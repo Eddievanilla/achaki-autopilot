@@ -51,8 +51,24 @@ class RobotWorker {
   async emitHeartbeat(customStep = null, customStatus = null) {
     if (this.isShuttingDown) return;
     try {
-      const step = customStep || this.currentStep;
+      let step = customStep || this.currentStep;
       const status = customStatus || (this.isWorking ? 'TRABALHANDO' : 'IDLE');
+
+      // Se o worker não estiver trabalhando e o step for AGUARDANDO, confere se há publicação assistida
+      if (!this.isWorking && (!step || step === 'AGUARDANDO')) {
+        try {
+          const { data: pendingAssisted } = await supabase
+            .from('publications')
+            .select('id')
+            .eq('status', 'ASSISTED_READY')
+            .limit(1);
+
+          if (pendingAssisted && pendingAssisted.length > 0) {
+            step = 'AGUARDANDO APROVAÇÃO';
+            this.currentStep = step;
+          }
+        } catch {}
+      }
 
       const payload = {
         worker_id: this.workerId,
@@ -241,6 +257,8 @@ class RobotWorker {
 
       if (cmd.command === 'RUN_NOW') {
         await this._executeRealPipeline(cmd, runId);
+      } else if (cmd.command === 'APPROVE_PUBLICATION') {
+        await this._executeApprovePublication(cmd, runId);
       } else if (cmd.command === 'PAUSE') {
         await this.setStep('PAUSADO');
         await eventLogger.warning('ROBOT', 'Operador pausado pelo Centro de Comando', { action: 'PAUSED' });
@@ -258,14 +276,25 @@ class RobotWorker {
           finished_at: new Date().toISOString(),
           metadata: {
             ...cmd.metadata,
-            result: 'COMPLETED_ASSISTED',
+            result: 'COMPLETED',
             durationMs,
             finishedAt: new Date().toISOString(),
           },
         })
         .eq('id', cmd.id);
 
-      await this.setStep('AGUARDANDO');
+      // Se houver publicação em ASSISTED_READY, mantém o status informativo
+      const { data: pendingAssisted } = await supabase
+        .from('publications')
+        .select('id')
+        .eq('status', 'ASSISTED_READY')
+        .limit(1);
+
+      if (pendingAssisted && pendingAssisted.length > 0) {
+        await this.setStep('AGUARDANDO APROVAÇÃO');
+      } else {
+        await this.setStep('AGUARDANDO');
+      }
     } catch (err) {
       const durationMs = Date.now() - startTime;
       logger.error(`[Worker] Erro durante a execução do comando ${cmd.id}:`, err);
@@ -291,8 +320,284 @@ class RobotWorker {
     } finally {
       this.isWorking = false;
       this.currentRunId = null;
-      await this.emitHeartbeat('AGUARDANDO', 'IDLE');
+      try {
+        const { data: pendingAssisted } = await supabase
+          .from('publications')
+          .select('id')
+          .eq('status', 'ASSISTED_READY')
+          .limit(1);
+
+        if (pendingAssisted && pendingAssisted.length > 0) {
+          this.currentStep = 'AGUARDANDO APROVAÇÃO';
+          await this.emitHeartbeat('AGUARDANDO APROVAÇÃO', 'IDLE');
+        } else {
+          await this.emitHeartbeat(this.currentStep || 'AGUARDANDO', 'IDLE');
+        }
+      } catch {
+        await this.emitHeartbeat('AGUARDANDO', 'IDLE');
+      }
     }
+  }
+
+  /**
+   * Executa a aprovação e publicação segura no Facebook:
+   *  1. Comando APPROVE_PUBLICATION recebido
+   *  2. Revalidação final: produto disponível, preço atual, desconto, link oficial
+   *  3. Se preço mudou: NÃO publica, atualiza card, volta para AGUARDANDO APROVAÇÃO
+   *  4. Se indisponível: cancela e informa no log
+   *  5. Se válido: publicação única e atômica com idempotency key
+   *  6. Grava tudo no Supabase
+   */
+  async _executeApprovePublication(cmd, runId) {
+    const pubId = cmd.metadata?.publicationId;
+    const testOnly = cmd.metadata?.testOnly === true;
+
+    await eventLogger.info('ROBOT', 'Comando APPROVE_PUBLICATION recebido', {
+      action: 'APPROVE_PUBLICATION_RECEIVED',
+      metadata: { commandId: cmd.id, publicationId: pubId },
+    });
+
+    // 1. Localiza a publicação pendente
+    let query = supabase.from('publications').select('*, products(*)');
+    if (pubId) {
+      query = query.eq('id', pubId);
+    } else {
+      query = query.eq('status', 'ASSISTED_READY').order('created_at', { ascending: false }).limit(1);
+    }
+    const { data: pubList, error: pubErr } = await query;
+    const pub = Array.isArray(pubList) ? pubList[0] : pubList;
+
+    if (pubErr || !pub) {
+      throw new Error(`Publicação preparada não encontrada no banco (ID: ${pubId || 'mais recente'})`);
+    }
+
+    // Idempotência estrita: se já estiver publicada, interrompe imediatamente
+    if (pub.status === 'PUBLISHED') {
+      await eventLogger.warning('FACEBOOK', 'Publicação já realizada anteriormente. Idempotência acionada.', {
+        action: 'IDEMPOTENCY_BLOCKED',
+        publicationId: pub.id,
+      });
+      return;
+    }
+
+    // 2. Revalidação final
+    await this.setStep('VALIDANDO PREÇO');
+    await eventLogger.info('PRICE', 'Revalidação final iniciada', {
+      action: 'PRICE_FINAL_REVALIDATION',
+      publicationId: pub.id,
+    });
+
+    // Consulta preço mais recente registrado para o produto
+    let latestPrice = Number(pub.price_published);
+    let originalPrice = pub.original_price_published ? Number(pub.original_price_published) : null;
+    let discountPercent = pub.discount_published ? Number(pub.discount_published) : 0;
+    let isAvailable = true;
+
+    if (pub.product_id) {
+      const { data: priceRow } = await supabase
+        .from('product_prices')
+        .select('current_price, original_price, discount_percent, in_stock')
+        .eq('product_id', pub.product_id)
+        .order('collected_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (priceRow) {
+        if (priceRow.in_stock === false) {
+          isAvailable = false;
+        }
+        if (priceRow.current_price && Number(priceRow.current_price) > 0) {
+          latestPrice = Number(priceRow.current_price);
+          originalPrice = priceRow.original_price ? Number(priceRow.original_price) : originalPrice;
+          discountPercent = priceRow.discount_percent || discountPercent;
+        }
+      }
+    }
+
+    // Se produto ficou indisponível:
+    if (!isAvailable) {
+      await supabase
+        .from('publications')
+        .update({ status: 'CANCELLED_UNAVAILABLE', updated_at: new Date().toISOString() })
+        .eq('id', pub.id);
+
+      await eventLogger.error('PRICE', 'Produto indisponível no marketplace. Publicação cancelada.', {
+        action: 'PRODUCT_UNAVAILABLE',
+        publicationId: pub.id,
+      });
+      await this.setStep('AGUARDANDO');
+      return;
+    }
+
+    // Se preço mudou em relação ao aprovado:
+    const registeredPrice = Number(pub.price_published);
+    if (registeredPrice && Math.abs(latestPrice - registeredPrice) > 0.05) {
+      await supabase
+        .from('publications')
+        .update({
+          price_published: latestPrice,
+          original_price_published: originalPrice,
+          discount_published: discountPercent,
+          metadata: {
+            ...pub.metadata,
+            price_changed: true,
+            previous_price: registeredPrice,
+            new_price: latestPrice,
+            revalidated_at: new Date().toISOString(),
+          },
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', pub.id);
+
+      await eventLogger.warning(
+        'PRICE',
+        `Preço alterado no marketplace de R$ ${registeredPrice.toFixed(2)} para R$ ${latestPrice.toFixed(2)}. Card atualizado — publicação retida para nova aprovação.`,
+        {
+          action: 'PRICE_CHANGED_REAPPROVAL_REQUIRED',
+          publicationId: pub.id,
+          metadata: { previousPrice: registeredPrice, newPrice: latestPrice },
+        }
+      );
+
+      await this.setStep('AGUARDANDO APROVAÇÃO');
+      return;
+    }
+
+    // Preço confirmado
+    await eventLogger.success('PRICE', 'Preço confirmado', {
+      action: 'PRICE_CONFIRMED',
+      metadata: { currentPrice: latestPrice, discountPercent },
+    });
+
+    // 3. Link oficial confirmado (deve ser meli.la direto ou link de afiliado oficial)
+    const affiliateUrl = pub.affiliate_url || pub.tracking_url;
+    if (!affiliateUrl || affiliateUrl.length < 5) {
+      throw new Error('Link de afiliado oficial inválido ou ausente na publicação preparada.');
+    }
+
+    await eventLogger.success('AFFILIATE', 'Link oficial confirmado', {
+      action: 'AFFILIATE_CONFIRMED',
+      metadata: { affiliateUrl },
+    });
+
+    // 4. Bloqueio de Idempotência Atômico no Banco (evita corrida / cliques múltiplos)
+    const idempotencyKey = pub.idempotency_key || `post_${pub.id}_${pub.product_id || 'prod'}_${Date.now()}`;
+    const { data: claimedPub, error: claimErr } = await supabase
+      .from('publications')
+      .update({
+        status: 'PUBLISHING',
+        idempotency_key: idempotencyKey,
+        run_id: runId,
+      })
+      .eq('id', pub.id)
+      .eq('status', 'ASSISTED_READY')
+      .select('*')
+      .maybeSingle();
+
+    if (claimErr || !claimedPub) {
+      await eventLogger.warning('FACEBOOK', 'Tentativa de publicação duplicada detectada (Idempotency Key ativa). Operação cancelada.', {
+        action: 'IDEMPOTENCY_GUARD_TRIGGERED',
+        publicationId: pub.id,
+      });
+      return;
+    }
+
+    // 5. Enviando publicação para o Facebook
+    await this.setStep('PUBLICANDO NO FACEBOOK');
+    await eventLogger.info('FACEBOOK', 'Enviando publicação', {
+      action: 'FACEBOOK_SENDING',
+      publicationId: pub.id,
+    });
+
+    let fbPostId = null;
+    let fbPublicationUrl = null;
+
+    if (testOnly || DRY_RUN_PUBLICATION) {
+      // MODO TESTE / DRY-RUN: NÃO posta na Meta
+      fbPostId = `dryrun_post_${Date.now()}`;
+      fbPublicationUrl = `https://www.facebook.com/ACHAki/posts/${fbPostId}`;
+    } else {
+      // MODO REAL: Busca token e posta via Meta Graph API oficial
+      const { data: stateData } = await supabase
+        .from('system_state')
+        .select('social_networks')
+        .eq('id', 'autopilot')
+        .maybeSingle();
+
+      const sn = stateData?.social_networks || {};
+      const pageAccessToken = sn.facebook_page_token;
+      const pageId = sn.facebook_page_id || '61587794361596';
+
+      if (!pageAccessToken) {
+        throw new Error('Facebook Page Access Token não encontrado em system_state. Autorize via OAuth primeiro.');
+      }
+
+      const FacebookPublisher = (await import('./publishers/facebook-publisher.js')).default;
+      const publisher = new FacebookPublisher();
+
+      const fbResult = await publisher.publishPost({
+        pageId,
+        pageAccessToken,
+        message: pub.content,
+        imageUrl: pub.media_url,
+        link: affiliateUrl,
+      });
+
+      fbPostId = fbResult.postId;
+      fbPublicationUrl = fbResult.publicationUrl;
+    }
+
+    await eventLogger.success('FACEBOOK', 'Publicação criada com sucesso', {
+      action: 'FACEBOOK_POST_CREATED',
+      publicationId: pub.id,
+      metadata: { postId: fbPostId, publicationUrl: fbPublicationUrl },
+    });
+
+    // 6. DATABASE | Publicação registrada
+    const publishedAt = new Date().toISOString();
+    await supabase
+      .from('publications')
+      .update({
+        status: 'PUBLISHED',
+        facebook_post_id: fbPostId,
+        publication_url: fbPublicationUrl,
+        published_at: publishedAt,
+        price_published: latestPrice,
+        affiliate_url: affiliateUrl,
+        content: pub.content,
+        media_url: pub.media_url,
+        run_id: runId,
+        metadata: {
+          ...pub.metadata,
+          approved_by: 'operator',
+          approved_at: new Date().toISOString(),
+          dryRun: DRY_RUN_PUBLICATION || testOnly,
+        },
+      })
+      .eq('id', pub.id);
+
+    // Registra métrica inicial de cliques = 0
+    await supabase.from('publication_metrics').insert({
+      publication_id: pub.id,
+      clicks: 0,
+      impressions: 0,
+      tracked_at: publishedAt,
+    });
+
+    await eventLogger.success('DATABASE', 'Publicação registrada', {
+      action: 'DATABASE_SAVED',
+      publicationId: pub.id,
+      metadata: { postId: fbPostId, publicationUrl: fbPublicationUrl },
+    });
+
+    // 7. ROBOT | Publicação concluída
+    await eventLogger.success('ROBOT', 'Publicação concluída', {
+      action: 'PUBLICATION_COMPLETED',
+      publicationId: pub.id,
+      metadata: { postId: fbPostId, publicationUrl: fbPublicationUrl },
+    });
+
+    await this.setStep('AGUARDANDO');
   }
 
   /**
@@ -432,6 +737,8 @@ class RobotWorker {
         action: 'CONTENT_PREP_START',
       });
 
+      const directAffiliateUrl = affiliateRes.affiliateUrl || bestOffer.productUrl;
+
       const creativeEngine = new CreativeEngine();
       const creative = creativeEngine.generatePost({
         title: bestOffer.title,
@@ -439,6 +746,7 @@ class RobotWorker {
         originalPrice: bestOffer.originalPrice,
         discountPercent: bestOffer.discountPercent || 0,
         imageUrl: bestOffer.imageUrl,
+        affiliateUrl: directAffiliateUrl,
         trackingUrl,
         strategy: bestOffer.strategy || { code: 'DESCONTO', name: 'Desconto Real Comprovado' },
         category: bestOffer.category || 'utilidades',
@@ -456,9 +764,14 @@ class RobotWorker {
             strategy: bestOffer.strategy?.code || 'DESCONTO',
             tracking_id: trackingId,
             tracking_url: trackingUrl,
-            affiliate_url: affiliateRes.affiliateUrl || bestOffer.productUrl,
-            product_url: bestOffer.productUrl,
+            affiliate_url: directAffiliateUrl,
             status: 'ASSISTED_READY',
+            content: creative.text,
+            media_url: bestOffer.imageUrl,
+            price_published: currentPrice,
+            original_price_published: bestOffer.originalPrice || null,
+            discount_published: bestOffer.discountPercent || 0,
+            run_id: runId,
             metadata: {
               dryRun: DRY_RUN_PUBLICATION,
               headline: creative.headline,
@@ -466,6 +779,10 @@ class RobotWorker {
               imageUrl: bestOffer.imageUrl,
               targetPageName: 'ACHAki Achadinhos e Ofertas',
               targetPageId: '61587794361596',
+              marketplaceProductId: bestOffer.productId || bestOffer.dbId,
+              score: bestOffer.finalScore || bestOffer.score || 85,
+              strategy: bestOffer.strategy?.code || 'DESCONTO',
+              validated_at: new Date().toISOString(),
             },
           })
           .select('id')

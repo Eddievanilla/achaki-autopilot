@@ -21,12 +21,183 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { action } = req.body || {};
+    const { action, publicationId } = req.body || {};
 
-    if (!['INICIAR', 'PAUSAR', 'EXECUTAR_AGORA'].includes(action)) {
-      return res.status(400).json({ error: 'Ação inválida. Use INICIAR, PAUSAR ou EXECUTAR_AGORA.' });
+    const validActions = [
+      'INICIAR',
+      'PAUSAR',
+      'EXECUTAR_AGORA',
+      'APPROVE_PUBLICATION',
+      'REJECT_PUBLICATION',
+      'CHOOSE_ANOTHER_OFFER',
+    ];
+
+    if (!validActions.includes(action)) {
+      return res.status(400).json({ error: `Ação inválida. Use uma das seguintes: ${validActions.join(', ')}` });
     }
 
+    // ─────────────────────────────────────────────────────────────
+    // 1. APROVAR E PUBLICAR
+    // ─────────────────────────────────────────────────────────────
+    if (action === 'APPROVE_PUBLICATION') {
+      if (!publicationId) {
+        return res.status(400).json({ error: 'publicationId é obrigatório para aprovação.' });
+      }
+
+      const { data: pub, error: pubErr } = await supabase
+        .from('publications')
+        .select('*')
+        .eq('id', publicationId)
+        .maybeSingle();
+
+      if (pubErr || !pub) {
+        return res.status(404).json({ error: 'Publicação preparada não encontrada.' });
+      }
+
+      if (pub.status === 'PUBLISHED') {
+        return res.status(400).json({ error: 'Esta publicação já foi realizada anteriormente (Idempotência ativa).' });
+      }
+
+      // 1. Registra telemetria imediata
+      await supabase.from('system_events').insert({
+        level: 'INFO',
+        category: 'DASHBOARD',
+        source: 'Centro-de-Comando',
+        action: 'PUBLICATION_APPROVED',
+        status: 'PENDING',
+        message: 'Publicação aprovada pelo operador',
+        publication_id: publicationId,
+        metadata: { publicationId, approved_at: new Date().toISOString() },
+      });
+
+      // 2. Enfileira comando APPROVE_PUBLICATION para o worker local
+      const { data: cmdRecord, error: cmdErr } = await supabase
+        .from('robot_commands')
+        .insert({
+          command: 'APPROVE_PUBLICATION',
+          status: 'PENDING',
+          metadata: {
+            publicationId,
+            requested_by: 'dashboard_operator',
+            requested_at: new Date().toISOString(),
+          },
+        })
+        .select('*')
+        .single();
+
+      if (cmdErr) {
+        throw new Error(`Erro ao enfileirar comando de aprovação: ${cmdErr.message}`);
+      }
+
+      // 3. Atualiza estado para TRABALHANDO
+      await supabase
+        .from('system_state')
+        .upsert({
+          id: 'autopilot',
+          status: 'TRABALHANDO',
+          current_step: 'Publicação aprovada pelo operador. Processando envio...',
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'id' });
+
+      return res.status(200).json({
+        ok: true,
+        action,
+        commandId: cmdRecord.id,
+        message: 'Publicação aprovada! Comando enviado para o worker local.',
+      });
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // 2. REJEITAR PUBLICAÇÃO
+    // ─────────────────────────────────────────────────────────────
+    if (action === 'REJECT_PUBLICATION') {
+      if (publicationId) {
+        await supabase
+          .from('publications')
+          .update({ status: 'REJECTED' })
+          .eq('id', publicationId);
+      }
+
+      await supabase.from('system_events').insert({
+        level: 'WARNING',
+        category: 'DASHBOARD',
+        source: 'Centro-de-Comando',
+        action: 'PUBLICATION_REJECTED',
+        status: 'REJECTED',
+        message: 'Publicação rejeitada pelo operador',
+        publication_id: publicationId || null,
+        metadata: { publicationId },
+      });
+
+      // Atualiza step para AGUARDANDO
+      await supabase
+        .from('worker_heartbeats')
+        .update({ current_step: 'AGUARDANDO', status: 'IDLE', updated_at: new Date().toISOString() })
+        .eq('worker_id', 'local-worker');
+
+      await supabase
+        .from('system_state')
+        .upsert({
+          id: 'autopilot',
+          status: 'ONLINE',
+          current_step: 'Publicação rejeitada. Aguardando próximo ciclo...',
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'id' });
+
+      return res.status(200).json({
+        ok: true,
+        action,
+        message: 'Publicação rejeitada com sucesso.',
+      });
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // 3. ESCOLHER OUTRA OFERTA
+    // ─────────────────────────────────────────────────────────────
+    if (action === 'CHOOSE_ANOTHER_OFFER') {
+      if (publicationId) {
+        await supabase
+          .from('publications')
+          .update({ status: 'SKIPPED' })
+          .eq('id', publicationId);
+      }
+
+      await supabase.from('system_events').insert({
+        level: 'INFO',
+        category: 'DASHBOARD',
+        source: 'Centro-de-Comando',
+        action: 'CHOOSE_ANOTHER_OFFER',
+        status: 'PENDING',
+        message: 'Solicitada nova oferta para curadoria',
+        publication_id: publicationId || null,
+        metadata: { skippedPublicationId: publicationId },
+      });
+
+      const { data: cmdRecord } = await supabase
+        .from('robot_commands')
+        .insert({
+          command: 'RUN_NOW',
+          status: 'PENDING',
+          metadata: {
+            reason: 'choose_another_offer',
+            skippedPublicationId: publicationId,
+            requested_at: new Date().toISOString(),
+          },
+        })
+        .select('*')
+        .single();
+
+      return res.status(200).json({
+        ok: true,
+        action,
+        commandId: cmdRecord?.id,
+        message: 'Nova oferta solicitada. O robô irá garimpar uma nova opção.',
+      });
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // 4. COMANDOS GERAIS (EXECUTAR_AGORA, PAUSAR, INICIAR)
+    // ─────────────────────────────────────────────────────────────
     let commandType = 'RUN_NOW';
     let newStatus = 'TRABALHANDO';
     let step = 'Comando EXECUTAR AGORA colocado na fila. Aguardando worker local...';
@@ -47,7 +218,6 @@ export default async function handler(req, res) {
       logLevel = 'INFO';
     }
 
-    // 1. Criar comando na fila robot_commands
     const { data: cmdRecord, error: cmdErr } = await supabase
       .from('robot_commands')
       .insert({
@@ -67,7 +237,6 @@ export default async function handler(req, res) {
       throw new Error(`Falha ao registrar comando na fila: ${cmdErr.message}`);
     }
 
-    // 2. Registrar imediatamente no system_events para telemetria em tempo real
     await supabase.from('system_events').insert({
       level: logLevel,
       category: 'DASHBOARD',
@@ -82,7 +251,6 @@ export default async function handler(req, res) {
       },
     });
 
-    // 3. Atualizar estado no Supabase (system_state)
     await supabase
       .from('system_state')
       .upsert({
@@ -91,13 +259,6 @@ export default async function handler(req, res) {
         current_step: step,
         updated_at: new Date().toISOString(),
       }, { onConflict: 'id' });
-
-    // 4. Registrar em system_activity_logs (legado)
-    await supabase.from('system_activity_logs').insert({
-      message: `Comando [${action}] acionado pelo painel operacional (ID: ${cmdRecord.id})`,
-      level: logLevel,
-      created_at: new Date().toISOString(),
-    });
 
     return res.status(200).json({
       ok: true,

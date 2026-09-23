@@ -196,21 +196,30 @@ export default async function handler(req, res) {
       .order('created_at', { ascending: false })
       .limit(6);
 
-    // 7.1 Publicações Reais no Banco
+    // 7.1 Publicações no Banco
     const { data: pubData } = await supabase
       .from('publications')
       .select(`
         id,
         tracking_id,
         tracking_url,
+        affiliate_url,
         publication_url,
         social_network,
         strategy,
         status,
+        content,
+        media_url,
+        price_published,
+        original_price_published,
+        discount_published,
+        metadata,
+        product_id,
         published_at,
         created_at,
         products (
           id,
+          marketplace_product_id,
           title,
           marketplace,
           product_url,
@@ -221,10 +230,18 @@ export default async function handler(req, res) {
           impressions
         )
       `)
-      .order('published_at', { ascending: false });
+      .order('created_at', { ascending: false });
 
-    const totalPubs = pubData || [];
-    const todayPubs = totalPubs.filter(p => (p.published_at || p.created_at) >= todayStartIso);
+    const allPubs = pubData || [];
+    const publishedPubs = allPubs.filter(p => p.status === 'PUBLISHED');
+    const preparedPub = allPubs.find(p => p.status === 'ASSISTED_READY');
+    const todayPubs = publishedPubs.filter(p => (p.published_at || p.created_at) >= todayStartIso);
+
+    // Se houver publicação preparada aguardando aprovação humana, atualiza o status do robô
+    if (preparedPub && robotStatus !== 'TRABALHANDO') {
+      robotStatus = 'AGUARDANDO APROVAÇÃO';
+      robotStep = 'Publicação preparada. Aguardando revisão e aprovação humana.';
+    }
 
     // Cliques de hoje
     const { count: todayClicksCount } = await supabase
@@ -317,12 +334,13 @@ export default async function handler(req, res) {
       status: robotStatus,
       stepText: robotStep,
       isWorkerOnline,
-      lastAction: `${todayOffersSelected} ofertas selecionadas com estratégia orgânica`,
+      lastAction: preparedPub ? 'Publicação preparada aguardando aprovação' : `${todayOffersSelected} ofertas selecionadas com estratégia orgânica`,
       currentStrategy: currentStratCode,
-      nextAction: isWorkerOnline ? 'Nova coleta em 25 minutos' : 'Aguardando worker iniciar',
+      nextAction: preparedPub ? 'Aguardando aprovação humana no painel' : (isWorkerOnline ? 'Nova coleta em 25 minutos' : 'Aguardando worker iniciar'),
       lastRunAt: state.last_run_at || new Date().toISOString(),
       durationSeconds: state.last_duration_seconds || 34,
       isWorking: robotStatus === 'TRABALHANDO',
+      isAwaitingApproval: Boolean(preparedPub),
     };
 
     const payload = {
@@ -337,8 +355,27 @@ export default async function handler(req, res) {
         currentStrategy: currentStratCode,
         nextScheduledTime: '00:25:00',
         currentGoal: `${targetClicks} cliques hoje`,
+        isAwaitingApproval: Boolean(preparedPub),
       },
       robotNow,
+      preparedPublication: preparedPub ? {
+        id: preparedPub.id,
+        productId: preparedPub.product_id,
+        marketplaceProductId: preparedPub.products?.marketplace_product_id || preparedPub.metadata?.marketplaceProductId || 'MLB-AUTOPILOT',
+        title: preparedPub.products?.title || preparedPub.metadata?.headline || 'Oferta Selecionada',
+        marketplace: preparedPub.products?.marketplace || preparedPub.marketplace || 'mercadolivre',
+        imageUrl: preparedPub.media_url || preparedPub.products?.image_url || preparedPub.metadata?.imageUrl || 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=400&q=80',
+        currentPrice: preparedPub.price_published != null ? Number(preparedPub.price_published) : null,
+        originalPrice: preparedPub.original_price_published != null ? Number(preparedPub.original_price_published) : null,
+        discountPercent: preparedPub.discount_published != null ? Number(preparedPub.discount_published) : 0,
+        copy: preparedPub.content || preparedPub.metadata?.messageText || '',
+        affiliateUrl: preparedPub.affiliate_url || '',
+        validatedAt: preparedPub.metadata?.validated_at || preparedPub.created_at,
+        strategy: preparedPub.strategy || preparedPub.metadata?.strategy || 'DESCONTO',
+        score: preparedPub.metadata?.score || 85,
+        status: preparedPub.status,
+        metadata: preparedPub.metadata || {},
+      } : null,
       strategyDetails,
       autopilotMode: state.autopilot_mode || 'ASSISTIDO',
       // 1. Bloco de Metas & Objetivo (Fase 5.4)
@@ -364,7 +401,7 @@ export default async function handler(req, res) {
       historical: {
         totalProductsCatalog: totalProductsCount || 57,
         totalOffersSelected: totalCandidatesCount || 80,
-        totalPublications: totalPubs.length,
+        totalPublications: publishedPubs.length,
       },
       // 4. Performance Orgânica (Zero Mocks com Tabs)
       performance: {
@@ -378,7 +415,7 @@ export default async function handler(req, res) {
           shares: 0,
         },
         sevenDays: {
-          publications: totalPubs.length,
+          publications: publishedPubs.length,
           impressions: 0,
           clicks: currentClicks,
           ctr: 'N/D',
@@ -387,7 +424,7 @@ export default async function handler(req, res) {
           shares: 0,
         },
         thirtyDays: {
-          publications: totalPubs.length,
+          publications: publishedPubs.length,
           impressions: 0,
           clicks: currentClicks,
           ctr: 'N/D',
@@ -446,22 +483,23 @@ export default async function handler(req, res) {
       })),
       // 11. Publicações e Resultados
       publications: {
-        items: totalPubs.map((p) => ({
+        items: publishedPubs.map((p) => ({
           id: p.id,
           productId: p.product_id,
           title: p.products?.title || 'Oferta Selecionada',
           marketplace: p.products?.marketplace || 'mercadolivre',
-          imageUrl: p.products?.image_url,
+          imageUrl: p.media_url || p.products?.image_url,
           socialNetwork: p.social_network || 'Facebook',
           strategy: p.strategy || 'DESCONTO',
           trackingUrl: p.tracking_url,
+          affiliateUrl: p.affiliate_url,
           publicationUrl: p.publication_url,
           time: new Date(p.published_at || p.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
           date: new Date(p.published_at || p.created_at).toLocaleDateString('pt-BR'),
           clicks: p.publication_metrics?.[0]?.clicks || 0,
           status: p.status,
         })),
-        message: totalPubs.length === 0 ? 'Nenhuma publicação realizada ainda.' : `${totalPubs.length} publicação(ões) realizada(s).`,
+        message: publishedPubs.length === 0 ? 'Nenhuma publicação realizada ainda.' : `${publishedPubs.length} publicação(ões) realizada(s).`,
       },
       timestamp: new Date().toISOString(),
     };

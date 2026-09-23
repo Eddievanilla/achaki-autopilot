@@ -34,6 +34,7 @@ export class CreativeEngine {
     originalPrice,
     discountPercent = 0,
     imageUrl,
+    affiliateUrl,
     trackingUrl,
     strategy = {},
     category = 'utilidades',
@@ -53,6 +54,11 @@ export class CreativeEngine {
       hook = `Garimpo de hoje com excelente custo-benefício:`;
     }
 
+    // Prioriza link oficial direto (ex: https://meli.la/...) no primeiro piloto
+    const directLink = (affiliateUrl && (affiliateUrl.includes('meli.la') || affiliateUrl.includes('mercadolivre.com')))
+      ? affiliateUrl
+      : (trackingUrl || affiliateUrl);
+
     // Texto curto, natural e sem spam
     const textLines = [
       hook,
@@ -61,7 +67,7 @@ export class CreativeEngine {
       `💰 Por apenas: ${priceFormatted}${discountPercent > 0 ? ` (${discountPercent}% OFF)` : ''}`,
       '',
       `👉 Veja todos os detalhes e garanta o seu aqui:`,
-      trackingUrl,
+      directLink,
     ];
 
     return {
@@ -69,6 +75,7 @@ export class CreativeEngine {
       text: textLines.join('\n'),
       imageUrl,
       trackingUrl,
+      affiliateUrl: directLink,
       strategyCode: stratCode,
     };
   }

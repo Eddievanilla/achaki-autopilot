@@ -1129,6 +1129,339 @@
     footer a:hover {
       text-decoration: underline;
     }
+
+    /* 📣 CARD PUBLICAÇÃO PREPARADA */
+    .prepared-card {
+      background: linear-gradient(145deg, rgba(22, 33, 62, 0.95), rgba(15, 23, 42, 0.95));
+      border: 2px solid rgba(59, 130, 246, 0.5);
+      box-shadow: 0 0 35px rgba(59, 130, 246, 0.25), inset 0 0 20px rgba(59, 130, 246, 0.08);
+      border-radius: var(--radius-lg);
+      padding: 24px 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .prepared-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #3b82f6, #10b981, #f59e0b);
+    }
+
+    .prepared-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .prepared-title-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .prepared-title {
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: #f8fafc;
+      letter-spacing: -0.01em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .prepared-badge-pulse {
+      background: rgba(245, 158, 11, 0.18);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 0 15px rgba(245, 158, 11, 0.25);
+    }
+
+    .prepared-grid {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 24px;
+    }
+
+    @media (max-width: 900px) {
+      .prepared-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .prepared-media-col {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .prepared-img-box {
+      width: 100%;
+      height: 240px;
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: #000;
+      position: relative;
+    }
+
+    .prepared-img-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.3s ease;
+    }
+
+    .prepared-img-box:hover img {
+      transform: scale(1.03);
+    }
+
+    .prepared-img-overlay-badges {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      display: flex;
+      justify-content: space-between;
+      pointer-events: none;
+    }
+
+    .prepared-pill {
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .prepared-pill-mp {
+      background: rgba(255, 230, 0, 0.2);
+      color: #ffe600;
+      border: 1px solid rgba(255, 230, 0, 0.4);
+      backdrop-filter: blur(8px);
+    }
+
+    .prepared-pill-disc {
+      background: rgba(239, 68, 68, 0.85);
+      color: #fff;
+      font-weight: 800;
+      box-shadow: 0 2px 10px rgba(239, 68, 68, 0.5);
+    }
+
+    .prepared-meta-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      font-size: 0.78rem;
+      background: rgba(0, 0, 0, 0.25);
+      padding: 12px 14px;
+      border-radius: var(--radius-sm);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .prepared-meta-row {
+      display: flex;
+      justify-content: space-between;
+      color: var(--text-muted);
+    }
+
+    .prepared-meta-row strong {
+      color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .prepared-content-col {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .prepared-product-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.4;
+    }
+
+    .prepared-price-banner {
+      display: flex;
+      align-items: baseline;
+      gap: 14px;
+      background: rgba(16, 185, 129, 0.08);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      padding: 12px 18px;
+      border-radius: var(--radius-sm);
+    }
+
+    .prepared-price-current {
+      font-size: 1.8rem;
+      font-weight: 800;
+      font-family: 'JetBrains Mono', monospace;
+      color: #34d399;
+    }
+
+    .prepared-price-orig {
+      font-size: 1.05rem;
+      color: var(--text-dim);
+      text-decoration: line-through;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .prepared-price-save {
+      margin-left: auto;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #10b981;
+      background: rgba(16, 185, 129, 0.15);
+      padding: 4px 10px;
+      border-radius: 6px;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .prepared-copy-label {
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-dim);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .prepared-copy-box {
+      background: #060913;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      font-size: 0.88rem;
+      line-height: 1.6;
+      color: #e2e8f0;
+      white-space: pre-wrap;
+      font-family: inherit;
+      max-height: 220px;
+      overflow-y: auto;
+      box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.4);
+    }
+
+    .prepared-link-box {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      background: rgba(59, 130, 246, 0.08);
+      border: 1px solid rgba(59, 130, 246, 0.25);
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 0.8rem;
+    }
+
+    .prepared-link-text {
+      color: #93c5fd;
+      font-family: 'JetBrains Mono', monospace;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-decoration: none;
+    }
+
+    .prepared-link-text:hover {
+      text-decoration: underline;
+    }
+
+    .prepared-actions-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+      padding-top: 14px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .btn-approve-post {
+      background: linear-gradient(135deg, #059669, #10b981);
+      color: #ffffff;
+      font-weight: 800;
+      font-size: 0.92rem;
+      padding: 12px 24px;
+      border-radius: 10px;
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 0 20px rgba(16, 185, 129, 0.35);
+      transition: all 0.2s ease;
+    }
+
+    .btn-approve-post:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 0 30px rgba(16, 185, 129, 0.6);
+      background: linear-gradient(135deg, #047857, #059669);
+    }
+
+    .btn-reject-post {
+      background: rgba(244, 63, 94, 0.1);
+      color: #f87171;
+      font-weight: 700;
+      font-size: 0.85rem;
+      padding: 10px 18px;
+      border-radius: 8px;
+      border: 1px solid rgba(244, 63, 94, 0.3);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .btn-reject-post:hover {
+      background: rgba(244, 63, 94, 0.2);
+      border-color: rgba(244, 63, 94, 0.5);
+      color: #fca5a5;
+    }
+
+    .btn-another-post {
+      background: rgba(59, 130, 246, 0.1);
+      color: #93c5fd;
+      font-weight: 700;
+      font-size: 0.85rem;
+      padding: 10px 18px;
+      border-radius: 8px;
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .btn-another-post:hover {
+      background: rgba(59, 130, 246, 0.2);
+      border-color: rgba(59, 130, 246, 0.5);
+      color: #bfdbfe;
+    }
   </style>
 </head>
 <body>
@@ -1230,6 +1563,103 @@
       <!-- FEED DE LOGS EM TEMPO REAL -->
       <div class="live-logs-terminal" id="liveLogsFeed">
         <div class="log-empty-msg">Conectando ao canal de telemetria em tempo real...</div>
+      </div>
+    </div>
+
+    <!-- 📣 CARD: PUBLICAÇÃO PREPARADA (AGUARDANDO APROVAÇÃO HUMANA) -->
+    <div id="preparedPublicationCard" class="prepared-card" style="display: none;">
+      <div class="prepared-header">
+        <div class="prepared-title-group">
+          <span class="prepared-title">📣 PUBLICAÇÃO PREPARADA</span>
+          <span class="prepared-badge-pulse">
+            <span class="pulse-dot" style="background: #fbbf24;"></span>
+            AGUARDANDO APROVAÇÃO HUMANA
+          </span>
+        </div>
+        <div style="font-size: 0.78rem; color: var(--text-dim);" id="prepValidatedTime">
+          Última validação: Há instantes
+        </div>
+      </div>
+
+      <div class="prepared-grid">
+        <!-- COLUNA DA ESQUERDA: IMAGEM E METADADOS -->
+        <div class="prepared-media-col">
+          <div class="prepared-img-box">
+            <img id="prepImage" src="" alt="Imagem do produto">
+            <div class="prepared-img-overlay-badges">
+              <span class="prepared-pill prepared-pill-mp" id="prepMarketplace">Mercado Livre</span>
+              <span class="prepared-pill prepared-pill-disc" id="prepDiscountBadge">-30% OFF</span>
+            </div>
+          </div>
+
+          <div class="prepared-meta-list">
+            <div class="prepared-meta-row">
+              <span>ID Marketplace:</span>
+              <strong id="prepProductId">MLB-00000000</strong>
+            </div>
+            <div class="prepared-meta-row">
+              <span>Estratégia:</span>
+              <strong id="prepStrategy" style="color: #d8b4fe;">DESCONTO</strong>
+            </div>
+            <div class="prepared-meta-row">
+              <span>Score Comercial:</span>
+              <strong id="prepScore" style="color: #34d399;">92 / 100</strong>
+            </div>
+            <div class="prepared-meta-row">
+              <span>Canal Destino:</span>
+              <strong style="color: #60a5fa;">Facebook (ACHAki)</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- COLUNA DA DIREITA: PREÇO, COPY, LINK E BOTÕES DE APROVAÇÃO -->
+        <div class="prepared-content-col">
+          <div class="prepared-product-title" id="prepTitle">Título do produto</div>
+
+          <div class="prepared-price-banner">
+            <div>
+              <div style="font-size: 0.72rem; color: var(--text-dim); text-transform: uppercase; font-weight: 700;">Preço Revalidado</div>
+              <div class="prepared-price-current" id="prepCurrentPrice">R$ 0,00</div>
+            </div>
+            <div id="prepOrigPriceWrap" style="display: none;">
+              <div style="font-size: 0.72rem; color: var(--text-dim); text-transform: uppercase; font-weight: 700;">Preço Anterior</div>
+              <div class="prepared-price-orig" id="prepOriginalPrice">R$ 0,00</div>
+            </div>
+            <div class="prepared-price-save" id="prepSavingsTag">Desconto Real</div>
+          </div>
+
+          <div>
+            <div class="prepared-copy-label">
+              <span>📝 Copy formatada para o post no Facebook</span>
+            </div>
+            <div class="prepared-copy-box" id="prepCopy">Carregando copy preparada...</div>
+          </div>
+
+          <div>
+            <div class="prepared-copy-label" style="margin-bottom: 6px;">
+              <span>🔗 Link Oficial de Afiliado (Uso Direto no Post)</span>
+            </div>
+            <div class="prepared-link-box">
+              <a id="prepAffiliateLink" href="#" target="_blank" rel="noopener noreferrer" class="prepared-link-text">
+                https://meli.la/...
+              </a>
+              <button class="log-action-btn" onclick="copyAffiliateLink()">📋 Copiar Link</button>
+            </div>
+          </div>
+
+          <!-- BOTÕES DE DECISÃO HUMANA -->
+          <div class="prepared-actions-row">
+            <button id="btnApprovePub" class="btn-approve-post" onclick="approvePreparedPublication()">
+              ✅ APROVAR E PUBLICAR
+            </button>
+            <button id="btnRejectPub" class="btn-reject-post" onclick="rejectPreparedPublication()">
+              ❌ REJEITAR
+            </button>
+            <button id="btnChooseAnother" class="btn-another-post" onclick="chooseAnotherOffer()">
+              🔄 ESCOLHER OUTRA OFERTA
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -1597,17 +2027,89 @@
       document.getElementById('cardGoalRemaining').textContent = data.goals?.remainingClicks ?? targetClicks;
       document.getElementById('cardGoalProjection').textContent = data.goals?.projectionToday || 'N/D';
 
+      // 📣 CARD PUBLICAÇÃO PREPARADA (MODO ASSISTIDO)
+      const prepCard = document.getElementById('preparedPublicationCard');
+      if (data.preparedPublication) {
+        const pub = data.preparedPublication;
+        currentPreparedPublicationId = pub.id;
+        if (prepCard) prepCard.style.display = 'flex';
+
+        const prepTitleEl = document.getElementById('prepTitle');
+        if (prepTitleEl) prepTitleEl.textContent = pub.title || 'Oferta Selecionada';
+
+        const prepImgEl = document.getElementById('prepImage');
+        if (prepImgEl) prepImgEl.src = pub.imageUrl || 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=400';
+
+        const prepMpEl = document.getElementById('prepMarketplace');
+        if (prepMpEl) prepMpEl.textContent = (pub.marketplace || 'mercadolivre').toUpperCase();
+
+        const prepProdIdEl = document.getElementById('prepProductId');
+        if (prepProdIdEl) prepProdIdEl.textContent = pub.marketplaceProductId || pub.productId || 'MLB';
+
+        const prepStratEl = document.getElementById('prepStrategy');
+        if (prepStratEl) prepStratEl.textContent = pub.strategy || 'DESCONTO';
+
+        const prepScoreEl = document.getElementById('prepScore');
+        if (prepScoreEl) prepScoreEl.textContent = `${pub.score || 85} / 100`;
+
+        const curPriceNum = pub.currentPrice != null ? Number(pub.currentPrice) : 0;
+        const prepPriceEl = document.getElementById('prepCurrentPrice');
+        if (prepPriceEl) prepPriceEl.textContent = `R$ ${curPriceNum.toFixed(2)}`;
+
+        const origPriceNum = pub.originalPrice != null ? Number(pub.originalPrice) : null;
+        const origWrap = document.getElementById('prepOrigPriceWrap');
+        const prepOrigEl = document.getElementById('prepOriginalPrice');
+        if (origPriceNum && origPriceNum > curPriceNum) {
+          if (origWrap) origWrap.style.display = 'block';
+          if (prepOrigEl) prepOrigEl.textContent = `R$ ${origPriceNum.toFixed(2)}`;
+        } else {
+          if (origWrap) origWrap.style.display = 'none';
+        }
+
+        const disc = pub.discountPercent || 0;
+        const prepDiscEl = document.getElementById('prepDiscountBadge');
+        if (prepDiscEl) prepDiscEl.textContent = disc > 0 ? `-${disc}% OFF` : 'OFERTA';
+        const prepSavEl = document.getElementById('prepSavingsTag');
+        if (prepSavEl) prepSavEl.textContent = disc > 0 ? `${disc}% de Desconto Real` : 'Preço Competitivo';
+
+        const prepCopyEl = document.getElementById('prepCopy');
+        if (prepCopyEl) prepCopyEl.textContent = pub.copy || '';
+
+        const affLink = document.getElementById('prepAffiliateLink');
+        if (affLink) {
+          affLink.href = pub.affiliateUrl || '#';
+          affLink.textContent = pub.affiliateUrl || 'Link oficial indisponível';
+        }
+
+        const valDate = pub.validatedAt ? new Date(pub.validatedAt).toLocaleTimeString('pt-BR') : 'Recente';
+        const prepValEl = document.getElementById('prepValidatedTime');
+        if (prepValEl) prepValEl.textContent = `Última validação: ${valDate}`;
+      } else {
+        currentPreparedPublicationId = null;
+        if (prepCard) prepCard.style.display = 'none';
+      }
+
       // 3. Robô Agora
       if (data.robotNow) {
         const isOnline = data.robotNow.isWorkerOnline;
         const cardStatus = document.getElementById('cardRobotStatus');
         const cardStep = document.getElementById('cardRobotStep');
+        const isAwaiting = data.preparedPublication || data.robotNow.status === 'AGUARDANDO APROVAÇÃO';
+
         if (cardStatus) {
-          cardStatus.textContent = isOnline ? (data.robotNow.status || 'AGUARDANDO') : 'OFFLINE';
-          cardStatus.className = 'status-tag ' + (isOnline ? (data.robotNow.status === 'TRABALHANDO' ? 'NO_RITMO' : 'SEM_DADOS') : 'ABAIXO_DA_META');
+          if (!isOnline) {
+            cardStatus.textContent = 'OFFLINE';
+            cardStatus.className = 'status-tag ABAIXO_DA_META';
+          } else if (isAwaiting) {
+            cardStatus.textContent = 'AGUARDANDO APROVAÇÃO';
+            cardStatus.className = 'status-tag NO_RITMO';
+          } else {
+            cardStatus.textContent = data.robotNow.status || 'AGUARDANDO';
+            cardStatus.className = 'status-tag ' + (data.robotNow.status === 'TRABALHANDO' ? 'NO_RITMO' : 'SEM_DADOS');
+          }
         }
         if (cardStep) {
-          cardStep.textContent = data.robotNow.stepText || 'Aguardando próximo ciclo de coleta...';
+          cardStep.textContent = isAwaiting ? 'Publicação preparada. Aguardando revisão e aprovação humana.' : (data.robotNow.stepText || 'Aguardando próximo ciclo de coleta...');
         }
         document.getElementById('cardRobotLastAction').textContent = data.robotNow.lastAction || '5 ofertas selecionadas';
         document.getElementById('cardRobotStrategy').textContent = data.robotNow.currentStrategy || 'DESCONTO';
@@ -1669,29 +2171,31 @@
       if (pubContainer) {
         if (data.publications?.items && data.publications.items.length > 0) {
           pubContainer.innerHTML = data.publications.items.map((pub) => `
-            <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: rgba(255,255,255,0.03); border: 1px solid var(--card-border); border-radius: var(--radius-sm); gap: 12px;">
-              <div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
-                <span style="font-size: 1.2rem;">📘</span>
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: rgba(255,255,255,0.03); border: 1px solid var(--card-border); border-radius: var(--radius-sm); gap: 12px;">
+              <div style="display: flex; align-items: center; gap: 12px; min-width: 0;">
+                <img src="${pub.imageUrl || 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=60'}" style="width: 44px; height: 44px; border-radius: 8px; object-fit: cover; border: 1px solid rgba(255,255,255,0.1);" alt="">
                 <div style="min-width: 0;">
-                  <div style="font-size: 0.85rem; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 280px;">
+                  <div style="font-size: 0.88rem; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 320px;">
                     ${pub.title}
                   </div>
-                  <div style="font-size: 0.72rem; color: var(--text-dim); display: flex; gap: 8px; align-items: center; margin-top: 2px;">
+                  <div style="font-size: 0.73rem; color: var(--text-dim); display: flex; gap: 8px; align-items: center; margin-top: 3px;">
                     <span>${pub.time}</span>
+                    <span>•</span>
+                    <span style="color: #60a5fa; font-weight: 600;">Facebook</span>
                     <span>•</span>
                     <span style="color: #d8b4fe;">${pub.strategy}</span>
                     <span>•</span>
-                    <span style="color: var(--emerald); font-weight: 600;">Cliques: ${pub.clicks}</span>
+                    <span style="color: var(--emerald); font-weight: 700;">Cliques: ${pub.clicks}</span>
                   </div>
                 </div>
               </div>
-              <div style="display: flex; gap: 6px; flex-shrink: 0;">
+              <div style="display: flex; gap: 8px; flex-shrink: 0; align-items: center;">
                 ${pub.publicationUrl ? `
-                  <a href="${pub.publicationUrl}" target="_blank" rel="noopener noreferrer" class="btn" style="padding: 4px 10px; font-size: 0.75rem; text-decoration: none;">
-                    Ver Post ↗
+                  <a href="${pub.publicationUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-primary" style="padding: 6px 14px; font-size: 0.78rem; font-weight: 700; text-decoration: none; background: #1877f2; border-color: #1877f2; display: inline-flex; align-items: center; gap: 6px;">
+                    VER NO FACEBOOK ↗
                   </a>
                 ` : ''}
-                <a href="${pub.trackingUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-primary" style="padding: 4px 10px; font-size: 0.75rem; text-decoration: none;">
+                <a href="${pub.affiliateUrl || pub.trackingUrl}" target="_blank" rel="noopener noreferrer" class="btn" style="padding: 6px 12px; font-size: 0.78rem; text-decoration: none;">
                   Link ↗
                 </a>
               </div>
@@ -1920,6 +2424,95 @@
       }
     }
 
+    // ─────────────────────────────────────────────────────────────
+    // 📣 AÇÕES DA PUBLICAÇÃO PREPARADA (MODO ASSISTIDO)
+    // ─────────────────────────────────────────────────────────────
+    let currentPreparedPublicationId = null;
+
+    async function approvePreparedPublication() {
+      if (!currentPreparedPublicationId) return;
+      const btn = document.getElementById('btnApprovePub');
+      const origText = btn ? btn.innerHTML : '';
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '⏳ Processando aprovação...';
+      }
+      try {
+        const res = await fetch('/api/controls', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'APPROVE_PUBLICATION',
+            publicationId: currentPreparedPublicationId,
+          }),
+        });
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.error || 'Falha ao aprovar');
+        if (btn) btn.innerHTML = '✓ Aprovado!';
+        setTimeout(() => loadDashboard(), 1200);
+      } catch (err) {
+        alert('Erro ao aprovar publicação: ' + err.message);
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = origText;
+        }
+      }
+    }
+
+    async function rejectPreparedPublication() {
+      if (!currentPreparedPublicationId) return;
+      if (!confirm('Deseja realmente rejeitar esta publicação preparada?')) return;
+      const btn = document.getElementById('btnRejectPub');
+      if (btn) btn.disabled = true;
+      try {
+        const res = await fetch('/api/controls', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'REJECT_PUBLICATION',
+            publicationId: currentPreparedPublicationId,
+          }),
+        });
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.error || 'Falha ao rejeitar');
+        setTimeout(() => loadDashboard(), 1000);
+      } catch (err) {
+        alert('Erro ao rejeitar publicação: ' + err.message);
+        if (btn) btn.disabled = false;
+      }
+    }
+
+    async function chooseAnotherOffer() {
+      if (!currentPreparedPublicationId) return;
+      const btn = document.getElementById('btnChooseAnother');
+      if (btn) btn.disabled = true;
+      try {
+        const res = await fetch('/api/controls', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'CHOOSE_ANOTHER_OFFER',
+            publicationId: currentPreparedPublicationId,
+          }),
+        });
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.error || 'Falha ao escolher outra oferta');
+        setTimeout(() => loadDashboard(), 1000);
+      } catch (err) {
+        alert('Erro ao escolher outra oferta: ' + err.message);
+        if (btn) btn.disabled = false;
+      }
+    }
+
+    function copyAffiliateLink() {
+      const link = document.getElementById('prepAffiliateLink')?.href;
+      if (link && navigator.clipboard) {
+        navigator.clipboard.writeText(link).then(() => {
+          alert('Link oficial copiado!');
+        });
+      }
+    }
+
     // ══════════════════════════════════════════════════════════
     // 🤖 LOG AO VIVO EM TEMPO REAL (SUPABASE REALTIME)
     // ══════════════════════════════════════════════════════════
@@ -1933,6 +2526,7 @@
     let supabaseClient = null;
     let realtimeChannel = null;
     let heartbeatRealtimeChannel = null;
+    let publicationsRealtimeChannel = null;
 
     const LOG_LEVEL_ICONS = {
       SUCCESS: '✓',
@@ -1957,7 +2551,7 @@
         // 1. Carrega os últimos 50 eventos do banco
         fetchInitialEvents();
 
-        // 2. Conecta aos canais Realtime (logs + worker heartbeats)
+        // 2. Conecta aos canais Realtime (logs + worker heartbeats + publicações)
         connectRealtimeChannel();
       } catch (err) {
         console.error('Falha ao inicializar Supabase Realtime:', err);
@@ -1991,6 +2585,9 @@
       if (heartbeatRealtimeChannel) {
         try { supabaseClient.removeChannel(heartbeatRealtimeChannel); } catch {}
       }
+      if (publicationsRealtimeChannel) {
+        try { supabaseClient.removeChannel(publicationsRealtimeChannel); } catch {}
+      }
 
       // Canal de Logs de Telemetria
       realtimeChannel = supabaseClient
@@ -2021,6 +2618,18 @@
           }
         )
         .subscribe();
+
+      // Canal de Publicações (para atualizar card de aprovação humana instantaneamente)
+      publicationsRealtimeChannel = supabaseClient
+        .channel('public:publications')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'publications' },
+          () => {
+            loadDashboard();
+          }
+        )
+        .subscribe();
     }
 
     function handleWorkerHeartbeatUpdate(hb) {
@@ -2034,10 +2643,15 @@
       const cardStatus = document.getElementById('cardRobotStatus');
       const cardStep = document.getElementById('cardRobotStep');
 
+      const isAwaiting = dashboardState?.preparedPublication || hb.current_step === 'AGUARDANDO APROVAÇÃO';
+
       if (statusBadge && statusText) {
         if (!isOnline) {
           statusText.textContent = 'WORKER OFFLINE';
           statusBadge.className = 'status-badge OFFLINE';
+        } else if (isAwaiting) {
+          statusText.textContent = 'AGUARDANDO APROVAÇÃO';
+          statusBadge.className = 'status-badge AGUARDANDO';
         } else {
           statusText.textContent = hb.status === 'TRABALHANDO' ? 'TRABALHANDO' : 'ONLINE';
           statusBadge.className = 'status-badge ' + (hb.status === 'TRABALHANDO' ? 'TRABALHANDO' : 'ONLINE');
@@ -2049,6 +2663,10 @@
           cardStatus.textContent = 'OFFLINE';
           cardStatus.className = 'status-tag ABAIXO_DA_META';
           cardStep.textContent = 'Worker local desconectado. Inicie com "npm run worker".';
+        } else if (isAwaiting) {
+          cardStatus.textContent = 'AGUARDANDO APROVAÇÃO';
+          cardStatus.className = 'status-tag NO_RITMO';
+          cardStep.textContent = 'Publicação preparada. Aguardando revisão e aprovação humana.';
         } else {
           cardStatus.textContent = hb.status === 'TRABALHANDO' ? 'TRABALHANDO' : (hb.status || 'AGUARDANDO');
           cardStatus.className = 'status-tag ' + (hb.status === 'TRABALHANDO' ? 'NO_RITMO' : 'SEM_DADOS');
