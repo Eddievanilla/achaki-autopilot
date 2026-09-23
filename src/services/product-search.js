@@ -14,6 +14,7 @@
 
 import ProviderManager from './provider-manager.js';
 import ProductRepository from '../database/product-repository.js';
+import OfferIntelligenceService from './offer-intelligence.js';
 import { ML_CATEGORIES } from '../marketplaces/mercadolivre.js';
 import { SHOPEE_CATEGORIES } from '../marketplaces/shopee.js';
 import logger from '../utils/logger.js';
@@ -29,6 +30,7 @@ export class ProductSearchService {
     this.openrouterAgent = openrouterAgent;
     this.providerManager = new ProviderManager({ browserManager });
     this.productRepository = new ProductRepository();
+    this.intelligenceService = new OfferIntelligenceService();
   }
 
   /**
@@ -336,60 +338,95 @@ export class ProductSearchService {
       logger.warn(`[ProductSearch] Falha não impeditiva no Supabase ao sincronizar produtos: ${dbErr.message}`);
     }
 
-    // 6. Ordena preliminarmente para priorizar os candidatos mais atrativos (desconto/avaliação)
-    const sortedForLLM = [...filtered].sort((a, b) => {
-      const discountA = a.discountPercent || 0;
-      const discountB = b.discountPercent || 0;
-      return discountB - discountA;
-    });
+    // 6. Consultar métricas históricas no Supabase e enriquecer produtos
+    const dbIds = filtered.map((p) => p.dbId).filter(Boolean);
+    let historyMap = new Map();
+    try {
+      historyMap = await this.productRepository.getHistoryMetricsBatch(dbIds);
+    } catch (histErr) {
+      logger.warn(`[ProductSearch] Falha não impeditiva ao consultar métricas históricas: ${histErr.message}`);
+    }
 
-    const llmCandidates = sortedForLLM.slice(0, 20);
-    const compactPayload = this._prepareForLLM(llmCandidates);
+    // 7. Enriquecimento e cálculo de LOCAL_SCORE determinístico
+    const enriched = this.intelligenceService.enrichProductsWithHistory(filtered, historyMap);
+    const evaluated = this.intelligenceService.evaluateProducts(enriched);
 
-    logger.info(`[ProductSearch] Enviando ${compactPayload.length} candidatos ao OpenRouter...`);
+    // Contadores para auditoria
+    const repeatedPenalties = evaluated.filter((p) => p.isRepeatedPenalty).length;
+    const suspiciousDiscounts = evaluated.filter((p) => p.isSuspiciousDiscount).length;
+    const confidenceCounts = {
+      LOW: evaluated.filter((p) => p.historyConfidence === 'LOW').length,
+      MEDIUM: evaluated.filter((p) => p.historyConfidence === 'MEDIUM').length,
+      HIGH: evaluated.filter((p) => p.historyConfidence === 'HIGH').length,
+    };
 
-    // 7. Curadoria inteligente via OpenRouterAgent
+    // 8. Pré-seleção balanceada de até 15 candidatos para economia de tokens
+    const preSelected = this.intelligenceService.preSelectForAI(evaluated, 15);
+    const compactPayload = this.intelligenceService.prepareAIPayload(preSelected);
+
+    logger.info(
+      `[ProductSearch] Motor Inteligente: ${evaluated.length} avaliados, ` +
+      `${preSelected.length} pré-selecionados para envio à IA. ` +
+      `(Penalizados: repetidos=${repeatedPenalties}, descontos_suspeitos=${suspiciousDiscounts})`
+    );
+
+    // 9. Curadoria inteligente via OpenRouterAgent
     const llmResponse = await this.openrouterAgent.selectBestOffers(compactPayload, limit);
 
     const selectedIds = Array.isArray(llmResponse.selected) ? llmResponse.selected : [];
     const reasoning = llmResponse.reasoning || {};
     const scores = llmResponse.scores || {};
     const risks = llmResponse.risks || {};
+    const tokensUsed = llmResponse.usage?.total_tokens || null;
 
     logger.info(`[ProductSearch] OpenRouter selecionou ${selectedIds.length} produtos.`);
 
-    // 8. Monta os Top selecionados com dados completos
-    const productMap = new Map(filtered.map((p) => [p.productId, p]));
-    const topOffers = [];
+    // 10. Monta ofertas selecionadas com LOCAL_SCORE, AI_SCORE e FINAL_SCORE
+    const preSelectedMap = new Map(preSelected.map((p) => [p.productId, p]));
+    const aiSelectedOffers = [];
 
     for (const id of selectedIds) {
-      const prod = productMap.get(id);
-      if (prod && topOffers.length < limit) {
-        topOffers.push({
+      const prod = preSelectedMap.get(id);
+      if (prod) {
+        const aiScore = scores[id] ?? 85;
+        const localScore = prod.localScore ?? 50;
+        const finalScore = this.intelligenceService.calculateFinalScore(localScore, aiScore);
+
+        aiSelectedOffers.push({
           ...prod,
-          score: scores[id] ?? 85,
+          score: finalScore, // Score gravado no banco / exibido
+          localScore,
+          aiScore,
+          finalScore,
+          historyConfidence: prod.historyConfidence,
           reasons: reasoning[id] ?? 'Produto selecionado pelo apelo de achadinho e preço acessível.',
           risks: risks[id] ?? 'Nenhum risco crítico identificado.',
         });
       }
     }
 
-    // Complementa caso a LLM tenha retornado menos que o limite
-    if (topOffers.length < limit) {
-      for (const prod of filtered) {
-        if (topOffers.length >= limit) break;
-        if (!topOffers.some((t) => t.productId === prod.productId)) {
-          topOffers.push({
-            ...prod,
-            score: 80,
-            reasons: 'Complementado deterministicamente por excelente relação preço/desconto.',
-            risks: 'Sem histórico longo avaliado.',
-          });
-        }
-      }
-    }
+    // 11. Aplicação de regra de DIVERSIDADE no TOP 5 (máximo 2 por categoria quando disponível)
+    const topOffers = this.intelligenceService.enforceDiversity(
+      aiSelectedOffers,
+      preSelected.map((prod) => {
+        const aiScore = scores[prod.productId] ?? 80;
+        const finalScore = this.intelligenceService.calculateFinalScore(prod.localScore, aiScore);
+        return {
+          ...prod,
+          score: finalScore,
+          localScore: prod.localScore,
+          aiScore,
+          finalScore,
+          historyConfidence: prod.historyConfidence,
+          reasons: 'Complementado por alta pontuação de oportunidade e diversidade.',
+          risks: 'Sem análise profunda da IA.',
+        };
+      }),
+      limit,
+      2
+    );
 
-    // 9. Salvar candidatos selecionados em offer_candidates
+    // 12. Salvar candidatos selecionados em offer_candidates
     try {
       logger.info(`[ProductSearch] Registrando ${topOffers.length} ofertas selecionadas em offer_candidates...`);
       memoryStats.candidatesSaved = await this.productRepository.saveSelectedCandidates(topOffers);
@@ -397,6 +434,8 @@ export class ProductSearchService {
     } catch (candErr) {
       logger.warn(`[ProductSearch] Falha não impeditiva ao registrar offer_candidates: ${candErr.message}`);
     }
+
+    const topCategories = Array.from(new Set(topOffers.map((t) => t.category || 'outros')));
 
     return {
       topOffers,
@@ -411,9 +450,18 @@ export class ProductSearchService {
         duplicatesRemoved: stats.duplicate,
         totalRemoved: stats.totalRemoved,
         afterFilter: filtered.length,
-        sentToAI: compactPayload.length,
-        selectedCount: topOffers.length,
         memory: memoryStats,
+        intelligence: {
+          analyzed: evaluated.length,
+          preSelected: preSelected.length,
+          sentToAI: compactPayload.length,
+          selected: topOffers.length,
+          topCategories,
+          confidenceCounts,
+          repeatedPenalties,
+          suspiciousDiscounts,
+          tokensUsed,
+        },
       },
     };
   }

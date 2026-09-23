@@ -123,15 +123,40 @@ export class ProviderManager {
       return [];
     }
 
+    const entry = this.providers[marketplace];
+
     try {
       logger.info(
         `[ProviderManager] Buscando ${marketplace} via ${provider.source} (status: ${provider.getStatus()})...`
       );
       const items = await provider.search(searchOptions);
-      return items;
+      if (items.length > 0) {
+        return items;
+      }
+
+      // Se a API oficial falhou ou retornou vazia e existe browser disponível, faz fallback imediato
+      if (provider.source === 'official_api' && entry.browser && entry.browser.getStatus() === 'AVAILABLE') {
+        logger.info(
+          `[ProviderManager] Official API retornou 0 itens em ${marketplace}. Acionando fallback browser imediatamente...`
+        );
+        return await entry.browser.search(searchOptions);
+      }
+
+      return [];
     } catch (err) {
       logger.error(`[ProviderManager] Erro ao buscar em ${marketplace} (${provider.source}): ${err.message}`);
       provider.status = 'ERROR';
+
+      // Fallback para browser se a API lançar erro
+      if (provider.source === 'official_api' && entry.browser && entry.browser.getStatus() === 'AVAILABLE') {
+        try {
+          logger.info(`[ProviderManager] Acionando fallback browser após exceção da API...`);
+          return await entry.browser.search(searchOptions);
+        } catch {
+          return [];
+        }
+      }
+
       return [];
     }
   }

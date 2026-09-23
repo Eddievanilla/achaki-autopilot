@@ -300,6 +300,115 @@ export class ProductRepository {
 
     return saved;
   }
+
+  /**
+   * Obtém métricas históricas agregadas para um conjunto de produtos.
+   *
+   * @param {string[]} dbIds - Lista de UUIDs dos produtos
+   * @returns {Promise<Map<string, object>>} Map indexado pelo dbId
+   */
+  async getHistoryMetricsBatch(dbIds) {
+    const metricsMap = new Map();
+    if (!Array.isArray(dbIds) || dbIds.length === 0) {
+      return metricsMap;
+    }
+
+    try {
+      // 1. Histórico de preços
+      const { data: prices, error: priceErr } = await this.client
+        .from('product_prices')
+        .select('product_id, current_price, original_price, discount_percent, collected_at')
+        .in('product_id', dbIds)
+        .order('collected_at', { ascending: true });
+
+      if (priceErr) {
+        logger.warn(`[ProductRepository] Falha ao consultar preços históricos: ${priceErr.message}`);
+      }
+
+      // 2. Frequência de seleção em offer_candidates
+      const { data: candidates, error: candErr } = await this.client
+        .from('offer_candidates')
+        .select('product_id')
+        .in('product_id', dbIds);
+
+      if (candErr) {
+        logger.warn(`[ProductRepository] Falha ao consultar histórico de candidatos: ${candErr.message}`);
+      }
+
+      // 3. Histórico de publicações
+      const { data: publications, error: pubErr } = await this.client
+        .from('publications')
+        .select('product_id')
+        .in('product_id', dbIds);
+
+      if (pubErr) {
+        logger.warn(`[ProductRepository] Falha ao consultar publicações: ${pubErr.message}`);
+      }
+
+      // Agrupa preços por product_id
+      const pricesByProd = new Map();
+      for (const p of (prices || [])) {
+        if (!pricesByProd.has(p.product_id)) {
+          pricesByProd.set(p.product_id, []);
+        }
+        pricesByProd.get(p.product_id).push(p);
+      }
+
+      // Conta seleções por product_id
+      const candidateCounts = new Map();
+      for (const c of (candidates || [])) {
+        candidateCounts.set(c.product_id, (candidateCounts.get(c.product_id) || 0) + 1);
+      }
+
+      // Identifica publicações por product_id
+      const publishedSet = new Set((publications || []).map((pub) => pub.product_id));
+
+      for (const id of dbIds) {
+        const prodPrices = pricesByProd.get(id) || [];
+        const priceCount = prodPrices.length;
+
+        let lastKnownPrice = null;
+        let minPrice = null;
+        let maxPrice = null;
+        let avgPrice = null;
+
+        if (priceCount > 0) {
+          const numericPrices = prodPrices.map((p) => Number(p.current_price)).filter((p) => !isNaN(p) && p > 0);
+          if (numericPrices.length > 0) {
+            minPrice = Math.min(...numericPrices);
+            maxPrice = Math.max(...numericPrices);
+            const sum = numericPrices.reduce((acc, curr) => acc + curr, 0);
+            avgPrice = Math.round((sum / numericPrices.length) * 100) / 100;
+            // O penúltimo preço registrado (se houver mais de 1 observação)
+            lastKnownPrice = numericPrices.length > 1 ? numericPrices[numericPrices.length - 2] : numericPrices[0];
+          }
+        }
+
+        let historyConfidence = 'LOW';
+        if (priceCount >= 5) {
+          historyConfidence = 'HIGH';
+        } else if (priceCount >= 2) {
+          historyConfidence = 'MEDIUM';
+        }
+
+        metricsMap.set(id, {
+          priceObservations: priceCount,
+          lastKnownPrice,
+          minPrice,
+          maxPrice,
+          avgPrice,
+          selectionFrequency: candidateCounts.get(id) || 0,
+          isPublished: publishedSet.has(id),
+          historyConfidence,
+        });
+      }
+
+      return metricsMap;
+    } catch (err) {
+      logger.error(`[ProductRepository] Exceção em getHistoryMetricsBatch: ${err.message}`);
+      return metricsMap;
+    }
+  }
 }
 
 export default ProductRepository;

@@ -352,6 +352,8 @@ class OpenRouterAgent {
       result.risks = {};
     }
 
+    result.usage = data?.usage || null;
+
     return result;
   }
 
