@@ -1,0 +1,26 @@
+{
+  "name": "achaki-autopilot",
+  "version": "1.0.0",
+  "description": "ACHAki Afiliauto — Operador autônomo local para pesquisa e publicação de ofertas",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "test:browser": "node index.js",
+    "test:openrouter": "node scripts/test-openrouter.js",
+    "setup:accounts": "node scripts/setup-accounts.js",
+    "check:sessions": "node scripts/check-sessions.js",
+    "test:products": "node scripts/test-products.js",
+    "test:providers": "node scripts/test-providers.js",
+    "setup:ml-api": "node scripts/setup-mercadolivre-api.js",
+    "oauth:ml": "node scripts/oauth-mercadolivre.js",
+    "test:ml-api": "node scripts/test-mercadolivre-api.js"
+  },
+  "keywords": ["achaki", "autopilot", "playwright", "chromium", "ofertas"],
+  "author": "ACHAki",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "playwright": "^1.48.0"
+  }
+}

@@ -1,0 +1,29 @@
+# ============================================================
+# ACHAki Autopilot — .gitignore
+# ============================================================
+
+# Variáveis de ambiente (NUNCA versionar credenciais)
+.env
+.env*.local
+.env.production
+.env.development
+
+# Dependências Node
+node_modules/
+
+# Perfil do navegador (dados de sessão, cookies, etc.)
+data/browser-profile/
+data/cookies/
+data/sessions/
+data/*.png
+
+# Logs gerados
+logs/
+*.log
+
+# Playwright cache/downloads
+.playwright/
+
+# OS
+.DS_Store
+Thumbs.db
