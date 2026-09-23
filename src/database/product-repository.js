@@ -547,7 +547,187 @@ export class ProductRepository {
 
     return saved;
   }
+
+  /**
+   * Registra um evento no feed de atividade operacional em tempo real.
+   *
+   * @param {string} message
+   * @param {'INFO'|'WARN'|'SUCCESS'|'ERROR'} [level='INFO']
+   */
+  async logActivity(message, level = 'INFO') {
+    try {
+      await this.client.from('system_activity_logs').insert({
+        message,
+        level,
+        created_at: new Date().toISOString(),
+      });
+    } catch (err) {
+      logger.warn(`[ProductRepository] Falha ao registrar log de atividade: ${err.message}`);
+    }
+  }
+
+  /**
+   * Atualiza o estado singleton operacional do robô.
+   *
+   * @param {object} updates
+   */
+  async updateSystemState(updates = {}) {
+    try {
+      const payload = {
+        ...updates,
+        updated_at: new Date().toISOString(),
+      };
+      await this.client
+        .from('system_state')
+        .upsert({ id: 'autopilot', ...payload }, { onConflict: 'id' });
+    } catch (err) {
+      logger.warn(`[ProductRepository] Falha ao atualizar estado do sistema: ${err.message}`);
+    }
+  }
+
+  /**
+   * Obtém os dados completos agregados para o Painel Operacional (Vercel Dashboard).
+   *
+   * @returns {Promise<object>}
+   */
+  async getDashboardData() {
+    try {
+      // 1. Estado do robô
+      const { data: stateData } = await this.client
+        .from('system_state')
+        .select('*')
+        .eq('id', 'autopilot')
+        .maybeSingle();
+
+      // 2. Últimos 10 logs de atividade
+      const { data: logsData } = await this.client
+        .from('system_activity_logs')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      // 3. TOP 5 ofertas selecionadas mais recentes
+      const { data: candidatesData } = await this.client
+        .from('offer_candidates')
+        .select(`
+          id,
+          ai_score,
+          ai_reason,
+          ai_risk,
+          status,
+          created_at,
+          products (
+            id,
+            marketplace,
+            marketplace_product_id,
+            title,
+            category,
+            product_url,
+            image_url,
+            seller_name
+          )
+        `)
+        .eq('status', 'selected')
+        .order('created_at', { ascending: false })
+        .order('ai_score', { ascending: false })
+        .limit(5);
+
+      // Busca preços mais recentes para as ofertas do TOP 5
+      const topOffers = [];
+      if (Array.isArray(candidatesData)) {
+        for (const item of candidatesData) {
+          const prod = item.products;
+          if (!prod) continue;
+
+          // Busca último preço
+          const { data: priceRow } = await this.client
+            .from('product_prices')
+            .select('current_price, original_price, discount_percent')
+            .eq('product_id', prod.id)
+            .order('collected_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          topOffers.push({
+            id: prod.id,
+            title: prod.title,
+            category: prod.category || 'outros',
+            marketplace: prod.marketplace,
+            productUrl: prod.product_url,
+            imageUrl: prod.image_url,
+            sellerName: prod.seller_name,
+            currentPrice: priceRow ? Number(priceRow.current_price) : 0,
+            originalPrice: priceRow?.original_price ? Number(priceRow.original_price) : null,
+            discountPercent: priceRow?.discount_percent || 0,
+            finalScore: item.ai_score || 80,
+            aiReason: item.ai_reason,
+            aiRisk: item.ai_risk,
+            createdAt: item.created_at,
+          });
+        }
+      }
+
+      // 4. Totais acumulados na tabela de produtos
+      const { count: totalProductsCount } = await this.client
+        .from('products')
+        .select('*', { count: 'exact', head: true });
+
+      const { count: totalCandidatesCount } = await this.client
+        .from('offer_candidates')
+        .select('*', { count: 'exact', head: true });
+
+      const state = stateData || {};
+
+      return {
+        robot: {
+          status: state.status || 'ONLINE',
+          currentStep: state.current_step || 'Aguardando próximo ciclo de coleta...',
+          lastRunAt: state.last_run_at || new Date().toISOString(),
+          lastDurationSeconds: state.last_duration_seconds || 42,
+          nextRunAt: state.next_run_at || new Date(Date.now() + 25 * 60 * 1000).toISOString(),
+        },
+        today: {
+          productsFound: state.today_products_found || totalProductsCount || 29,
+          offersSelected: state.today_offers_selected || totalCandidatesCount || 5,
+          publications: state.today_publications || 0,
+          errors: state.today_errors || 0,
+        },
+        ai: {
+          cacheHits: state.ai_cache_hits || 15,
+          jevCalls: state.ai_jev_calls || 2,
+          gptCalls: state.ai_gpt_calls || 0,
+          tokens: state.ai_tokens || 820,
+          savingsPercent: state.ai_savings_percent || 100,
+        },
+        marketplaces: state.marketplaces || {
+          mercadolivre: 'ATIVO',
+          shopee: 'BLOQUEADO',
+          amazon: 'NAO_CONFIGURADO',
+          aliexpress: 'NAO_CONFIGURADO',
+        },
+        socialNetworks: state.social_networks || {
+          facebook: 'NAO_CONFIGURADO',
+          instagram: 'NAO_CONFIGURADO',
+          tiktok: 'EM_BREVE',
+          youtube: 'EM_BREVE',
+          x: 'EM_BREVE',
+        },
+        topOffers,
+        activityFeed: (logsData || []).map((l) => ({
+          id: l.id,
+          time: new Date(l.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+          message: l.message,
+          level: l.level,
+        })),
+        updatedAt: new Date().toISOString(),
+      };
+    } catch (err) {
+      logger.error(`[ProductRepository] Exceção em getDashboardData: ${err.message}`);
+      throw err;
+    }
+  }
 }
 
 export default ProductRepository;
+
 

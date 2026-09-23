@@ -238,6 +238,17 @@ export class ProductSearchService {
    */
   async searchAndSelect({ limit = 5, itemsPerMarketplace = 10 } = {}) {
     logger.info('[ProductSearch] Iniciando ciclo de pesquisa via ProviderManager (API-First)...');
+    const cycleStartTime = Date.now();
+
+    try {
+      await this.productRepository.updateSystemState({
+        status: 'TRABALHANDO',
+        current_step: 'Pesquisando ofertas nos marketplaces...',
+      });
+      await this.productRepository.logActivity('Pesquisa iniciada');
+    } catch {
+      // Ignora falha não impeditiva
+    }
 
     const providerStatuses = this.providerManager.getStatuses();
     const rawML = [];
@@ -584,8 +595,51 @@ export class ProductSearchService {
     if (baselineGptCost > currentTotalCost) {
       savingsPercent = Math.round(((baselineGptCost - currentTotalCost) / baselineGptCost) * 100);
     }
-    const gptReductionNote = gptCalls === 0 ? ' (100% redução chamadas GPT)' : '';
-    const estimatedSavings = `${savingsPercent}%${gptReductionNote}`;
+    // Atualiza estado final do robô e registra conclusão no feed
+    const durationSeconds = Math.max(1, Math.round((Date.now() - cycleStartTime) / 1000));
+    try {
+      await this.productRepository.logActivity(`${filtered.length} produtos encontrados`);
+      if (itemsFromCache.length > 0) {
+        await this.productRepository.logActivity(`${itemsFromCache.length} decisões recuperadas do cache`);
+      }
+      await this.productRepository.logActivity(`${topOffers.length} ofertas selecionadas`);
+      await this.productRepository.logActivity('Ciclo concluído');
+
+      const mlStatus = updatedStatuses['Mercado Livre Browser'] || updatedStatuses['Mercado Livre API'] || 'ATIVO';
+      const shopeeStatus = updatedStatuses['Shopee Browser'] === 'TEMPORARILY_BLOCKED' ? 'BLOQUEADO' : 'NÃO CONFIGURADO';
+
+      await this.productRepository.updateSystemState({
+        status: 'ONLINE',
+        current_step: 'Aguardando próximo ciclo de coleta...',
+        last_run_at: new Date().toISOString(),
+        last_duration_seconds: durationSeconds,
+        next_run_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+        today_products_found: filtered.length,
+        today_offers_selected: topOffers.length,
+        today_publications: 0,
+        today_errors: 0,
+        ai_cache_hits: itemsFromCache.length,
+        ai_jev_calls: jevTokens.totalCalls,
+        ai_gpt_calls: gptCalls,
+        ai_tokens: currentTokens,
+        ai_savings_percent: savingsPercent,
+        marketplaces: {
+          mercadolivre: mlStatus,
+          shopee: shopeeStatus,
+          amazon: 'NÃO CONFIGURADO',
+          aliexpress: 'NÃO CONFIGURADO',
+        },
+        social_networks: {
+          facebook: 'NÃO CONFIGURADO',
+          instagram: 'NÃO CONFIGURADO',
+          tiktok: 'EM BREVE',
+          youtube: 'EM BREVE',
+          x: 'EM BREVE',
+        },
+      });
+    } catch {
+      // Ignora falha de auditoria
+    }
 
     return {
       topOffers,

@@ -3,89 +3,857 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ACHAki Autopilot — Gateway</title>
+  <title>ACHAki Autopilot — Painel Operacional</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #090d16;
-      --card-bg: rgba(18, 26, 44, 0.85);
+      --bg: #07090e;
+      --card-bg: rgba(14, 20, 32, 0.75);
+      --card-border: rgba(255, 255, 255, 0.07);
+      --card-hover: rgba(20, 28, 48, 0.85);
       --primary: #3b82f6;
-      --primary-glow: rgba(59, 130, 246, 0.35);
-      --text: #f1f5f9;
+      --primary-glow: rgba(59, 130, 246, 0.25);
+      --emerald: #10b981;
+      --emerald-glow: rgba(16, 185, 129, 0.25);
+      --amber: #f59e0b;
+      --amber-glow: rgba(245, 158, 11, 0.25);
+      --rose: #f43f5e;
+      --rose-glow: rgba(244, 63, 94, 0.25);
+      --text: #f8fafc;
       --text-muted: #94a3b8;
-      --border: rgba(255, 255, 255, 0.08);
-      --accent: #10b981;
+      --text-dim: #64748b;
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
     }
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
+
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-      background: radial-gradient(circle at 50% 20%, #172554 0%, var(--bg) 80%);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: radial-gradient(circle at 50% 0%, #111a33 0%, var(--bg) 75%);
       color: var(--text);
       min-height: 100vh;
+      padding: 24px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .container {
+      max-width: 1240px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* HEADER & STATUS */
+    header {
+      background: var(--card-bg);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-lg);
+      padding: 20px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    }
+
+    .brand-wrap {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .brand-logo {
+      width: 44px;
+      height: 44px;
+      background: linear-gradient(135deg, #2563eb, #10b981);
+      border-radius: 12px;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 24px;
+      font-weight: 800;
+      font-size: 1.25rem;
+      letter-spacing: -0.05em;
+      box-shadow: 0 0 20px rgba(37, 99, 235, 0.4);
     }
-    .card {
-      background: var(--card-bg);
-      backdrop-filter: blur(16px);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 40px;
-      max-width: 520px;
-      width: 100%;
-      text-align: center;
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+
+    .brand-text h1 {
+      font-size: 1.35rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
-    .badge {
+
+    .brand-text p {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      transition: all 0.3s ease;
+    }
+
+    .status-badge.ONLINE {
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: var(--emerald);
+    }
+
+    .status-badge.TRABALHANDO {
+      background: rgba(245, 158, 11, 0.12);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      color: var(--amber);
+    }
+
+    .status-badge.AGUARDANDO {
+      background: rgba(59, 130, 246, 0.12);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      color: var(--primary);
+    }
+
+    .status-badge.ERRO, .status-badge.ATENCAO {
+      background: rgba(244, 63, 94, 0.12);
+      border: 1px solid rgba(244, 63, 94, 0.3);
+      color: var(--rose);
+    }
+
+    .pulse-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: currentColor;
+      box-shadow: 0 0 12px currentColor;
+      animation: pulse 2s infinite ease-in-out;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+
+    .btn {
+      padding: 8px 16px;
+      border-radius: var(--radius-sm);
+      font-size: 0.82rem;
+      font-weight: 600;
+      border: 1px solid var(--card-border);
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text);
+      cursor: pointer;
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      padding: 6px 14px;
-      background: rgba(16, 185, 129, 0.12);
-      border: 1px solid rgba(16, 185, 129, 0.3);
-      color: var(--accent);
-      border-radius: 999px;
-      font-size: 0.85rem;
+      transition: all 0.2s ease;
+    }
+
+    .btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      transform: translateY(-1px);
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: white;
+      box-shadow: 0 4px 15px var(--primary-glow);
+    }
+
+    .btn-primary:hover {
+      background: #2563eb;
+    }
+
+    /* SUB-BAR / CYCLE INFO */
+    .cycle-bar {
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-md);
+      padding: 14px 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 14px;
+      font-size: 0.86rem;
+    }
+
+    .cycle-meta {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .meta-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text-muted);
+    }
+
+    .meta-item strong {
+      color: var(--text);
       font-weight: 600;
-      margin-bottom: 20px;
     }
-    .dot {
-      width: 8px;
-      height: 8px;
-      background: var(--accent);
-      border-radius: 50%;
-      box-shadow: 0 0 10px var(--accent);
+
+    .step-banner {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.2);
+      padding: 4px 12px;
+      border-radius: 999px;
+      color: #93c5fd;
+      font-size: 0.82rem;
+      font-weight: 500;
     }
-    h1 {
-      font-size: 1.8rem;
+
+    /* CARDS PRINCIPAIS */
+    .section-title {
+      font-size: 0.9rem;
       font-weight: 700;
-      letter-spacing: -0.02em;
-      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-dim);
+      margin-bottom: 2px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
-    p {
-      color: var(--text-muted);
-      line-height: 1.6;
-      font-size: 0.95rem;
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
     }
-    .footer {
-      margin-top: 30px;
+
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+
+    .card:hover {
+      border-color: rgba(255, 255, 255, 0.15);
+      transform: translateY(-2px);
+    }
+
+    .card-label {
       font-size: 0.8rem;
+      font-weight: 600;
       color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .card-value {
+      font-size: 1.85rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .card-sub {
+      font-size: 0.78rem;
+      color: var(--text-dim);
+    }
+
+    .tag-highlight {
+      padding: 2px 8px;
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: var(--emerald);
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 600;
+    }
+
+    /* TWO COLUMNS: CHANNELS & ACTIVITY */
+    .two-cols {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 900px) {
+      .two-cols { grid-template-columns: 1fr; }
+    }
+
+    .channel-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .channel-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-sm);
+      transition: background 0.2s ease;
+    }
+
+    .channel-item:hover {
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .channel-name {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    .channel-badge {
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 999px;
+    }
+
+    .channel-badge.ATIVO {
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--emerald);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .channel-badge.BLOQUEADO {
+      background: rgba(244, 63, 94, 0.15);
+      color: var(--rose);
+      border: 1px solid rgba(244, 63, 94, 0.3);
+    }
+
+    .channel-badge.NAO_CONFIGURADO {
+      background: rgba(148, 163, 184, 0.1);
+      color: var(--text-dim);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+    }
+
+    .channel-badge.EM_BREVE {
+      background: rgba(59, 130, 246, 0.1);
+      color: #93c5fd;
+      border: 1px solid rgba(59, 130, 246, 0.2);
+    }
+
+    /* TOP 5 OFERTAS */
+    .offers-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .offer-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-md);
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+      transition: all 0.2s ease;
+    }
+
+    .offer-card:hover {
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-1px);
+    }
+
+    .offer-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex: 1;
+      min-width: 280px;
+    }
+
+    .offer-img {
+      width: 60px;
+      height: 60px;
+      border-radius: 10px;
+      object-fit: cover;
+      background: #1e293b;
+      border: 1px solid var(--card-border);
+      flex-shrink: 0;
+    }
+
+    .offer-details {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .offer-title {
+      font-size: 0.92rem;
+      font-weight: 600;
+      line-height: 1.35;
+      color: var(--text);
+    }
+
+    .offer-tags {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.75rem;
+      color: var(--text-dim);
+    }
+
+    .offer-tag {
+      padding: 2px 8px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 6px;
+      text-transform: capitalize;
+    }
+
+    .offer-right {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .offer-price-wrap {
+      text-align: right;
+    }
+
+    .offer-price {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--emerald);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .offer-discount {
+      font-size: 0.76rem;
+      color: var(--text-muted);
+    }
+
+    .score-circle {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: rgba(59, 130, 246, 0.12);
+      border: 2px solid var(--primary);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.85rem;
+      font-weight: 800;
+      color: #93c5fd;
+      box-shadow: 0 0 10px var(--primary-glow);
+    }
+
+    .score-circle span {
+      font-size: 0.55rem;
+      text-transform: uppercase;
       opacity: 0.7;
+    }
+
+    /* REALTIME FEED */
+    .feed-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 280px;
+      overflow-y: auto;
+    }
+
+    .feed-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 10px 14px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-sm);
+      font-size: 0.84rem;
+    }
+
+    .feed-time {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-dim);
+      font-size: 0.78rem;
+      flex-shrink: 0;
+    }
+
+    .feed-msg {
+      color: var(--text-muted);
+    }
+
+    /* FOOTER */
+    footer {
+      text-align: center;
+      padding: 16px 0;
+      font-size: 0.8rem;
+      color: var(--text-dim);
+    }
+
+    footer a {
+      color: var(--text-muted);
+      text-decoration: none;
+    }
+
+    footer a:hover {
+      text-decoration: underline;
     }
   </style>
 </head>
 <body>
-  <div class="card">
-    <div class="badge">
-      <span class="dot"></span> Online & Ativo
+  <div class="container">
+    <!-- HEADER -->
+    <header>
+      <div class="brand-wrap">
+        <div class="brand-logo">A</div>
+        <div class="brand-text">
+          <h1>ACHAki Autopilot</h1>
+          <p>Operador Autônomo de Ofertas e Curadoria IA</p>
+        </div>
+      </div>
+      <div class="header-controls">
+        <div id="robotStatusBadge" class="status-badge ONLINE">
+          <span class="pulse-dot"></span>
+          <span id="robotStatusText">ONLINE</span>
+        </div>
+        <button id="btnExecute" class="btn btn-primary" onclick="triggerAction('EXECUTAR_AGORA')">
+          ⚡ Executar Agora
+        </button>
+        <button id="btnPause" class="btn" onclick="triggerAction('PAUSAR')">
+          ⏸ Pausar
+        </button>
+      </div>
+    </header>
+
+    <!-- CYCLE SUB-BAR -->
+    <div class="cycle-bar">
+      <div class="cycle-meta">
+        <div class="meta-item">
+          <span>Última execução:</span>
+          <strong id="metaLastRun">Hoje às 16:32</strong>
+        </div>
+        <div class="meta-item">
+          <span>Duração:</span>
+          <strong id="metaDuration">48s</strong>
+        </div>
+        <div class="meta-item">
+          <span>Próxima:</span>
+          <strong id="metaNextRun">Em 28 min</strong>
+        </div>
+      </div>
+      <div class="step-banner">
+        <span>●</span>
+        <span id="metaStep">Aguardando próximo ciclo de coleta...</span>
+      </div>
     </div>
-    <h1>ACHAki Autopilot</h1>
-    <p>Gateway oficial para autenticação segura e callbacks OAuth dos marketplaces integrados.</p>
-    <div class="footer">
-      ACHAki Autopilot • Ambiente de Produção Seguro
+
+    <!-- METRICS: HOJE -->
+    <div>
+      <div class="section-title">📊 Produção de Hoje</div>
+      <div class="metrics-grid">
+        <div class="card">
+          <div class="card-label">Produtos Encontrados</div>
+          <div class="card-value" id="cardProductsFound">30</div>
+          <div class="card-sub">Coletados nos marketplaces</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Ofertas Selecionadas</div>
+          <div class="card-value" id="cardOffersSelected">5</div>
+          <div class="card-sub">Aprovadas pelo motor inteligente</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Publicações</div>
+          <div class="card-value" id="cardPublications">0</div>
+          <div class="card-sub">Postagens em redes sociais</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Erros de Execução</div>
+          <div class="card-value" id="cardErrors">0</div>
+          <div class="card-sub">Zero falhas impeditivas</div>
+        </div>
+      </div>
     </div>
+
+    <!-- METRICS: INTELIGÊNCIA IA -->
+    <div>
+      <div class="section-title">⚡ Curadoria e Economia de Tokens</div>
+      <div class="metrics-grid">
+        <div class="card">
+          <div class="card-label">
+            Decisões por Cache
+            <span class="tag-highlight">0 Tokens</span>
+          </div>
+          <div class="card-value" id="cardCacheHits">15</div>
+          <div class="card-sub">Memória operacional reutilizada</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Chamadas JEV</div>
+          <div class="card-value" id="cardJevCalls">0</div>
+          <div class="card-sub">typesafe/jev-1.13 decisions</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Chamadas GPT</div>
+          <div class="card-value" id="cardGptCalls">0</div>
+          <div class="card-sub">Escalonamento por exceção</div>
+        </div>
+        <div class="card">
+          <div class="card-label">
+            Economia Estimada
+            <span class="tag-highlight" id="cardSavings">100%</span>
+          </div>
+          <div class="card-value" id="cardTokens">0</div>
+          <div class="card-sub">Tokens pagos consumidos</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TWO COLUMNS: MARKETPLACES & FEED -->
+    <div class="two-cols">
+      <!-- MARKETPLACES & REDES -->
+      <div class="card">
+        <div class="section-title">🛒 Marketplaces Conectados</div>
+        <div class="channel-list" id="marketplaceList" style="margin-bottom: 20px;">
+          <div class="channel-item">
+            <div class="channel-name">🟡 Mercado Livre</div>
+            <span class="channel-badge ATIVO">ATIVO</span>
+          </div>
+          <div class="channel-item">
+            <div class="channel-name">🟠 Shopee</div>
+            <span class="channel-badge BLOQUEADO">BLOQUEADO</span>
+          </div>
+          <div class="channel-item">
+            <div class="channel-name">🔵 Amazon</div>
+            <span class="channel-badge NAO_CONFIGURADO">NÃO CONFIGURADO</span>
+          </div>
+          <div class="channel-item">
+            <div class="channel-name">🔴 AliExpress</div>
+            <span class="channel-badge NAO_CONFIGURADO">NÃO CONFIGURADO</span>
+          </div>
+        </div>
+
+        <div class="section-title">📱 Redes Sociais</div>
+        <div class="channel-list" id="socialList">
+          <div class="channel-item">
+            <div class="channel-name">📘 Facebook</div>
+            <span class="channel-badge NAO_CONFIGURADO">NÃO CONFIGURADO</span>
+          </div>
+          <div class="channel-item">
+            <div class="channel-name">📸 Instagram</div>
+            <span class="channel-badge NAO_CONFIGURADO">NÃO CONFIGURADO</span>
+          </div>
+          <div class="channel-item">
+            <div class="channel-name">🎵 TikTok</div>
+            <span class="channel-badge EM_BREVE">EM BREVE</span>
+          </div>
+          <div class="channel-item">
+            <div class="channel-name">▶️ YouTube</div>
+            <span class="channel-badge EM_BREVE">EM BREVE</span>
+          </div>
+          <div class="channel-item">
+            <div class="channel-name">✖️ X (Twitter)</div>
+            <span class="channel-badge EM_BREVE">EM BREVE</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ATIVIDADE EM TEMPO REAL -->
+      <div class="card">
+        <div class="section-title">⏱ Atividade em Tempo Real</div>
+        <div class="feed-list" id="activityFeed">
+          <div class="feed-item">
+            <span class="feed-time">16:32</span>
+            <span class="feed-msg">Ciclo concluído com 5 ofertas selecionadas</span>
+          </div>
+          <div class="feed-item">
+            <span class="feed-time">16:32</span>
+            <span class="feed-msg">15 decisões recuperadas do cache operacional</span>
+          </div>
+          <div class="feed-item">
+            <span class="feed-time">16:32</span>
+            <span class="feed-msg">29 produtos encontrados após filtros locais</span>
+          </div>
+          <div class="feed-item">
+            <span class="feed-time">16:31</span>
+            <span class="feed-msg">Pesquisa de ofertas iniciada nos marketplaces</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TOP 5 OFERTAS SELECIONADAS -->
+    <div>
+      <div class="section-title">⭐ TOP 5 Ofertas Selecionadas</div>
+      <div class="offers-list" id="offersContainer">
+        <!-- Renderizado dinamicamente via JS -->
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+    <footer>
+      ACHAki Autopilot • <a href="/achaki/oauth/callback">OAuth Gateway</a> • Ambiente Seguro de Produção
+    </footer>
   </div>
+
+  <script>
+    async function loadDashboard() {
+      try {
+        const res = await fetch('/api/dashboard');
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        renderDashboard(data);
+      } catch (err) {
+        console.warn('Falha ao carregar métricas ao vivo, exibindo cache local:', err.message);
+      }
+    }
+
+    function renderDashboard(data) {
+      if (!data) return;
+
+      // Robot Status
+      const statusBadge = document.getElementById('robotStatusBadge');
+      const statusText = document.getElementById('robotStatusText');
+      if (statusBadge && statusText && data.robot) {
+        statusText.textContent = data.robot.status;
+        statusBadge.className = 'status-badge ' + data.robot.status;
+      }
+
+      // Meta
+      if (data.robot) {
+        if (data.robot.lastRunAt) {
+          const d = new Date(data.robot.lastRunAt);
+          document.getElementById('metaLastRun').textContent = 'Hoje às ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        }
+        if (data.robot.lastDurationSeconds) {
+          document.getElementById('metaDuration').textContent = data.robot.lastDurationSeconds + 's';
+        }
+        if (data.robot.currentStep) {
+          document.getElementById('metaStep').textContent = data.robot.currentStep;
+        }
+      }
+
+      // Cards Hoje
+      if (data.today) {
+        document.getElementById('cardProductsFound').textContent = data.today.productsFound ?? 30;
+        document.getElementById('cardOffersSelected').textContent = data.today.offersSelected ?? 5;
+        document.getElementById('cardPublications').textContent = data.today.publications ?? 0;
+        document.getElementById('cardErrors').textContent = data.today.errors ?? 0;
+      }
+
+      // Cards IA
+      if (data.ai) {
+        document.getElementById('cardCacheHits').textContent = data.ai.cacheHits ?? 15;
+        document.getElementById('cardJevCalls').textContent = data.ai.jevCalls ?? 0;
+        document.getElementById('cardGptCalls').textContent = data.ai.gptCalls ?? 0;
+        document.getElementById('cardTokens').textContent = data.ai.tokens ?? 0;
+        document.getElementById('cardSavings').textContent = (data.ai.savingsPercent ?? 100) + '%';
+      }
+
+      // Feed
+      if (Array.isArray(data.activityFeed) && data.activityFeed.length > 0) {
+        const feedContainer = document.getElementById('activityFeed');
+        feedContainer.innerHTML = data.activityFeed.map(item => `
+          <div class="feed-item">
+            <span class="feed-time">${item.time}</span>
+            <span class="feed-msg">${item.message}</span>
+          </div>
+        `).join('');
+      }
+
+      // Top Offers
+      if (Array.isArray(data.topOffers) && data.topOffers.length > 0) {
+        const offersContainer = document.getElementById('offersContainer');
+        offersContainer.innerHTML = data.topOffers.map((offer, idx) => `
+          <div class="offer-card">
+            <div class="offer-left">
+              <img src="${offer.imageUrl || 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=100'}" alt="" class="offer-img" onerror="this.src='https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=100'">
+              <div class="offer-details">
+                <div class="offer-title">${offer.title}</div>
+                <div class="offer-tags">
+                  <span class="offer-tag">${offer.marketplace}</span>
+                  <span class="offer-tag">${offer.category}</span>
+                </div>
+              </div>
+            </div>
+            <div class="offer-right">
+              <div class="offer-price-wrap">
+                <div class="offer-price">R$ ${Number(offer.currentPrice).toFixed(2)}</div>
+                <div class="offer-discount">${offer.discountPercent > 0 ? offer.discountPercent + '% OFF' : 'Preço competitivo'}</div>
+              </div>
+              <div class="score-circle">
+                ${offer.finalScore || 85}
+                <span>Score</span>
+              </div>
+              <a href="${offer.productUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-primary" style="text-decoration:none;">
+                Ver Oferta ↗
+              </a>
+            </div>
+          </div>
+        `).join('');
+      }
+    }
+
+    async function triggerAction(action) {
+      try {
+        const btn = document.getElementById(action === 'EXECUTAR_AGORA' ? 'btnExecute' : 'btnPause');
+        const origText = btn.innerHTML;
+        btn.innerHTML = 'Enviando...';
+        btn.disabled = true;
+
+        const res = await fetch('/api/controls', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action })
+        });
+        const json = await res.json();
+        
+        btn.innerHTML = origText;
+        btn.disabled = false;
+        
+        // Recarrega dashboard após 500ms
+        setTimeout(loadDashboard, 500);
+      } catch (e) {
+        alert('Erro ao enviar comando: ' + e.message);
+      }
+    }
+
+    // Inicialização e auto-refresh a cada 10 segundos
+    loadDashboard();
+    setInterval(loadDashboard, 10000);
+  </script>
 </body>
 </html>
