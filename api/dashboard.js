@@ -25,7 +25,7 @@ export default async function handler(req, res) {
     const spDateStr = now.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' }); // YYYY-MM-DD
     const todayStartIso = new Date(`${spDateStr}T00:00:00-03:00`).toISOString();
 
-    // 1. Estado do robô
+    // 1. Estado do robô e heartbeat do worker local
     const { data: stateData } = await supabase
       .from('system_state')
       .select('*')
@@ -33,6 +33,26 @@ export default async function handler(req, res) {
       .maybeSingle();
 
     const state = stateData || {};
+
+    const { data: heartbeatData } = await supabase
+      .from('worker_heartbeats')
+      .select('*')
+      .order('last_heartbeat_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const nowMs = Date.now();
+    const lastHbMs = heartbeatData ? new Date(heartbeatData.last_heartbeat_at).getTime() : 0;
+    // Worker é considerado ONLINE se enviou heartbeat nos últimos 40 segundos
+    const isWorkerOnline = Boolean(heartbeatData && (nowMs - lastHbMs < 40000));
+
+    let robotStatus = 'WORKER OFFLINE';
+    let robotStep = 'Worker local desconectado. Inicie o operador com "npm run worker".';
+
+    if (isWorkerOnline) {
+      robotStatus = heartbeatData.status === 'TRABALHANDO' ? 'TRABALHANDO' : (state.status || 'ONLINE');
+      robotStep = heartbeatData.current_step || state.current_step || 'Aguardando próximo comando ou ciclo...';
+    }
 
     // 2. Runs de automação de hoje
     const { data: todayRuns } = await supabase
@@ -294,16 +314,33 @@ export default async function handler(req, res) {
 
     // Robô Agora
     const robotNow = {
-      status: state.status || 'ONLINE',
-      stepText: state.current_step || 'Aguardando próximo ciclo de coleta...',
+      status: robotStatus,
+      stepText: robotStep,
+      isWorkerOnline,
       lastAction: `${todayOffersSelected} ofertas selecionadas com estratégia orgânica`,
       currentStrategy: currentStratCode,
-      nextAction: 'Nova coleta em 25 minutos',
+      nextAction: isWorkerOnline ? 'Nova coleta em 25 minutos' : 'Aguardando worker iniciar',
       lastRunAt: state.last_run_at || new Date().toISOString(),
       durationSeconds: state.last_duration_seconds || 34,
-      isWorking: state.status === 'TRABALHANDO',
+      isWorking: robotStatus === 'TRABALHANDO',
     };
 
+    const payload = {
+      // Robô & Operador Real
+      robot: {
+        status: robotStatus,
+        step: robotStep,
+        isWorkerOnline,
+        lastHeartbeatAt: heartbeatData?.last_heartbeat_at || null,
+        lastActivity: state.last_run_at || new Date().toISOString(),
+        workingDurationSeconds: state.last_duration_seconds || 0,
+        currentStrategy: currentStratCode,
+        nextScheduledTime: '00:25:00',
+        currentGoal: `${targetClicks} cliques hoje`,
+      },
+      robotNow,
+      strategyDetails,
+      autopilotMode: state.autopilot_mode || 'ASSISTIDO',
       // 1. Bloco de Metas & Objetivo (Fase 5.4)
       goals: {
         targetClicks,

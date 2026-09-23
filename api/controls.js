@@ -27,21 +27,62 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Ação inválida. Use INICIAR, PAUSAR ou EXECUTAR_AGORA.' });
     }
 
-    let newStatus = 'ONLINE';
-    let step = 'Comando recebido pelo painel.';
+    let commandType = 'RUN_NOW';
+    let newStatus = 'TRABALHANDO';
+    let step = 'Comando EXECUTAR AGORA colocado na fila. Aguardando worker local...';
+    let logMessage = 'Comando EXECUTAR AGORA solicitado pelo painel';
+    let logLevel = 'INFO';
 
     if (action === 'PAUSAR') {
+      commandType = 'PAUSE';
       newStatus = 'AGUARDANDO';
       step = 'Operador pausado pelo painel operacional.';
-    } else if (action === 'EXECUTAR_AGORA') {
-      newStatus = 'TRABALHANDO';
-      step = 'Disparo manual solicitado pelo painel. Inicializando ciclo...';
+      logMessage = 'Comando PAUSAR solicitado pelo painel';
+      logLevel = 'WARNING';
     } else if (action === 'INICIAR') {
+      commandType = 'RESUME';
       newStatus = 'ONLINE';
-      step = 'Operador ativado. Aguardando próximo agendamento.';
+      step = 'Operador ativado. Aguardando comandos ou agendamento.';
+      logMessage = 'Comando INICIAR solicitado pelo painel';
+      logLevel = 'INFO';
     }
 
-    // Atualiza estado no Supabase
+    // 1. Criar comando na fila robot_commands
+    const { data: cmdRecord, error: cmdErr } = await supabase
+      .from('robot_commands')
+      .insert({
+        command: commandType,
+        status: 'PENDING',
+        metadata: {
+          requested_by: 'dashboard_button',
+          action,
+          requested_at: new Date().toISOString(),
+        },
+      })
+      .select('id, command, status, created_at')
+      .single();
+
+    if (cmdErr) {
+      console.error('[Controls] Erro ao enfileirar comando:', cmdErr);
+      throw new Error(`Falha ao registrar comando na fila: ${cmdErr.message}`);
+    }
+
+    // 2. Registrar imediatamente no system_events para telemetria em tempo real
+    await supabase.from('system_events').insert({
+      level: logLevel,
+      category: 'DASHBOARD',
+      source: 'Centro-de-Comando',
+      action: `${action}_REQUESTED`,
+      status: 'PENDING',
+      message: logMessage,
+      metadata: {
+        command_id: cmdRecord.id,
+        command_type: commandType,
+        action,
+      },
+    });
+
+    // 3. Atualizar estado no Supabase (system_state)
     await supabase
       .from('system_state')
       .upsert({
@@ -51,20 +92,23 @@ export default async function handler(req, res) {
         updated_at: new Date().toISOString(),
       }, { onConflict: 'id' });
 
-    // Registra log no feed
+    // 4. Registrar em system_activity_logs (legado)
     await supabase.from('system_activity_logs').insert({
-      message: `Comando [${action}] acionado pelo painel operacional`,
-      level: 'INFO',
+      message: `Comando [${action}] acionado pelo painel operacional (ID: ${cmdRecord.id})`,
+      level: logLevel,
       created_at: new Date().toISOString(),
     });
 
     return res.status(200).json({
       ok: true,
       action,
+      commandId: cmdRecord.id,
+      commandType,
       status: newStatus,
-      message: `Comando ${action} processado com sucesso.`,
+      message: `Comando ${action} enviado com sucesso para a fila do worker local.`,
     });
   } catch (err) {
+    console.error('[Controls] Erro no handler:', err);
     return res.status(500).json({ error: 'Falha ao processar comando: ' + err.message });
   }
 }

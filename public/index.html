@@ -156,6 +156,13 @@
       border: 1px solid rgba(148, 163, 184, 0.3);
     }
 
+    .status-badge.OFFLINE {
+      background: rgba(244, 63, 94, 0.12);
+      color: #fb7185;
+      border: 1px solid rgba(244, 63, 94, 0.35);
+      box-shadow: 0 0 10px rgba(244, 63, 94, 0.2);
+    }
+
     .pulse-dot {
       width: 8px;
       height: 8px;
@@ -1546,8 +1553,13 @@
       const statusBadge = document.getElementById('robotStatusBadge');
       const statusText = document.getElementById('robotStatusText');
       if (statusBadge && statusText && data.robot) {
-        statusText.textContent = data.robot.status;
-        statusBadge.className = 'status-badge ' + data.robot.status;
+        if (!data.robot.isWorkerOnline) {
+          statusText.textContent = 'WORKER OFFLINE';
+          statusBadge.className = 'status-badge OFFLINE';
+        } else {
+          statusText.textContent = data.robot.status;
+          statusBadge.className = 'status-badge ' + (data.robot.status === 'TRABALHANDO' ? 'TRABALHANDO' : (data.robot.status === 'AGUARDANDO' ? 'AGUARDANDO' : 'ONLINE'));
+        }
       }
 
       // 1. Modo Autopilot
@@ -1587,8 +1599,16 @@
 
       // 3. Robô Agora
       if (data.robotNow) {
-        document.getElementById('cardRobotStatus').textContent = data.robotNow.status || 'AGUARDANDO';
-        document.getElementById('cardRobotStep').textContent = data.robotNow.stepText || 'Aguardando próximo ciclo de coleta...';
+        const isOnline = data.robotNow.isWorkerOnline;
+        const cardStatus = document.getElementById('cardRobotStatus');
+        const cardStep = document.getElementById('cardRobotStep');
+        if (cardStatus) {
+          cardStatus.textContent = isOnline ? (data.robotNow.status || 'AGUARDANDO') : 'OFFLINE';
+          cardStatus.className = 'status-tag ' + (isOnline ? (data.robotNow.status === 'TRABALHANDO' ? 'NO_RITMO' : 'SEM_DADOS') : 'ABAIXO_DA_META');
+        }
+        if (cardStep) {
+          cardStep.textContent = data.robotNow.stepText || 'Aguardando próximo ciclo de coleta...';
+        }
         document.getElementById('cardRobotLastAction').textContent = data.robotNow.lastAction || '5 ofertas selecionadas';
         document.getElementById('cardRobotStrategy').textContent = data.robotNow.currentStrategy || 'DESCONTO';
         document.getElementById('cardRobotNextAction').textContent = data.robotNow.nextAction || 'Nova coleta em 25 min';
@@ -1861,23 +1881,42 @@
     }
 
     async function triggerAction(action) {
-      try {
-        const btn = document.getElementById(action === 'EXECUTAR_AGORA' ? 'btnExecute' : 'btnPause');
-        const origText = btn.innerHTML;
-        btn.innerHTML = 'Enviando...';
+      const btn = document.getElementById(action === 'EXECUTAR_AGORA' ? 'btnExecute' : 'btnPause');
+      const origText = btn ? btn.innerHTML : '';
+      if (btn) {
+        btn.innerHTML = action === 'EXECUTAR_AGORA' ? '⚡ Enviando comando...' : 'Enviando...';
         btn.disabled = true;
+      }
 
+      try {
         const res = await fetch('/api/controls', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action })
         });
-        await res.json();
-        btn.innerHTML = origText;
-        btn.disabled = false;
-        setTimeout(loadDashboard, 600);
+        const result = await res.json();
+
+        if (!res.ok) {
+          throw new Error(result.error || 'Falha ao processar comando.');
+        }
+
+        if (btn) {
+          btn.innerHTML = action === 'EXECUTAR_AGORA' ? '✓ Na fila do worker!' : '✓ Comando enviado!';
+        }
+
+        setTimeout(() => {
+          if (btn) {
+            btn.innerHTML = origText;
+            btn.disabled = false;
+          }
+          loadDashboard();
+        }, 1500);
       } catch (e) {
         alert('Erro ao enviar comando: ' + e.message);
+        if (btn) {
+          btn.innerHTML = origText;
+          btn.disabled = false;
+        }
       }
     }
 
@@ -1893,6 +1932,7 @@
     let isLiveLogsPaused = false;
     let supabaseClient = null;
     let realtimeChannel = null;
+    let heartbeatRealtimeChannel = null;
 
     const LOG_LEVEL_ICONS = {
       SUCCESS: '✓',
@@ -1917,7 +1957,7 @@
         // 1. Carrega os últimos 50 eventos do banco
         fetchInitialEvents();
 
-        // 2. Conecta ao canal Realtime
+        // 2. Conecta aos canais Realtime (logs + worker heartbeats)
         connectRealtimeChannel();
       } catch (err) {
         console.error('Falha ao inicializar Supabase Realtime:', err);
@@ -1948,7 +1988,11 @@
       if (realtimeChannel) {
         try { supabaseClient.removeChannel(realtimeChannel); } catch {}
       }
+      if (heartbeatRealtimeChannel) {
+        try { supabaseClient.removeChannel(heartbeatRealtimeChannel); } catch {}
+      }
 
+      // Canal de Logs de Telemetria
       realtimeChannel = supabaseClient
         .channel('public:system_events')
         .on(
@@ -1963,6 +2007,54 @@
         .subscribe((status) => {
           updateRealtimeStatus(status);
         });
+
+      // Canal de Heartbeat do Worker Local
+      heartbeatRealtimeChannel = supabaseClient
+        .channel('public:worker_heartbeats')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'worker_heartbeats' },
+          (payload) => {
+            if (payload && payload.new) {
+              handleWorkerHeartbeatUpdate(payload.new);
+            }
+          }
+        )
+        .subscribe();
+    }
+
+    function handleWorkerHeartbeatUpdate(hb) {
+      if (!hb) return;
+      const nowMs = Date.now();
+      const lastHbMs = new Date(hb.last_heartbeat_at).getTime();
+      const isOnline = (nowMs - lastHbMs < 40000) && hb.status !== 'OFFLINE';
+
+      const statusBadge = document.getElementById('robotStatusBadge');
+      const statusText = document.getElementById('robotStatusText');
+      const cardStatus = document.getElementById('cardRobotStatus');
+      const cardStep = document.getElementById('cardRobotStep');
+
+      if (statusBadge && statusText) {
+        if (!isOnline) {
+          statusText.textContent = 'WORKER OFFLINE';
+          statusBadge.className = 'status-badge OFFLINE';
+        } else {
+          statusText.textContent = hb.status === 'TRABALHANDO' ? 'TRABALHANDO' : 'ONLINE';
+          statusBadge.className = 'status-badge ' + (hb.status === 'TRABALHANDO' ? 'TRABALHANDO' : 'ONLINE');
+        }
+      }
+
+      if (cardStatus && cardStep) {
+        if (!isOnline) {
+          cardStatus.textContent = 'OFFLINE';
+          cardStatus.className = 'status-tag ABAIXO_DA_META';
+          cardStep.textContent = 'Worker local desconectado. Inicie com "npm run worker".';
+        } else {
+          cardStatus.textContent = hb.status === 'TRABALHANDO' ? 'TRABALHANDO' : (hb.status || 'AGUARDANDO');
+          cardStatus.className = 'status-tag ' + (hb.status === 'TRABALHANDO' ? 'NO_RITMO' : 'SEM_DADOS');
+          cardStep.textContent = hb.current_step || 'Aguardando próximo comando ou ciclo...';
+        }
+      }
     }
 
     function updateRealtimeStatus(status) {
