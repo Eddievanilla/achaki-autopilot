@@ -1,5 +1,6 @@
 {
   "rewrites": [
-    { "source": "/go/:trackingId", "destination": "/api/go?trackingId=:trackingId" }
+    { "source": "/go/:trackingId", "destination": "/api/go?trackingId=:trackingId" },
+    { "source": "/auth/facebook/callback", "destination": "/api/auth/facebook/callback" }
   ]
 }
