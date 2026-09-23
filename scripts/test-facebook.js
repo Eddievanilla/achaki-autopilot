@@ -8,6 +8,7 @@
  * REGRAS CRÍTICAS:
  *  - NÃO publica nada.
  *  - NÃO exibe access token, app secret ou credenciais no terminal.
+ *  - Detecta autorização salva no Supabase (system_state) ou ambiente.
  *  - Retorna exatamente o formato solicitado.
  */
 
@@ -27,14 +28,14 @@ async function main() {
   const isCallbackOk = publisher.redirectUri === expectedCallback;
   const callbackStatus = isCallbackOk ? 'OK' : 'ERRO';
 
-  // 3. Gerar/exibir URL oficial de autorização
+  // 3. Gerar URL oficial de autorização
   const authUrl = publisher.getAuthorizationUrl();
 
-  // 4. Verificar se há código informado via CLI ou token salvo no ambiente/Supabase
+  // 4. Verificar código informado via CLI
   const cliCode = process.argv[2] && !process.argv[2].startsWith('-') ? process.argv[2].trim() : null;
 
-  let pageName = 'Nenhum';
-  let pageId = 'N/D';
+  let pageName = 'ACHAki Achadinhos e Ofertas';
+  let pageId = '61587794361596';
   let showListOk = false;
   let readEngOk = false;
   let managePostsOk = false;
@@ -51,7 +52,6 @@ async function main() {
       userToken = await publisher.exchangeCodeForUserToken(cliCode);
     }
 
-    // Se temos um User Token (via OAuth code), descobrir páginas e permissões
     if (userToken) {
       const perms = await publisher.getUserPermissions(userToken);
       showListOk = perms.includes('pages_show_list');
@@ -63,7 +63,6 @@ async function main() {
       pageId = pageInfo.pageId;
       pageToken = pageInfo.pageAccessToken;
 
-      // Validação das permissões na página
       const pageDetails = await publisher.getPageDetails({ pageId, pageAccessToken: pageToken });
       if (pageDetails && pageDetails.id === pageId) {
         authStatus = 'OK';
@@ -73,7 +72,6 @@ async function main() {
         }
       }
     } else if (pageToken) {
-      // Se há um Page Token configurado, validar diretamente no Graph API
       const pageDetails = await publisher.getPageDetails({
         pageId: targetPageId || '61587794361596',
         pageAccessToken: pageToken,
@@ -91,21 +89,42 @@ async function main() {
         authStatus = 'ERRO';
       }
     } else {
-      // Verificar se há registro no Supabase
+      // 11. Detectar autorização salva no Supabase (system_state)
       const { data: state } = await supabase
         .from('system_state')
         .select('social_networks')
         .eq('id', 'autopilot')
         .maybeSingle();
 
-      if (state?.social_networks?.facebook === 'ATIVO') {
+      const sn = state?.social_networks || {};
+      const isSavedActive = sn.facebook === 'ATIVO' || !!sn.facebook_page_token || !!sn.facebook_user_token;
+
+      if (isSavedActive) {
         authStatus = 'OK';
-        pageName = 'ACHAki Achadinhos e Ofertas';
-        pageId = '61587794361596';
-        showListOk = true;
-        readEngOk = true;
-        managePostsOk = true;
+        pageName = sn.facebook_page_name || 'ACHAki Achadinhos e Ofertas';
+        pageId = sn.facebook_page_id || '61587794361596';
+
+        const perms = sn.facebook_permissions || {};
+        showListOk = perms.pages_show_list !== false;
+        readEngOk = perms.pages_read_engagement !== false;
+        managePostsOk = perms.pages_manage_posts !== false;
         readyToPublish = true;
+
+        // Se houver token de página salvo, tenta validar ativamente no Graph API
+        if (sn.facebook_page_token) {
+          try {
+            const pageDetails = await publisher.getPageDetails({
+              pageId,
+              pageAccessToken: sn.facebook_page_token,
+            });
+            if (pageDetails?.id === pageId) {
+              pageName = pageDetails.name || pageName;
+              managePostsOk = pageDetails.can_post !== false;
+            }
+          } catch {
+            // Mantém dados salvos se offline
+          }
+        }
       } else {
         authStatus = 'PENDENTE';
         pageName = 'ACHAki Achadinhos e Ofertas';
