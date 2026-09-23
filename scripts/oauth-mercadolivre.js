@@ -72,7 +72,7 @@ async function main() {
   console.log(`  👉 ${authUrl}\n`);
   console.log('Clique em "Permitir" / "Continuar" para autorizar a aplicação.');
   console.log('O Mercado Livre irá redirecioná-lo para a Redirect URI com o parâmetro "code=".');
-  console.log('Exemplo: https://achaki.co.netlify.app/achaki/oauth/callback?code=TG-66f1...-123456\n');
+  console.log('Exemplo: https://achaki-autopilot.vercel.app/achaki/oauth/callback?code=TG-66f1...-123456\n');
 
   console.log('──────────────────────────────────────────────────────────');
   console.log('3. PASSO 2 — INFORMAR O CÓDIGO');

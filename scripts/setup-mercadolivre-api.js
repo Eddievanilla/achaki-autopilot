@@ -54,7 +54,7 @@ async function main() {
     console.log('  2. Faça login com a sua conta do Mercado Livre.\n');
     console.log('  3. Vá em "Meus Aplicativos" (ou crie um novo aplicativo):\n');
     console.log('     • Nome: ACHAki Autopilot');
-    console.log('     • Redirecionamento: https://achaki.co.netlify.app/achaki/oauth/callback\n');
+    console.log('     • Redirecionamento: https://achaki-autopilot.vercel.app/achaki/oauth/callback\n');
     console.log('  4. Copie o App ID (Client ID) e Secret Key (Client Secret).\n');
     console.log('  5. Adicione no seu arquivo .env:\n');
     console.log('     MERCADOLIVRE_CLIENT_ID=seu_client_id_aqui');

@@ -15,7 +15,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import logger from '../../utils/logger.js';
 
-export const DEFAULT_REDIRECT_URI = 'https://achaki.co.netlify.app/achaki/oauth/callback';
+export const DEFAULT_REDIRECT_URI = 'https://achaki-autopilot.vercel.app/achaki/oauth/callback';
 const TOKEN_URL = 'https://api.mercadolibre.com/oauth/token';
 const AUTH_URL = 'https://auth.mercadolivre.com.br/authorization';
 
@@ -60,7 +60,7 @@ export class MercadoLivreOAuthManager {
     if (!rawInput || typeof rawInput !== 'string') return '';
     const trimmed = rawInput.trim();
 
-    // Se o usuário colou a URL completa (ex: https://achaki.co.netlify.app/achaki/oauth/callback?code=TG-...)
+    // Se o usuário colou a URL completa (ex: https://achaki-autopilot.vercel.app/achaki/oauth/callback?code=TG-...)
     if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
       try {
         const parsed = new URL(trimmed);
