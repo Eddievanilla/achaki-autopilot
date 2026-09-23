@@ -115,6 +115,51 @@ export class FacebookPublisher {
   }
 
   /**
+   * Consulta permissões concedidas pelo usuário.
+   *
+   * @param {string} userAccessToken
+   * @returns {Promise<Array<string>>} Lista de permissões com status 'granted'
+   */
+  async getUserPermissions(userAccessToken) {
+    try {
+      const url = `${this.baseUrl}/me/permissions?access_token=${userAccessToken}`;
+      const res = await fetch(url);
+      const data = await res.json();
+
+      if (data.error || !Array.isArray(data.data)) {
+        return [];
+      }
+
+      return data.data
+        .filter((p) => p.status === 'granted')
+        .map((p) => p.permission);
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * Consulta detalhes e tarefas da Página no Graph API.
+   *
+   * @param {object} params
+   * @param {string} params.pageId
+   * @param {string} params.pageAccessToken
+   * @returns {Promise<object|null>}
+   */
+  async getPageDetails({ pageId, pageAccessToken }) {
+    try {
+      const url = `${this.baseUrl}/${pageId}?fields=id,name,can_post,tasks&access_token=${pageAccessToken}`;
+      const res = await fetch(url);
+      const data = await res.json();
+
+      if (data.error) return null;
+      return data;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
    * Valida se o Page Access Token e permissões estão válidos para a página.
    *
    * @param {object} params
@@ -124,11 +169,8 @@ export class FacebookPublisher {
    */
   async validatePermissions({ pageId, pageAccessToken }) {
     try {
-      const url = `${this.baseUrl}/${pageId}?fields=id,name&access_token=${pageAccessToken}`;
-      const res = await fetch(url);
-      const data = await res.json();
-
-      return !data.error && data.id === pageId;
+      const details = await this.getPageDetails({ pageId, pageAccessToken });
+      return details !== null && details.id === pageId;
     } catch {
       return false;
     }

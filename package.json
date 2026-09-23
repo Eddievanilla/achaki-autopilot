@@ -20,7 +20,8 @@
     "test:memory": "node scripts/test-memory.js",
     "test:intelligence": "node scripts/test-intelligence.js",
     "test:jev": "node scripts/test-jev.js",
-    "test:command-center": "node scripts/test-command-center.js"
+    "test:command-center": "node scripts/test-command-center.js",
+    "test:facebook": "node scripts/test-facebook.js"
   },
   "keywords": [
     "achaki",
