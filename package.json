@@ -16,7 +16,8 @@
     "oauth:ml": "node scripts/oauth-mercadolivre.js",
     "test:ml-api": "node scripts/test-mercadolivre-api.js",
     "test:supabase": "node scripts/test-supabase.js",
-    "migrate": "node scripts/migrate.js"
+    "migrate": "node scripts/migrate.js",
+    "test:memory": "node scripts/test-memory.js"
   },
   "keywords": [
     "achaki",

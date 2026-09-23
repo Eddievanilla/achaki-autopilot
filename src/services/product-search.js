@@ -13,6 +13,7 @@
  */
 
 import ProviderManager from './provider-manager.js';
+import ProductRepository from '../database/product-repository.js';
 import { ML_CATEGORIES } from '../marketplaces/mercadolivre.js';
 import { SHOPEE_CATEGORIES } from '../marketplaces/shopee.js';
 import logger from '../utils/logger.js';
@@ -27,6 +28,7 @@ export class ProductSearchService {
     this.browserManager = browserManager;
     this.openrouterAgent = openrouterAgent;
     this.providerManager = new ProviderManager({ browserManager });
+    this.productRepository = new ProductRepository();
   }
 
   /**
@@ -312,7 +314,29 @@ export class ProductSearchService {
       throw new Error('[ProductSearch] Nenhum produto válido disponível após filtros.');
     }
 
-    // 5. Ordena preliminarmente para priorizar os candidatos mais atrativos (desconto/avaliação)
+    // 5. Salvar/Atualizar produtos e registrar histórico de preços no Supabase (Memória Operacional)
+    let memoryStats = {
+      savedTotal: 0,
+      newCount: 0,
+      updatedCount: 0,
+      pricesRecorded: 0,
+      pricesSkipped: 0,
+      candidatesSaved: 0,
+    };
+
+    try {
+      logger.info(`[ProductSearch] Sincronizando ${filtered.length} produtos válidos com Supabase...`);
+      const syncResult = await this.productRepository.syncProductsBatch(filtered);
+      memoryStats = { ...memoryStats, ...syncResult };
+      logger.info(
+        `[ProductSearch] Memória Supabase: Novos=${syncResult.newCount}, Atualizados=${syncResult.updatedCount}, ` +
+        `Preços=${syncResult.pricesRecorded}, Preços repetidos ignorados=${syncResult.pricesSkipped}`
+      );
+    } catch (dbErr) {
+      logger.warn(`[ProductSearch] Falha não impeditiva no Supabase ao sincronizar produtos: ${dbErr.message}`);
+    }
+
+    // 6. Ordena preliminarmente para priorizar os candidatos mais atrativos (desconto/avaliação)
     const sortedForLLM = [...filtered].sort((a, b) => {
       const discountA = a.discountPercent || 0;
       const discountB = b.discountPercent || 0;
@@ -324,7 +348,7 @@ export class ProductSearchService {
 
     logger.info(`[ProductSearch] Enviando ${compactPayload.length} candidatos ao OpenRouter...`);
 
-    // 6. Curadoria inteligente via OpenRouterAgent
+    // 7. Curadoria inteligente via OpenRouterAgent
     const llmResponse = await this.openrouterAgent.selectBestOffers(compactPayload, limit);
 
     const selectedIds = Array.isArray(llmResponse.selected) ? llmResponse.selected : [];
@@ -334,7 +358,7 @@ export class ProductSearchService {
 
     logger.info(`[ProductSearch] OpenRouter selecionou ${selectedIds.length} produtos.`);
 
-    // 7. Monta os Top selecionados com dados completos
+    // 8. Monta os Top selecionados com dados completos
     const productMap = new Map(filtered.map((p) => [p.productId, p]));
     const topOffers = [];
 
@@ -365,6 +389,15 @@ export class ProductSearchService {
       }
     }
 
+    // 9. Salvar candidatos selecionados em offer_candidates
+    try {
+      logger.info(`[ProductSearch] Registrando ${topOffers.length} ofertas selecionadas em offer_candidates...`);
+      memoryStats.candidatesSaved = await this.productRepository.saveSelectedCandidates(topOffers);
+      logger.info(`[ProductSearch] Candidatos registrados no Supabase: ${memoryStats.candidatesSaved}`);
+    } catch (candErr) {
+      logger.warn(`[ProductSearch] Falha não impeditiva ao registrar offer_candidates: ${candErr.message}`);
+    }
+
     return {
       topOffers,
       providerStatuses: updatedStatuses,
@@ -380,6 +413,7 @@ export class ProductSearchService {
         afterFilter: filtered.length,
         sentToAI: compactPayload.length,
         selectedCount: topOffers.length,
+        memory: memoryStats,
       },
     };
   }
