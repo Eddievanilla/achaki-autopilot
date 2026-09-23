@@ -21,7 +21,8 @@
     "test:intelligence": "node scripts/test-intelligence.js",
     "test:jev": "node scripts/test-jev.js",
     "test:command-center": "node scripts/test-command-center.js",
-    "test:facebook": "node scripts/test-facebook.js"
+    "test:facebook": "node scripts/test-facebook.js",
+    "test:live-logs": "node scripts/test-live-logs.js"
   },
   "keywords": [
     "achaki",

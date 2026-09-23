@@ -11,6 +11,7 @@
 
 import logger from '../utils/logger.js';
 import { supabase } from '../database/supabase.js';
+import eventLogger from '../services/event-logger.js';
 
 export class FacebookPublisher {
   constructor({
@@ -194,6 +195,10 @@ export class FacebookPublisher {
    */
   async publishPost({ pageId, pageAccessToken, message, imageUrl, link }) {
     logger.info(`[FacebookPublisher] Publicando oferta na Página ${pageId}...`);
+    await eventLogger.info('FACEBOOK', `Publicação iniciada na Página oficial (ID: ${pageId})...`, {
+      action: 'PUBLISH_START',
+      metadata: { pageId, hasImage: Boolean(imageUrl), hasLink: Boolean(link) },
+    });
 
     let endpoint = `${this.baseUrl}/${pageId}/photos`;
     let body = {};
@@ -225,6 +230,10 @@ export class FacebookPublisher {
 
     if (data.error) {
       logger.error(`[FacebookPublisher] Erro ao publicar: ${data.error.message}`);
+      await eventLogger.error('FACEBOOK', `Falha na publicação Meta: ${data.error.message}`, {
+        action: 'PUBLISH_ERROR',
+        metadata: { pageId, errorType: data.error.type },
+      });
       throw new Error(`Falha na publicação Meta: ${data.error.message} (${data.error.type})`);
     }
 
@@ -233,6 +242,10 @@ export class FacebookPublisher {
     const publishedAt = new Date().toISOString();
 
     logger.info(`[FacebookPublisher] Publicação concluída com sucesso! ID: ${postId} | URL: ${publicationUrl}`);
+    await eventLogger.success('FACEBOOK', `Publicação concluída com sucesso na Página oficial! ID: ${postId}`, {
+      action: 'PUBLISH_SUCCESS',
+      metadata: { postId, publicationUrl },
+    });
 
     return {
       success: true,

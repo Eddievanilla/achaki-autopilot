@@ -97,10 +97,26 @@ export default async function handler(req, res) {
           .eq('metric_name', 'clicks_per_day');
       }
 
-      // 6. Log de auditoria
+      // 6. Log de auditoria e telemetria em tempo real
       await supabase.from('system_activity_logs').insert({
         message: `Clique rastreado no Facebook (${pub.marketplace}): ${trackingId}`,
         level: 'info',
+      });
+
+      await supabase.from('system_events').insert({
+        level: 'SUCCESS',
+        category: 'TRACKING',
+        source: 'ACHAki-Redirect',
+        action: 'CLICK_RECORDED',
+        status: 'SUCCESS',
+        message: `Clique registrado no Facebook para oferta (${pub.marketplace}): ${trackingId}`,
+        metadata: {
+          tracking_id: trackingId,
+          marketplace: pub.marketplace,
+          product_id: pub.product_id,
+        },
+        product_id: pub.product_id,
+        publication_id: pub.id,
       });
     }
 

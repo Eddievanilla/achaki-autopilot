@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     :root {
       --bg: #07090e;
@@ -868,6 +869,243 @@
       max-height: 220px;
     }
 
+    /* 🤖 LOG AO VIVO EM TEMPO REAL */
+    .live-logs-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-md);
+      padding: 18px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    }
+
+    .live-logs-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .live-logs-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .live-logs-title {
+      font-size: 0.95rem;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+      color: #f8fafc;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .realtime-status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 20px;
+      letter-spacing: 0.04em;
+      transition: all 0.3s ease;
+    }
+
+    .realtime-status-pill.online {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      box-shadow: 0 0 10px rgba(16, 185, 129, 0.2);
+    }
+
+    .realtime-status-pill.reconnecting {
+      background: rgba(245, 158, 11, 0.15);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.35);
+      box-shadow: 0 0 10px rgba(245, 158, 11, 0.2);
+    }
+
+    .realtime-status-pill.offline {
+      background: rgba(244, 63, 94, 0.15);
+      color: #fb7185;
+      border: 1px solid rgba(244, 63, 94, 0.35);
+      box-shadow: 0 0 10px rgba(244, 63, 94, 0.2);
+    }
+
+    .live-logs-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .log-action-btn {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--card-border);
+      color: var(--text-dim);
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .log-action-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text);
+      border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    .log-action-btn.active-pause {
+      background: rgba(245, 158, 11, 0.2);
+      border-color: rgba(245, 158, 11, 0.4);
+      color: #fbbf24;
+    }
+
+    .live-logs-filter-bar {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .log-filter-pill {
+      background: transparent;
+      border: 1px solid var(--card-border);
+      color: var(--text-dim);
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .log-filter-pill:hover {
+      border-color: rgba(255, 255, 255, 0.18);
+      color: var(--text);
+    }
+
+    .log-filter-pill.active {
+      background: rgba(59, 130, 246, 0.18);
+      border-color: var(--primary);
+      color: #93c5fd;
+    }
+
+    .log-count-indicator {
+      margin-left: auto;
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .live-logs-terminal {
+      background: #040711;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: var(--radius-sm);
+      height: 280px;
+      overflow-y: auto;
+      padding: 8px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.78rem;
+    }
+
+    .log-row {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.15s ease;
+      line-height: 1.4;
+    }
+
+    .log-row:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .log-time {
+      color: #64748b;
+      font-size: 0.73rem;
+      min-width: 62px;
+      flex-shrink: 0;
+    }
+
+    .log-cat {
+      font-weight: 700;
+      font-size: 0.68rem;
+      min-width: 90px;
+      text-transform: uppercase;
+      flex-shrink: 0;
+    }
+
+    .log-badge-icon {
+      font-weight: 800;
+      font-size: 0.75rem;
+      width: 14px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    .log-msg {
+      color: #cbd5e1;
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .log-dur {
+      color: #64748b;
+      font-size: 0.7rem;
+      margin-left: 6px;
+      flex-shrink: 0;
+    }
+
+    /* Cores discretas por nível */
+    .log-level-SUCCESS .log-cat { color: #34d399; }
+    .log-level-SUCCESS .log-badge-icon { color: #10b981; }
+    .log-level-SUCCESS .log-msg { color: #e2e8f0; }
+
+    .log-level-INFO .log-cat { color: #38bdf8; }
+    .log-level-INFO .log-badge-icon { color: #0284c7; }
+    .log-level-INFO .log-msg { color: #cbd5e1; }
+
+    .log-level-WARNING .log-cat { color: #fbbf24; }
+    .log-level-WARNING .log-badge-icon { color: #f59e0b; }
+    .log-level-WARNING .log-msg { color: #fef08a; }
+
+    .log-level-ERROR .log-cat { color: #f87171; }
+    .log-level-ERROR .log-badge-icon { color: #ef4444; }
+    .log-level-ERROR .log-msg { color: #fecdd3; }
+
+    .log-level-DEBUG .log-cat { color: #94a3b8; }
+    .log-level-DEBUG .log-badge-icon { color: #64748b; }
+    .log-level-DEBUG .log-msg { color: #94a3b8; }
+
+    .log-empty-msg {
+      color: var(--text-dim);
+      font-size: 0.78rem;
+      text-align: center;
+      padding: 30px;
+    }
+
     /* FOOTER */
     footer {
       text-align: center;
@@ -948,6 +1186,43 @@
           <span>Retenção: <strong id="heroRetention">N/D</strong></span>
           <span>Conversões: <strong id="heroConversions">0</strong></span>
         </div>
+      </div>
+    </div>
+
+    <!-- 🤖 PAINEL: LOG AO VIVO EM TEMPO REAL -->
+    <div class="live-logs-card">
+      <div class="live-logs-header">
+        <div class="live-logs-title-wrap">
+          <span class="live-logs-title">🤖 LOG AO VIVO</span>
+          <span id="realtimeStatusBadge" class="realtime-status-pill online">
+            <span class="pulse-dot"></span>
+            <span id="realtimeStatusLabel">TEMPO REAL</span>
+          </span>
+        </div>
+        <div class="live-logs-actions">
+          <button id="btnPauseLiveLogs" class="log-action-btn" onclick="togglePauseLiveLogs()">
+            ⏸ Pausar Visualização
+          </button>
+          <button id="btnClearLiveLogs" class="log-action-btn" onclick="clearLiveLogsUI()">
+            🧹 Limpar Tela
+          </button>
+        </div>
+      </div>
+
+      <!-- FILTROS COMPACTOS -->
+      <div class="live-logs-filter-bar">
+        <button id="filterBtn_TODOS" class="log-filter-pill active" onclick="setLogFilter('TODOS')">TODOS</button>
+        <button id="filterBtn_ROBO" class="log-filter-pill" onclick="setLogFilter('ROBO')">ROBÔ</button>
+        <button id="filterBtn_MARKETPLACE" class="log-filter-pill" onclick="setLogFilter('MARKETPLACE')">MARKETPLACE</button>
+        <button id="filterBtn_IA" class="log-filter-pill" onclick="setLogFilter('IA')">IA</button>
+        <button id="filterBtn_FACEBOOK" class="log-filter-pill" onclick="setLogFilter('FACEBOOK')">FACEBOOK</button>
+        <button id="filterBtn_ERROS" class="log-filter-pill" onclick="setLogFilter('ERROS')">ERROS</button>
+        <span class="log-count-indicator" id="liveLogCount">0 eventos</span>
+      </div>
+
+      <!-- FEED DE LOGS EM TEMPO REAL -->
+      <div class="live-logs-terminal" id="liveLogsFeed">
+        <div class="log-empty-msg">Conectando ao canal de telemetria em tempo real...</div>
       </div>
     </div>
 
@@ -1606,8 +1881,269 @@
       }
     }
 
-    // Inicialização e auto-refresh a cada 8 segundos
+    // ══════════════════════════════════════════════════════════
+    // 🤖 LOG AO VIVO EM TEMPO REAL (SUPABASE REALTIME)
+    // ══════════════════════════════════════════════════════════
+
+    const SUPABASE_PROJECT_URL = 'https://fobehbttydmqupfpioux.supabase.co';
+    const SUPABASE_PUBLIC_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZvYmVoYnR0eWRtcXVwZnBpb3V4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAxNzk2NTYsImV4cCI6MjEwNTc1NTY1Nn0.QSRQxVol0FYDtbbSxJ8_-jCMUcRD9ygiHZZI4wy7EGQ';
+
+    let liveLogs = [];
+    let currentLogFilter = 'TODOS';
+    let isLiveLogsPaused = false;
+    let supabaseClient = null;
+    let realtimeChannel = null;
+
+    const LOG_LEVEL_ICONS = {
+      SUCCESS: '✓',
+      INFO: 'ℹ',
+      WARNING: '⚠',
+      ERROR: '✖',
+      DEBUG: '⚙'
+    };
+
+    function initRealtimeLogs() {
+      if (!window.supabase) {
+        console.warn('SDK Supabase não carregado no navegador.');
+        updateRealtimeStatus('CLOSED');
+        return;
+      }
+
+      try {
+        supabaseClient = window.supabase.createClient(SUPABASE_PROJECT_URL, SUPABASE_PUBLIC_KEY, {
+          auth: { persistSession: false },
+        });
+
+        // 1. Carrega os últimos 50 eventos do banco
+        fetchInitialEvents();
+
+        // 2. Conecta ao canal Realtime
+        connectRealtimeChannel();
+      } catch (err) {
+        console.error('Falha ao inicializar Supabase Realtime:', err);
+        updateRealtimeStatus('CLOSED');
+      }
+    }
+
+    async function fetchInitialEvents() {
+      try {
+        const { data, error } = await supabaseClient
+          .from('system_events')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(50);
+
+        if (!error && Array.isArray(data)) {
+          liveLogs = data;
+          renderLiveLogs();
+        }
+      } catch (err) {
+        console.warn('Erro ao carregar eventos iniciais:', err.message);
+      }
+    }
+
+    function connectRealtimeChannel() {
+      updateRealtimeStatus('CONNECTING');
+
+      if (realtimeChannel) {
+        try { supabaseClient.removeChannel(realtimeChannel); } catch {}
+      }
+
+      realtimeChannel = supabaseClient
+        .channel('public:system_events')
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'system_events' },
+          (payload) => {
+            if (payload && payload.new) {
+              handleIncomingLiveEvent(payload.new);
+            }
+          }
+        )
+        .subscribe((status) => {
+          updateRealtimeStatus(status);
+        });
+    }
+
+    function updateRealtimeStatus(status) {
+      const badge = document.getElementById('realtimeStatusBadge');
+      const label = document.getElementById('realtimeStatusLabel');
+      if (!badge || !label) return;
+
+      if (status === 'SUBSCRIBED') {
+        badge.className = 'realtime-status-pill online';
+        label.textContent = 'TEMPO REAL';
+      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CONNECTING') {
+        badge.className = 'realtime-status-pill reconnecting';
+        label.textContent = 'RECONECTANDO';
+        setTimeout(() => {
+          if (realtimeChannel && realtimeChannel.state !== 'joined') {
+            connectRealtimeChannel();
+          }
+        }, 4000);
+      } else {
+        badge.className = 'realtime-status-pill offline';
+        label.textContent = 'OFFLINE';
+      }
+    }
+
+    function handleIncomingLiveEvent(event) {
+      liveLogs.unshift(event);
+      if (liveLogs.length > 100) {
+        liveLogs.pop();
+      }
+
+      if (isLiveLogsPaused) {
+        updateLogCount();
+        return;
+      }
+
+      renderLiveLogs();
+    }
+
+    function filterMatches(event, filter) {
+      if (filter === 'TODOS') return true;
+
+      const cat = (event.category || '').toUpperCase();
+      const lvl = (event.level || '').toUpperCase();
+
+      if (filter === 'ROBO') {
+        return cat === 'ROBOT' || cat === 'SYSTEM';
+      }
+      if (filter === 'MARKETPLACE') {
+        return ['MARKETPLACE', 'COLLECTOR', 'MERCADOLIVRE', 'PRICE', 'AFFILIATE'].includes(cat);
+      }
+      if (filter === 'IA') {
+        return ['AI', 'JEV', 'OPENROUTER'].includes(cat);
+      }
+      if (filter === 'FACEBOOK') {
+        return cat === 'FACEBOOK';
+      }
+      if (filter === 'ERROS') {
+        return lvl === 'ERROR' || cat === 'ERROR';
+      }
+      return true;
+    }
+
+    function setLogFilter(filter) {
+      currentLogFilter = filter;
+      const filters = ['TODOS', 'ROBO', 'MARKETPLACE', 'IA', 'FACEBOOK', 'ERROS'];
+      filters.forEach((f) => {
+        const btn = document.getElementById('filterBtn_' + f);
+        if (btn) {
+          btn.className = 'log-filter-pill' + (f === filter ? ' active' : '');
+        }
+      });
+      renderLiveLogs();
+    }
+
+    function togglePauseLiveLogs() {
+      isLiveLogsPaused = !isLiveLogsPaused;
+      const btn = document.getElementById('btnPauseLiveLogs');
+      if (btn) {
+        if (isLiveLogsPaused) {
+          btn.innerHTML = '▶ Retomar Visualização';
+          btn.classList.add('active-pause');
+        } else {
+          btn.innerHTML = '⏸ Pausar Visualização';
+          btn.classList.remove('active-pause');
+          renderLiveLogs();
+        }
+      }
+    }
+
+    function clearLiveLogsUI() {
+      liveLogs = [];
+      const feed = document.getElementById('liveLogsFeed');
+      if (feed) {
+        feed.innerHTML = '<div class="log-empty-msg">Tela limpa. Aguardando novos eventos...</div>';
+      }
+      updateLogCount();
+    }
+
+    function updateLogCount() {
+      const countEl = document.getElementById('liveLogCount');
+      if (countEl) {
+        const filteredCount = liveLogs.filter((e) => filterMatches(e, currentLogFilter)).length;
+        countEl.textContent = `${filteredCount} evento${filteredCount === 1 ? '' : 's'}`;
+      }
+    }
+
+    function renderLiveLogs() {
+      const feed = document.getElementById('liveLogsFeed');
+      if (!feed) return;
+
+      const filtered = liveLogs.filter((e) => filterMatches(e, currentLogFilter));
+      updateLogCount();
+
+      if (filtered.length === 0) {
+        feed.innerHTML = '<div class="log-empty-msg">Nenhum evento registrado para o filtro selecionado.</div>';
+        return;
+      }
+
+      feed.innerHTML = filtered.map((event) => {
+        const time = new Date(event.created_at).toLocaleTimeString('pt-BR', { hour12: false });
+        const lvl = (event.level || 'INFO').toUpperCase();
+        const icon = LOG_LEVEL_ICONS[lvl] || '●';
+        const cat = event.category || 'SYSTEM';
+        const msg = escapeHtml(event.message || '');
+        const dur = event.duration_ms ? `<span class="log-dur">${event.duration_ms}ms</span>` : '';
+
+        return `
+          <div class="log-row log-level-${lvl}" onclick="openEventDetailsModal('${event.id}')">
+            <span class="log-time">${time}</span>
+            <span class="log-cat">${cat}</span>
+            <span class="log-badge-icon">${icon}</span>
+            <span class="log-msg" title="${msg}">${msg}</span>
+            ${dur}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function openEventDetailsModal(eventId) {
+      const event = liveLogs.find((e) => e.id === eventId);
+      if (!event) return;
+
+      document.getElementById('modalTitle').textContent = `Evento: [${event.category}] ${event.action || event.level}`;
+      
+      const timeStr = new Date(event.created_at).toLocaleString('pt-BR');
+      const safeMeta = JSON.stringify(event.metadata || {}, null, 2);
+
+      document.getElementById('modalBody').innerHTML = `
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <div><strong>Horário:</strong> ${timeStr}</div>
+          <div><strong>Nível / Status:</strong> <span class="tag-highlight">${event.level}</span> / ${event.status || 'OK'}</div>
+          <div><strong>Categoria:</strong> ${event.category}</div>
+          <div><strong>Origem (Source):</strong> ${event.source || 'ACHAki-Autopilot'}</div>
+          ${event.action ? `<div><strong>Ação:</strong> ${event.action}</div>` : ''}
+          ${event.run_id ? `<div><strong>Run ID:</strong> <code style="color:#93c5fd;">${event.run_id}</code></div>` : ''}
+          ${event.duration_ms ? `<div><strong>Duração:</strong> ${event.duration_ms} ms</div>` : ''}
+          <div><strong>Mensagem:</strong></div>
+          <div style="background:#090d16; padding:10px; border-radius:6px; color:#f8fafc; border:1px solid rgba(255,255,255,0.06); font-family:monospace;">
+            ${escapeHtml(event.message)}
+          </div>
+          <div><strong>Metadados (Sanitizados):</strong></div>
+          <pre class="code-block">${escapeHtml(safeMeta)}</pre>
+        </div>
+      `;
+
+      document.getElementById('genericModal').classList.add('open');
+    }
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    // Inicialização do Dashboard e dos Logs em Tempo Real
     loadDashboard();
+    initRealtimeLogs();
     setInterval(loadDashboard, 8000);
   </script>
 </body>
