@@ -15,6 +15,7 @@
 import ProviderManager from './provider-manager.js';
 import ProductRepository from '../database/product-repository.js';
 import OfferIntelligenceService from './offer-intelligence.js';
+import JevAgent from '../agents/jev-agent.js';
 import { ML_CATEGORIES } from '../marketplaces/mercadolivre.js';
 import { SHOPEE_CATEGORIES } from '../marketplaces/shopee.js';
 import logger from '../utils/logger.js';
@@ -24,10 +25,12 @@ export class ProductSearchService {
    * @param {object} params
    * @param {import('../browser/browser.js').default} params.browserManager
    * @param {import('../agents/openrouter-agent.js').default} params.openrouterAgent
+   * @param {import('../agents/jev-agent.js').default} [params.jevAgent]
    */
-  constructor({ browserManager, openrouterAgent }) {
+  constructor({ browserManager, openrouterAgent, jevAgent }) {
     this.browserManager = browserManager;
     this.openrouterAgent = openrouterAgent;
+    this.jevAgent = jevAgent || new JevAgent();
     this.providerManager = new ProviderManager({ browserManager });
     this.productRepository = new ProductRepository();
     this.intelligenceService = new OfferIntelligenceService();
@@ -366,67 +369,175 @@ export class ProductSearchService {
 
     logger.info(
       `[ProductSearch] Motor Inteligente: ${evaluated.length} avaliados, ` +
-      `${preSelected.length} pré-selecionados para envio à IA. ` +
+      `${preSelected.length} pré-selecionados para o pipeline de IA. ` +
       `(Penalizados: repetidos=${repeatedPenalties}, descontos_suspeitos=${suspiciousDiscounts})`
     );
 
-    // 9. Curadoria inteligente via OpenRouterAgent
-    const llmResponse = await this.openrouterAgent.selectBestOffers(compactPayload, limit);
+    // 9. Camada de Cache no Supabase: verificar decisões recentes para os 15 candidatos
+    let cachedMap = new Map();
+    try {
+      cachedMap = await this.productRepository.getCachedDecisionsBatch(preSelected, 24);
+      if (cachedMap.size > 0) {
+        logger.info(`[ProductSearch] Cache Supabase: ${cachedMap.size} decisões recentes reutilizadas.`);
+      }
+    } catch (cacheErr) {
+      logger.warn(`[ProductSearch] Falha não impeditiva ao consultar cache Supabase: ${cacheErr.message}`);
+    }
 
-    const selectedIds = Array.isArray(llmResponse.selected) ? llmResponse.selected : [];
-    const reasoning = llmResponse.reasoning || {};
-    const scores = llmResponse.scores || {};
-    const risks = llmResponse.risks || {};
-    const tokensUsed = llmResponse.usage?.total_tokens || null;
+    const itemsForJev = preSelected.filter((p) => !cachedMap.has(p.productId));
+    const itemsFromCache = preSelected.filter((p) => cachedMap.has(p.productId));
 
-    logger.info(`[ProductSearch] OpenRouter selecionou ${selectedIds.length} produtos.`);
+    // 10. Camada de Decisão JEV (typesafe/jev-1.13)
+    let jevEvaluated = [];
+    let jevTokens = { inputTokens: 0, outputTokens: 0, totalCalls: 0 };
+    let jevStatus = 'OK';
+    let jevFallbackTriggered = false;
 
-    // 10. Monta ofertas selecionadas com LOCAL_SCORE, AI_SCORE e FINAL_SCORE
-    const preSelectedMap = new Map(preSelected.map((p) => [p.productId, p]));
-    const aiSelectedOffers = [];
-
-    for (const id of selectedIds) {
-      const prod = preSelectedMap.get(id);
-      if (prod) {
-        const aiScore = scores[id] ?? 85;
-        const localScore = prod.localScore ?? 50;
-        const finalScore = this.intelligenceService.calculateFinalScore(localScore, aiScore);
-
-        aiSelectedOffers.push({
-          ...prod,
-          score: finalScore, // Score gravado no banco / exibido
-          localScore,
-          aiScore,
-          finalScore,
-          historyConfidence: prod.historyConfidence,
-          reasons: reasoning[id] ?? 'Produto selecionado pelo apelo de achadinho e preço acessível.',
-          risks: risks[id] ?? 'Nenhum risco crítico identificado.',
-        });
+    if (itemsForJev.length > 0) {
+      try {
+        const jevResult = await this.jevAgent.evaluateCandidatesBatch(itemsForJev);
+        jevEvaluated = jevResult.evaluated;
+        jevTokens = jevResult.tokensUsed;
+        if (jevResult.failures === itemsForJev.length && itemsForJev.length > 0) {
+          jevStatus = 'ERRO';
+          jevFallbackTriggered = true;
+          logger.warn('[ProductSearch] JEV indisponível para todos os itens. Acionando fallback regras -> GPT.');
+        }
+      } catch (jevErr) {
+        jevStatus = 'ERRO';
+        jevFallbackTriggered = true;
+        logger.warn(`[ProductSearch] Falha no JevAgent: ${jevErr.message}. Acionando fallback.`);
       }
     }
 
-    // 11. Aplicação de regra de DIVERSIDADE no TOP 5 (máximo 2 por categoria quando disponível)
-    const topOffers = this.intelligenceService.enforceDiversity(
-      aiSelectedOffers,
-      preSelected.map((prod) => {
-        const aiScore = scores[prod.productId] ?? 80;
-        const finalScore = this.intelligenceService.calculateFinalScore(prod.localScore, aiScore);
-        return {
-          ...prod,
-          score: finalScore,
-          localScore: prod.localScore,
-          aiScore,
-          finalScore,
-          historyConfidence: prod.historyConfidence,
-          reasons: 'Complementado por alta pontuação de oportunidade e diversidade.',
-          risks: 'Sem análise profunda da IA.',
-        };
-      }),
-      limit,
-      2
-    );
+    // 11. Montagem do conjunto unificado pré-escalonamento
+    const unifiedCandidates = [];
 
-    // 12. Salvar candidatos selecionados em offer_candidates
+    // Adiciona itens vindos do cache
+    for (const item of itemsFromCache) {
+      const cached = cachedMap.get(item.productId);
+      unifiedCandidates.push({
+        ...item,
+        jevDecisionScore: cached.jevDecisionScore,
+        jevQualityTier: cached.jevQualityTier,
+        jevIsAchadinho: cached.jevIsAchadinho,
+        jevRiskLevel: cached.jevRiskLevel,
+        jevNeedsEscalation: cached.jevNeedsEscalation ?? false,
+        aiScore: cached.aiScore ?? item.localScore,
+        reasons: cached.aiReason ?? 'Decisão estruturada reutilizada do cache operacional.',
+        risks: cached.aiRisk ?? 'Nenhum risco relevante identificado.',
+        modelUsed: cached.modelUsed || 'cached',
+        fromCache: true,
+      });
+    }
+
+    // Adiciona itens avaliados pelo JEV
+    for (const item of jevEvaluated) {
+      unifiedCandidates.push(item);
+    }
+
+    // 12. Camada de Escalonamento GPT-4o-mini (somente quando necessário)
+    let gptItems = [];
+    let gptTokens = 0;
+    let gptCalls = 0;
+    let gptFallbackTriggered = false;
+
+    if (jevFallbackTriggered) {
+      // Fallback 1: JEV falhou -> envia todo o payload pré-selecionado ao GPT (modo Fase 5)
+      gptItems = preSelected.slice(0, 15);
+      logger.info(`[ProductSearch] [FALLBACK] Enviando ${gptItems.length} candidatos diretamente ao GPT-4o-mini.`);
+    } else {
+      // Normal: Seleciona no máximo 5 a 8 produtos que precisam de raciocínio profundo
+      const needingEscalation = unifiedCandidates.filter((c) => c.jevNeedsEscalation && !c.fromCache);
+      gptItems = needingEscalation.slice(0, 8);
+      if (gptItems.length > 0) {
+        logger.info(`[ProductSearch] [ESCALATION] ${gptItems.length} candidatos encaminhados ao GPT-4o-mini.`);
+      } else {
+        logger.info('[ProductSearch] [FAST-PATH] Alta confiança estruturada do JEV: nenhuma chamada GPT necessária.');
+      }
+    }
+
+    const gptUpdates = new Map();
+    if (gptItems.length > 0) {
+      try {
+        const escalationPayload = this.intelligenceService.prepareAIPayload(gptItems);
+        const gptRes = await this.openrouterAgent.selectBestOffers(escalationPayload, limit);
+        gptCalls++;
+        gptTokens = gptRes.usage?.total_tokens || 0;
+
+        const scores = gptRes.scores || {};
+        const reasoning = gptRes.reasoning || {};
+        const risks = gptRes.risks || {};
+
+        for (const item of gptItems) {
+          gptUpdates.set(item.productId, {
+            aiScore: scores[item.productId] ?? item.aiScore ?? 85,
+            reasons: reasoning[item.productId] ?? item.reasons,
+            risks: risks[item.productId] ?? item.risks,
+            modelUsed: 'openai/gpt-4o-mini',
+          });
+        }
+      } catch (gptErr) {
+        gptFallbackTriggered = true;
+        logger.warn(`[ProductSearch] Falha no GPT-4o-mini: ${gptErr.message}. Mantendo decisões do JEV + regras locais.`);
+      }
+    }
+
+    // 13. Combinação final de scores e persistência de cache
+    const finalEvaluatedList = [];
+    const candidatesToCache = [];
+
+    for (const item of unifiedCandidates) {
+      let aiScore = item.aiScore;
+      let reasons = item.reasons;
+      let risks = item.risks;
+      let modelUsed = item.modelUsed;
+
+      if (gptUpdates.has(item.productId)) {
+        const update = gptUpdates.get(item.productId);
+        aiScore = update.aiScore;
+        reasons = update.reasons;
+        risks = update.risks;
+        modelUsed = update.modelUsed;
+      }
+
+      const localScore = item.localScore ?? 50;
+      const finalScore = this.intelligenceService.calculateFinalScore(localScore, aiScore);
+
+      const candidateObject = {
+        ...item,
+        score: finalScore,
+        localScore,
+        aiScore,
+        finalScore,
+        reasons,
+        risks,
+        modelUsed,
+      };
+
+      finalEvaluatedList.push(candidateObject);
+
+      // Apenas produtos que não vieram do cache precisam ser gravados no Supabase
+      if (!item.fromCache && item.dbId) {
+        candidatesToCache.push(candidateObject);
+      }
+    }
+
+    // Grava novas decisões na tabela ai_decision_cache do Supabase
+    if (candidatesToCache.length > 0) {
+      try {
+        await this.productRepository.saveDecisionCacheBatch(candidatesToCache);
+      } catch (saveErr) {
+        logger.warn(`[ProductSearch] Falha não impeditiva ao atualizar cache no Supabase: ${saveErr.message}`);
+      }
+    }
+
+    // 14. Aplicação de regra de DIVERSIDADE no TOP 5 (máximo 2 por categoria)
+    // Ordena pelo maior finalScore
+    const rankedCandidates = [...finalEvaluatedList].sort((a, b) => b.finalScore - a.finalScore);
+    const topOffers = this.intelligenceService.enforceDiversity(rankedCandidates, preSelected, limit, 2);
+
+    // 15. Salvar ofertas selecionadas em offer_candidates
     try {
       logger.info(`[ProductSearch] Registrando ${topOffers.length} ofertas selecionadas em offer_candidates...`);
       memoryStats.candidatesSaved = await this.productRepository.saveSelectedCandidates(topOffers);
@@ -436,6 +547,21 @@ export class ProductSearchService {
     }
 
     const topCategories = Array.from(new Set(topOffers.map((t) => t.category || 'outros')));
+
+    const currentTokens = jevTokens.inputTokens + gptTokens;
+
+    // Cálculo de economia financeira estimada vs Fase 5 (baseline de 2.500 tokens GPT-4o-mini a $0.15/1M)
+    const baselineGptCost = 2500 * (0.15 / 1000000);
+    const currentJevCost = jevTokens.inputTokens * (0.042 / 1000000);
+    const currentGptCost = gptTokens * (0.15 / 1000000);
+    const currentTotalCost = currentJevCost + currentGptCost;
+
+    let savingsPercent = 0;
+    if (baselineGptCost > currentTotalCost) {
+      savingsPercent = Math.round(((baselineGptCost - currentTotalCost) / baselineGptCost) * 100);
+    }
+    const gptReductionNote = gptCalls === 0 ? ' (100% redução chamadas GPT)' : '';
+    const estimatedSavings = `${savingsPercent}%${gptReductionNote}`;
 
     return {
       topOffers,
@@ -454,14 +580,29 @@ export class ProductSearchService {
         intelligence: {
           analyzed: evaluated.length,
           preSelected: preSelected.length,
-          sentToAI: compactPayload.length,
+          sentToAI: preSelected.length,
           selected: topOffers.length,
           topCategories,
           confidenceCounts,
           repeatedPenalties,
           suspiciousDiscounts,
-          tokensUsed,
+          tokensUsed: currentTokens,
         },
+        jev: {
+          status: jevStatus,
+          model: this.jevAgent.model,
+          sentToJev: itemsForJev.length,
+          calls: jevTokens.totalCalls,
+          tokens: jevTokens.inputTokens,
+          cacheHits: itemsFromCache.length,
+        },
+        gpt: {
+          sentToGpt: gptItems.length,
+          calls: gptCalls,
+          tokens: gptTokens,
+          fallbackTriggered: jevFallbackTriggered || gptFallbackTriggered,
+        },
+        estimatedSavings,
       },
     };
   }

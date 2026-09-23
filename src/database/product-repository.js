@@ -409,6 +409,145 @@ export class ProductRepository {
       return metricsMap;
     }
   }
+
+  /**
+   * Consulta decisões recentes em cache para um lote de produtos.
+   * Reutiliza a decisão se:
+   *  - Foi analisada recentemente (TTL padrão: 24 horas);
+   *  - O preço atual for idêntico;
+   *  - O percentual de desconto for idêntico.
+   *
+   * @param {Array<object>} products - Produtos com dbId e currentPrice
+   * @param {number} [ttlHours=24] - Validade do cache em horas
+   * @returns {Promise<Map<string, object>>} Map indexado pelo productId original
+   */
+  async getCachedDecisionsBatch(products, ttlHours = 24) {
+    const cachedMap = new Map();
+    if (!Array.isArray(products) || products.length === 0) {
+      return cachedMap;
+    }
+
+    const dbIdToProductMap = new Map();
+    const dbIds = [];
+    for (const p of products) {
+      if (p.dbId) {
+        dbIds.push(p.dbId);
+        dbIdToProductMap.set(p.dbId, p);
+      }
+    }
+
+    if (dbIds.length === 0) {
+      return cachedMap;
+    }
+
+    try {
+      const sinceDate = new Date(Date.now() - ttlHours * 3600 * 1000).toISOString();
+      const { data: cachedRows, error } = await this.client
+        .from('ai_decision_cache')
+        .select('*')
+        .in('product_id', dbIds)
+        .gte('updated_at', sinceDate);
+
+      if (error) {
+        logger.warn(`[ProductRepository] Erro ao consultar cache de decisões: ${error.message}`);
+        return cachedMap;
+      }
+
+      if (Array.isArray(cachedRows)) {
+        for (const row of cachedRows) {
+          const product = dbIdToProductMap.get(row.product_id);
+          if (!product) continue;
+
+          // Valida se o preço e desconto não mudaram
+          const curPrice = Number(product.currentPrice);
+          const cachedPrice = Number(row.last_price);
+          const priceMatches = Math.abs(curPrice - cachedPrice) < 0.05;
+
+          const curDiscount = Number(product.announcedDiscount || product.discountPercent || 0);
+          const cachedDiscount = Number(row.discount_percent || 0);
+          const discountMatches = Math.abs(curDiscount - cachedDiscount) <= 1;
+
+          if (priceMatches && discountMatches) {
+            cachedMap.set(product.productId, {
+              productId: product.productId,
+              dbId: row.product_id,
+              lastPrice: row.last_price,
+              discountPercent: row.discount_percent,
+              localScore: row.local_score,
+              jevDecisionScore: row.jev_decision_score,
+              jevQualityTier: row.jev_quality_tier,
+              jevIsAchadinho: row.jev_is_achadinho,
+              jevRiskLevel: row.jev_risk_level,
+              jevNeedsEscalation: row.jev_needs_escalation,
+              aiScore: row.ai_score,
+              aiReason: row.ai_reason,
+              aiRisk: row.ai_risk,
+              modelUsed: row.model_used,
+              cachedAt: row.updated_at,
+              fromCache: true,
+            });
+          }
+        }
+      }
+
+      return cachedMap;
+    } catch (err) {
+      logger.warn(`[ProductRepository] Exceção ao consultar cache de decisões: ${err.message}`);
+      return cachedMap;
+    }
+  }
+
+  /**
+   * Salva ou atualiza decisões na tabela `ai_decision_cache`.
+   *
+   * @param {Array<object>} decisions
+   * @returns {Promise<number>} Quantidade de registros persistidos no cache
+   */
+  async saveDecisionCacheBatch(decisions) {
+    if (!Array.isArray(decisions) || decisions.length === 0) {
+      return 0;
+    }
+
+    let saved = 0;
+    const now = new Date().toISOString();
+
+    for (const d of decisions) {
+      if (!d.dbId) continue;
+      try {
+        const payload = {
+          product_id: d.dbId,
+          last_price: d.currentPrice ?? d.lastPrice ?? 0,
+          discount_percent: d.announcedDiscount ?? d.discountPercent ?? 0,
+          local_score: d.localScore ?? null,
+          jev_decision_score: d.jevDecisionScore ?? null,
+          jev_quality_tier: d.jevQualityTier ?? null,
+          jev_is_achadinho: d.jevIsAchadinho ?? null,
+          jev_risk_level: d.jevRiskLevel ?? null,
+          jev_needs_escalation: d.jevNeedsEscalation ?? false,
+          ai_score: d.aiScore ?? null,
+          ai_reason: d.reasons ?? d.aiReason ?? null,
+          ai_risk: d.risks ?? d.aiRisk ?? null,
+          model_used: d.modelUsed || 'typesafe/jev-1.13',
+          updated_at: now,
+        };
+
+        const { error } = await this.client
+          .from('ai_decision_cache')
+          .upsert(payload, { onConflict: 'product_id' });
+
+        if (!error) {
+          saved++;
+        } else {
+          logger.warn(`[ProductRepository] Falha ao persistir cache para produto ${d.dbId}: ${error.message}`);
+        }
+      } catch (err) {
+        logger.warn(`[ProductRepository] Exceção ao salvar cache de decisão: ${err.message}`);
+      }
+    }
+
+    return saved;
+  }
 }
 
 export default ProductRepository;
+
