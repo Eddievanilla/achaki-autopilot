@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ACHAki Autopilot — Painel Operacional</title>
+  <title>ACHAki Autopilot — Centro de Comando e Painel Operacional</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -21,6 +21,8 @@
       --amber-glow: rgba(245, 158, 11, 0.25);
       --rose: #f43f5e;
       --rose-glow: rgba(244, 63, 94, 0.25);
+      --purple: #a855f7;
+      --purple-glow: rgba(168, 85, 247, 0.25);
       --text: #f8fafc;
       --text-muted: #94a3b8;
       --text-dim: #64748b;
@@ -42,7 +44,7 @@
     }
 
     .container {
-      max-width: 1240px;
+      max-width: 1280px;
       width: 100%;
       display: flex;
       flex-direction: column;
@@ -102,6 +104,35 @@
       display: flex;
       align-items: center;
       gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .mode-selector {
+      display: flex;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--card-border);
+      border-radius: 999px;
+      padding: 3px;
+      gap: 2px;
+    }
+
+    .mode-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-dim);
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 5px 12px;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .mode-btn.active {
+      background: var(--primary);
+      color: white;
+      box-shadow: 0 0 12px var(--primary-glow);
     }
 
     .status-badge {
@@ -118,86 +149,95 @@
 
     .status-badge.ONLINE {
       background: rgba(16, 185, 129, 0.12);
-      border: 1px solid rgba(16, 185, 129, 0.3);
       color: var(--emerald);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      box-shadow: 0 0 15px var(--emerald-glow);
     }
 
     .status-badge.TRABALHANDO {
-      background: rgba(245, 158, 11, 0.12);
-      border: 1px solid rgba(245, 158, 11, 0.3);
-      color: var(--amber);
+      background: rgba(59, 130, 246, 0.15);
+      color: #93c5fd;
+      border: 1px solid rgba(59, 130, 246, 0.4);
+      box-shadow: 0 0 15px var(--primary-glow);
     }
 
     .status-badge.AGUARDANDO {
-      background: rgba(59, 130, 246, 0.12);
-      border: 1px solid rgba(59, 130, 246, 0.3);
-      color: var(--primary);
+      background: rgba(245, 158, 11, 0.12);
+      color: var(--amber);
+      border: 1px solid rgba(245, 158, 11, 0.3);
     }
 
-    .status-badge.ERRO, .status-badge.ATENCAO {
-      background: rgba(244, 63, 94, 0.12);
-      border: 1px solid rgba(244, 63, 94, 0.3);
+    .status-badge.PAUSADO {
+      background: rgba(148, 163, 184, 0.12);
+      color: var(--text-muted);
+      border: 1px solid rgba(148, 163, 184, 0.3);
+    }
+
+    .status-badge.ERRO {
+      background: rgba(244, 63, 94, 0.15);
       color: var(--rose);
+      border: 1px solid rgba(244, 63, 94, 0.3);
+      box-shadow: 0 0 15px var(--rose-glow);
     }
 
     .pulse-dot {
-      width: 10px;
-      height: 10px;
+      width: 8px;
+      height: 8px;
       border-radius: 50%;
       background: currentColor;
-      box-shadow: 0 0 12px currentColor;
-      animation: pulse 2s infinite ease-in-out;
+      animation: pulse 1.8s infinite;
     }
 
     @keyframes pulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.4; transform: scale(0.85); }
+      0% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.3; transform: scale(0.85); }
+      100% { opacity: 1; transform: scale(1); }
     }
 
     .btn {
       padding: 8px 16px;
       border-radius: var(--radius-sm);
-      font-size: 0.82rem;
+      font-size: 0.84rem;
       font-weight: 600;
+      cursor: pointer;
       border: 1px solid var(--card-border);
       background: rgba(255, 255, 255, 0.05);
       color: var(--text);
-      cursor: pointer;
+      transition: all 0.2s ease;
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      transition: all 0.2s ease;
     }
 
     .btn:hover {
       background: rgba(255, 255, 255, 0.1);
-      transform: translateY(-1px);
+      border-color: rgba(255, 255, 255, 0.2);
     }
 
     .btn-primary {
-      background: var(--primary);
-      border-color: var(--primary);
+      background: #2563eb;
+      border-color: #3b82f6;
       color: white;
-      box-shadow: 0 4px 15px var(--primary-glow);
     }
 
     .btn-primary:hover {
-      background: #2563eb;
+      background: #1d4ed8;
+      box-shadow: 0 0 15px var(--primary-glow);
     }
 
-    /* SUB-BAR / CYCLE INFO */
+    /* SUB-BAR / CYCLE PROGRESS */
     .cycle-bar {
       background: var(--card-bg);
-      backdrop-filter: blur(16px);
+      backdrop-filter: blur(20px);
       border: 1px solid var(--card-border);
       border-radius: var(--radius-md);
-      padding: 14px 22px;
+      padding: 12px 24px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       flex-wrap: wrap;
-      gap: 14px;
-      font-size: 0.86rem;
+      gap: 12px;
+      font-size: 0.85rem;
     }
 
     .cycle-meta {
@@ -216,35 +256,31 @@
 
     .meta-item strong {
       color: var(--text);
-      font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
     }
 
     .step-banner {
       display: flex;
       align-items: center;
       gap: 8px;
-      background: rgba(59, 130, 246, 0.1);
-      border: 1px solid rgba(59, 130, 246, 0.2);
-      padding: 4px 12px;
-      border-radius: 999px;
       color: #93c5fd;
-      font-size: 0.82rem;
       font-weight: 500;
     }
 
-    /* CARDS PRINCIPAIS */
+    /* SECTION TITLES */
     .section-title {
-      font-size: 0.9rem;
+      font-size: 0.95rem;
       font-weight: 700;
+      color: var(--text-muted);
       text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--text-dim);
-      margin-bottom: 2px;
+      letter-spacing: 0.06em;
+      margin-bottom: 12px;
       display: flex;
       align-items: center;
-      gap: 8px;
+      justify-content: space-between;
     }
 
+    /* GRIDS */
     .metrics-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -256,22 +292,24 @@
       backdrop-filter: blur(16px);
       border: 1px solid var(--card-border);
       border-radius: var(--radius-md);
-      padding: 20px;
+      padding: 18px 20px;
       display: flex;
       flex-direction: column;
-      gap: 8px;
-      transition: transform 0.2s ease, border-color 0.2s ease;
+      gap: 6px;
+      transition: all 0.2s ease;
     }
 
     .card:hover {
       border-color: rgba(255, 255, 255, 0.15);
-      transform: translateY(-2px);
+      transform: translateY(-1px);
     }
 
     .card-label {
-      font-size: 0.8rem;
+      font-size: 0.78rem;
+      color: var(--text-dim);
       font-weight: 600;
-      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -280,26 +318,54 @@
     .card-value {
       font-size: 1.85rem;
       font-weight: 800;
-      letter-spacing: -0.03em;
       font-family: 'JetBrains Mono', monospace;
+      color: var(--text);
+      line-height: 1.2;
     }
 
     .card-sub {
-      font-size: 0.78rem;
+      font-size: 0.75rem;
       color: var(--text-dim);
     }
 
     .tag-highlight {
-      padding: 2px 8px;
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
       background: rgba(16, 185, 129, 0.15);
-      border: 1px solid rgba(16, 185, 129, 0.3);
       color: var(--emerald);
-      border-radius: 999px;
-      font-size: 0.72rem;
-      font-weight: 600;
+      border: 1px solid rgba(16, 185, 129, 0.3);
     }
 
-    /* TWO COLUMNS: CHANNELS & ACTIVITY */
+    .tag-purple {
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(168, 85, 247, 0.15);
+      color: #d8b4fe;
+      border: 1px solid rgba(168, 85, 247, 0.3);
+    }
+
+    /* GOALS PROGRESS BAR */
+    .progress-track {
+      width: 100%;
+      height: 8px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 999px;
+      overflow: hidden;
+      margin-top: 6px;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #3b82f6, #10b981);
+      width: 0%;
+      transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* TWO COLUMNS */
     .two-cols {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -324,11 +390,6 @@
       background: rgba(255, 255, 255, 0.02);
       border: 1px solid var(--card-border);
       border-radius: var(--radius-sm);
-      transition: background 0.2s ease;
-    }
-
-    .channel-item:hover {
-      background: rgba(255, 255, 255, 0.04);
     }
 
     .channel-name {
@@ -368,6 +429,93 @@
       background: rgba(59, 130, 246, 0.1);
       color: #93c5fd;
       border: 1px solid rgba(59, 130, 246, 0.2);
+    }
+
+    /* DECISIONS PANEL ("Por que o robô fez isso?") */
+    .decision-box {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      border-left: 3px solid var(--primary);
+    }
+
+    .decision-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #93c5fd;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .decision-text {
+      font-size: 0.83rem;
+      color: var(--text-muted);
+      line-height: 1.45;
+    }
+
+    /* DIARY LIST & ITEMS */
+    .diary-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 380px;
+      overflow-y: auto;
+    }
+
+    .diary-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 14px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-sm);
+      font-size: 0.84rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .diary-item:hover {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.18);
+    }
+
+    .diary-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .diary-time {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-dim);
+      font-size: 0.78rem;
+      flex-shrink: 0;
+    }
+
+    .diary-msg {
+      color: var(--text-muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .diary-badge {
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: rgba(59, 130, 246, 0.1);
+      color: #93c5fd;
+      flex-shrink: 0;
     }
 
     /* TOP 5 OFERTAS */
@@ -433,6 +581,7 @@
       gap: 8px;
       font-size: 0.75rem;
       color: var(--text-dim);
+      flex-wrap: wrap;
     }
 
     .offer-tag {
@@ -440,6 +589,15 @@
       background: rgba(255, 255, 255, 0.05);
       border-radius: 6px;
       text-transform: capitalize;
+    }
+
+    .offer-strategy-tag {
+      padding: 2px 8px;
+      background: rgba(168, 85, 247, 0.15);
+      color: #d8b4fe;
+      border: 1px solid rgba(168, 85, 247, 0.3);
+      border-radius: 6px;
+      font-weight: 600;
     }
 
     .offer-right {
@@ -486,35 +644,76 @@
       opacity: 0.7;
     }
 
-    /* REALTIME FEED */
-    .feed-list {
+    /* MODAL DE DRILL-DOWN */
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(8px);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-backdrop.open {
+      display: flex;
+    }
+
+    .modal-content {
+      background: #0f172a;
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-lg);
+      max-width: 620px;
+      width: 100%;
+      padding: 24px;
       display: flex;
       flex-direction: column;
-      gap: 8px;
-      max-height: 280px;
-      overflow-y: auto;
+      gap: 16px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8);
     }
 
-    .feed-item {
+    .modal-header {
       display: flex;
-      align-items: flex-start;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--card-border);
+      padding-bottom: 12px;
+    }
+
+    .modal-header h3 {
+      font-size: 1.1rem;
+      color: var(--text);
+    }
+
+    .modal-close {
+      background: transparent;
+      border: none;
+      color: var(--text-dim);
+      font-size: 1.4rem;
+      cursor: pointer;
+    }
+
+    .modal-body {
+      font-size: 0.88rem;
+      line-height: 1.5;
+      color: var(--text-muted);
+      display: flex;
+      flex-direction: column;
       gap: 12px;
-      padding: 10px 14px;
-      background: rgba(255, 255, 255, 0.02);
+    }
+
+    pre.code-block {
+      background: #070a12;
       border: 1px solid var(--card-border);
       border-radius: var(--radius-sm);
-      font-size: 0.84rem;
-    }
-
-    .feed-time {
+      padding: 12px;
       font-family: 'JetBrains Mono', monospace;
-      color: var(--text-dim);
       font-size: 0.78rem;
-      flex-shrink: 0;
-    }
-
-    .feed-msg {
-      color: var(--text-muted);
+      color: #93c5fd;
+      overflow-x: auto;
+      max-height: 200px;
     }
 
     /* FOOTER */
@@ -542,11 +741,18 @@
       <div class="brand-wrap">
         <div class="brand-logo">A</div>
         <div class="brand-text">
-          <h1>ACHAki Autopilot</h1>
-          <p>Operador Autônomo de Ofertas e Curadoria IA</p>
+          <h1>ACHAki Autopilot <span>Centro de Comando</span></h1>
+          <p>Operador Orgânico, Metas Diárias e Curadoria IA</p>
         </div>
       </div>
       <div class="header-controls">
+        <!-- SELETOR DE MODO DO AUTOPILOT -->
+        <div class="mode-selector">
+          <button id="modeOff" class="mode-btn" onclick="setAutopilotMode('OFF')">OFF</button>
+          <button id="modeAssist" class="mode-btn active" onclick="setAutopilotMode('ASSISTIDO')">ASSISTIDO</button>
+          <button id="modeAuto" class="mode-btn" onclick="setAutopilotMode('AUTONOMO')">AUTÔNOMO</button>
+        </div>
+
         <div id="robotStatusBadge" class="status-badge ONLINE">
           <span class="pulse-dot"></span>
           <span id="robotStatusText">ONLINE</span>
@@ -565,15 +771,19 @@
       <div class="cycle-meta">
         <div class="meta-item">
           <span>Última execução:</span>
-          <strong id="metaLastRun">Hoje às 16:32</strong>
+          <strong id="metaLastRun">--:--</strong>
         </div>
         <div class="meta-item">
           <span>Duração:</span>
-          <strong id="metaDuration">48s</strong>
+          <strong id="metaDuration">--</strong>
         </div>
         <div class="meta-item">
-          <span>Próxima:</span>
-          <strong id="metaNextRun">Em 28 min</strong>
+          <span>Próxima ação:</span>
+          <strong id="metaNextRun">Em 25 min</strong>
+        </div>
+        <div class="meta-item">
+          <span>Estratégia Ativa:</span>
+          <span class="tag-purple" id="metaStrategy">ACHADINHO</span>
         </div>
       </div>
       <div class="step-banner">
@@ -582,24 +792,70 @@
       </div>
     </div>
 
-    <!-- METRICS: HOJE -->
+    <!-- METAS & CENTRO DE COMANDO ORGÂNICO -->
     <div>
-      <div class="section-title">📊 Produção de Hoje</div>
+      <div class="section-title">
+        <span>🎯 Metas Diárias & Otimizador de Cliques</span>
+        <span style="font-size: 0.75rem; color: var(--emerald);" id="metaGoalStatus">Status: NO PRAZO</span>
+      </div>
+      <div class="metrics-grid">
+        <!-- CARD META DE CLIQUES -->
+        <div class="card">
+          <div class="card-label">
+            Meta de Cliques / Dia
+            <span class="tag-highlight" id="goalTargetBadge">20 Cliques</span>
+          </div>
+          <div class="card-value" id="cardGoalClicks">0 / 20</div>
+          <div class="progress-track">
+            <div class="progress-fill" id="goalProgressBar" style="width: 0%;"></div>
+          </div>
+          <div class="card-sub" id="goalSubText">0% atingido hoje • 20 restantes</div>
+        </div>
+
+        <!-- CARD PROJEÇÃO ORGÂNICA -->
+        <div class="card">
+          <div class="card-label">
+            Projeção Hoje
+            <span class="tag-purple">GoalOptimizer</span>
+          </div>
+          <div class="card-value" id="cardProjection">0</div>
+          <div class="card-sub">Cliques projetados com base no catálogo</div>
+        </div>
+
+        <!-- CARD CLIQUES TOTAIS (ZERO MOCK) -->
+        <div class="card">
+          <div class="card-label">Cliques Rastreados</div>
+          <div class="card-value" id="cardRealClicks">0</div>
+          <div class="card-sub">Tracking real (Zero Mocks)</div>
+        </div>
+
+        <!-- CARD RETENÇÃO & CTR -->
+        <div class="card">
+          <div class="card-label">CTR Médio / Retenção</div>
+          <div class="card-value" id="cardCtr">0.0%</div>
+          <div class="card-sub" id="cardRetention">Retenção: N/D (Aguardando publicações)</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- METRICS: HOJE (PRODUÇÃO) -->
+    <div>
+      <div class="section-title">📊 Produção Operacional</div>
       <div class="metrics-grid">
         <div class="card">
           <div class="card-label">Produtos Encontrados</div>
-          <div class="card-value" id="cardProductsFound">30</div>
+          <div class="card-value" id="cardProductsFound">0</div>
           <div class="card-sub">Coletados nos marketplaces</div>
         </div>
         <div class="card">
           <div class="card-label">Ofertas Selecionadas</div>
-          <div class="card-value" id="cardOffersSelected">5</div>
-          <div class="card-sub">Aprovadas pelo motor inteligente</div>
+          <div class="card-value" id="cardOffersSelected">0</div>
+          <div class="card-sub">Com estratégias orgânicas prontas</div>
         </div>
         <div class="card">
           <div class="card-label">Publicações</div>
           <div class="card-value" id="cardPublications">0</div>
-          <div class="card-sub">Postagens em redes sociais</div>
+          <div class="card-sub">Prontas para envio (Fase futura)</div>
         </div>
         <div class="card">
           <div class="card-label">Erros de Execução</div>
@@ -618,7 +874,7 @@
             Decisões por Cache
             <span class="tag-highlight">0 Tokens</span>
           </div>
-          <div class="card-value" id="cardCacheHits">15</div>
+          <div class="card-value" id="cardCacheHits">0</div>
           <div class="card-sub">Memória operacional reutilizada</div>
         </div>
         <div class="card">
@@ -642,12 +898,25 @@
       </div>
     </div>
 
-    <!-- TWO COLUMNS: MARKETPLACES & FEED -->
+    <!-- TWO COLUMNS: DECISÕES DO ROBÔ & DIÁRIO COM DRILL-DOWN -->
     <div class="two-cols">
-      <!-- MARKETPLACES & REDES -->
+      <!-- DECISÕES DO OTIMIZADOR -->
       <div class="card">
-        <div class="section-title">🛒 Marketplaces Conectados</div>
-        <div class="channel-list" id="marketplaceList" style="margin-bottom: 20px;">
+        <div class="section-title">🧠 Por que o robô fez isso?</div>
+        <div style="display: flex; flex-direction: column; gap: 10px;" id="decisionsContainer">
+          <div class="decision-box">
+            <div class="decision-title">
+              <span>🎯 Alinhamento com Meta Diária</span>
+              <span style="font-size: 0.72rem; color: var(--text-dim);">Agora</span>
+            </div>
+            <div class="decision-text" id="latestDecisionText">
+              O robô priorizou produtos com desconto real comprovado e bom histórico de avaliações, rotacionando a estratégia para "ACHADINHO" com foco no alcance de 20 cliques diários sem saturação de categorias.
+            </div>
+          </div>
+        </div>
+
+        <div class="section-title" style="margin-top: 18px;">🛒 Marketplaces Conectados</div>
+        <div class="channel-list" id="marketplaceList">
           <div class="channel-item">
             <div class="channel-name">🟡 Mercado Livre</div>
             <span class="channel-badge ATIVO">ATIVO</span>
@@ -666,7 +935,7 @@
           </div>
         </div>
 
-        <div class="section-title">📱 Redes Sociais</div>
+        <div class="section-title" style="margin-top: 18px;">📱 Redes Sociais</div>
         <div class="channel-list" id="socialList">
           <div class="channel-item">
             <div class="channel-name">📘 Facebook</div>
@@ -691,25 +960,20 @@
         </div>
       </div>
 
-      <!-- ATIVIDADE EM TEMPO REAL -->
+      <!-- DIÁRIO DO ROBÔ COM DRILL-DOWN -->
       <div class="card">
-        <div class="section-title">⏱ Atividade em Tempo Real</div>
-        <div class="feed-list" id="activityFeed">
-          <div class="feed-item">
-            <span class="feed-time">16:32</span>
-            <span class="feed-msg">Ciclo concluído com 5 ofertas selecionadas</span>
-          </div>
-          <div class="feed-item">
-            <span class="feed-time">16:32</span>
-            <span class="feed-msg">15 decisões recuperadas do cache operacional</span>
-          </div>
-          <div class="feed-item">
-            <span class="feed-time">16:32</span>
-            <span class="feed-msg">29 produtos encontrados após filtros locais</span>
-          </div>
-          <div class="feed-item">
-            <span class="feed-time">16:31</span>
-            <span class="feed-msg">Pesquisa de ofertas iniciada nos marketplaces</span>
+        <div class="section-title">
+          <span>📖 Diário do Robô (Auditoria & Drill-Down)</span>
+          <span style="font-size: 0.72rem; color: var(--text-dim);">Clique para detalhes</span>
+        </div>
+        <div class="diary-list" id="robotDiaryContainer">
+          <!-- Itens renderizados dinamicamente -->
+          <div class="diary-item">
+            <div class="diary-left">
+              <span class="diary-time">--:--</span>
+              <span class="diary-msg">Carregando diário de operações...</span>
+            </div>
+            <span class="diary-badge">SISTEMA</span>
           </div>
         </div>
       </div>
@@ -717,7 +981,7 @@
 
     <!-- TOP 5 OFERTAS SELECIONADAS -->
     <div>
-      <div class="section-title">⭐ TOP 5 Ofertas Selecionadas</div>
+      <div class="section-title">⭐ TOP 5 Ofertas com Estratégia Orgânica</div>
       <div class="offers-list" id="offersContainer">
         <!-- Renderizado dinamicamente via JS -->
       </div>
@@ -725,11 +989,26 @@
 
     <!-- FOOTER -->
     <footer>
-      ACHAki Autopilot • <a href="/achaki/oauth/callback">OAuth Gateway</a> • Ambiente Seguro de Produção
+      ACHAki Autopilot • <a href="/achaki/oauth/callback">OAuth Gateway</a> • Ambiente Seguro de Produção • Zero Mock Policy
     </footer>
   </div>
 
+  <!-- MODAL DE DRILL-DOWN DO DIÁRIO -->
+  <div class="modal-backdrop" id="drillDownModal" onclick="closeModal(event)">
+    <div class="modal-content" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3 id="modalTitle">Detalhes do Evento</h3>
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+      </div>
+      <div class="modal-body" id="modalBody">
+        <!-- Preenchido dinamicamente -->
+      </div>
+    </div>
+  </div>
+
   <script>
+    let diaryCache = [];
+
     async function loadDashboard() {
       try {
         const res = await fetch('/api/dashboard');
@@ -737,14 +1016,14 @@
         const data = await res.json();
         renderDashboard(data);
       } catch (err) {
-        console.warn('Falha ao carregar métricas ao vivo, exibindo cache local:', err.message);
+        console.warn('Falha ao carregar métricas ao vivo:', err.message);
       }
     }
 
     function renderDashboard(data) {
       if (!data) return;
 
-      // Robot Status
+      // Status do Robô
       const statusBadge = document.getElementById('robotStatusBadge');
       const statusText = document.getElementById('robotStatusText');
       if (statusBadge && statusText && data.robot) {
@@ -752,13 +1031,24 @@
         statusBadge.className = 'status-badge ' + data.robot.status;
       }
 
-      // Meta
+      // Modo Autopilot
+      const currentMode = data.autopilotMode || 'ASSISTIDO';
+      document.getElementById('modeOff').className = 'mode-btn' + (currentMode === 'OFF' ? ' active' : '');
+      document.getElementById('modeAssist').className = 'mode-btn' + (currentMode === 'ASSISTIDO' ? ' active' : '');
+      document.getElementById('modeAuto').className = 'mode-btn' + (currentMode === 'AUTONOMO' ? ' active' : '');
+
+      // Estratégia Ativa
+      if (data.currentStrategy) {
+        document.getElementById('metaStrategy').textContent = data.currentStrategy;
+      }
+
+      // Meta & Ciclo
       if (data.robot) {
         if (data.robot.lastRunAt) {
           const d = new Date(data.robot.lastRunAt);
           document.getElementById('metaLastRun').textContent = 'Hoje às ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
         }
-        if (data.robot.lastDurationSeconds) {
+        if (data.robot.lastDurationSeconds !== undefined) {
           document.getElementById('metaDuration').textContent = data.robot.lastDurationSeconds + 's';
         }
         if (data.robot.currentStep) {
@@ -766,38 +1056,69 @@
         }
       }
 
-      // Cards Hoje
+      // Metas Diárias
+      const targetClicks = data.goals?.targetClicks || 20;
+      const currentClicks = data.goals?.currentClicks || 0; // Zero Mock
+      const progressPercent = Math.min(100, Math.round((currentClicks / targetClicks) * 100));
+      document.getElementById('goalTargetBadge').textContent = targetClicks + ' Cliques';
+      document.getElementById('cardGoalClicks').textContent = `${currentClicks} / ${targetClicks}`;
+      document.getElementById('goalProgressBar').style.width = progressPercent + '%';
+      document.getElementById('goalSubText').textContent = `${progressPercent}% atingido hoje • ${Math.max(0, targetClicks - currentClicks)} restantes`;
+      document.getElementById('cardProjection').textContent = data.goals?.projectionToday ?? 0;
+      document.getElementById('cardRealClicks').textContent = data.performance?.clicksToday ?? 0;
+      document.getElementById('cardCtr').textContent = (data.performance?.ctr ?? 0).toFixed(1) + '%';
+      document.getElementById('cardRetention').textContent = 'Retenção: ' + (data.performance?.retention || 'N/D');
+
+      // Cards Produção Hoje
       if (data.today) {
-        document.getElementById('cardProductsFound').textContent = data.today.productsFound ?? 30;
-        document.getElementById('cardOffersSelected').textContent = data.today.offersSelected ?? 5;
+        document.getElementById('cardProductsFound').textContent = data.today.productsFound ?? 0;
+        document.getElementById('cardOffersSelected').textContent = data.today.offersSelected ?? 0;
         document.getElementById('cardPublications').textContent = data.today.publications ?? 0;
         document.getElementById('cardErrors').textContent = data.today.errors ?? 0;
       }
 
       // Cards IA
       if (data.ai) {
-        document.getElementById('cardCacheHits').textContent = data.ai.cacheHits ?? 15;
+        document.getElementById('cardCacheHits').textContent = data.ai.cacheHits ?? 0;
         document.getElementById('cardJevCalls').textContent = data.ai.jevCalls ?? 0;
         document.getElementById('cardGptCalls').textContent = data.ai.gptCalls ?? 0;
         document.getElementById('cardTokens').textContent = data.ai.tokens ?? 0;
         document.getElementById('cardSavings').textContent = (data.ai.savingsPercent ?? 100) + '%';
       }
 
-      // Feed
-      if (Array.isArray(data.activityFeed) && data.activityFeed.length > 0) {
-        const feedContainer = document.getElementById('activityFeed');
-        feedContainer.innerHTML = data.activityFeed.map(item => `
-          <div class="feed-item">
-            <span class="feed-time">${item.time}</span>
-            <span class="feed-msg">${item.message}</span>
+      // Decisões Recentes ("Por que o robô fez isso?")
+      if (Array.isArray(data.optimizerDecisions) && data.optimizerDecisions.length > 0) {
+        const decisionsContainer = document.getElementById('decisionsContainer');
+        decisionsContainer.innerHTML = data.optimizerDecisions.slice(0, 2).map(dec => `
+          <div class="decision-box">
+            <div class="decision-title">
+              <span>🎯 ${dec.actionTaken || 'Otimização de Estratégia'}</span>
+              <span style="font-size: 0.72rem; color: var(--text-dim);">${dec.time || 'Hoje'}</span>
+            </div>
+            <div class="decision-text">${dec.reason}</div>
           </div>
         `).join('');
       }
 
-      // Top Offers
+      // Diário do Robô (Auditoria com Drill-Down)
+      if (Array.isArray(data.diary) && data.diary.length > 0) {
+        diaryCache = data.diary;
+        const diaryContainer = document.getElementById('robotDiaryContainer');
+        diaryContainer.innerHTML = data.diary.map((item, idx) => `
+          <div class="diary-item" onclick="openDiaryDrillDown(${idx})">
+            <div class="diary-left">
+              <span class="diary-time">${item.time}</span>
+              <span class="diary-msg">${item.message}</span>
+            </div>
+            <span class="diary-badge">${item.strategy || item.eventType || 'INFO'}</span>
+          </div>
+        `).join('');
+      }
+
+      // Top Offers com Estratégia
       if (Array.isArray(data.topOffers) && data.topOffers.length > 0) {
         const offersContainer = document.getElementById('offersContainer');
-        offersContainer.innerHTML = data.topOffers.map((offer, idx) => `
+        offersContainer.innerHTML = data.topOffers.map((offer) => `
           <div class="offer-card">
             <div class="offer-left">
               <img src="${offer.imageUrl || 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=100'}" alt="" class="offer-img" onerror="this.src='https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=100'">
@@ -806,6 +1127,7 @@
                 <div class="offer-tags">
                   <span class="offer-tag">${offer.marketplace}</span>
                   <span class="offer-tag">${offer.category}</span>
+                  <span class="offer-strategy-tag">🎯 Estratégia: ${offer.strategy?.name || 'ACHADINHO'}</span>
                 </div>
               </div>
             </div>
@@ -827,6 +1149,55 @@
       }
     }
 
+    // Modal de Drill-Down do Diário
+    function openDiaryDrillDown(index) {
+      const item = diaryCache[index];
+      if (!item) return;
+
+      document.getElementById('modalTitle').textContent = `Auditoria de Evento [${item.eventType || 'LOG'}]`;
+      let html = `
+        <p><strong>Horário:</strong> ${item.date} às ${item.time}</p>
+        <p><strong>Descrição:</strong> ${item.message}</p>
+        <p><strong>Estratégia Associada:</strong> <span class="tag-purple">${item.strategy || 'Geral'}</span></p>
+      `;
+
+      if (item.productTitle) {
+        html += `
+          <p><strong>Produto em Foco:</strong> ${item.productTitle} (${item.marketplace || 'ML'})</p>
+        `;
+      }
+
+      if (item.details && Object.keys(item.details).length > 0) {
+        html += `
+          <p><strong>Contexto e Métricas Operacionais:</strong></p>
+          <pre class="code-block">${JSON.stringify(item.details, null, 2)}</pre>
+        `;
+      }
+
+      document.getElementById('modalBody').innerHTML = html;
+      document.getElementById('drillDownModal').classList.add('open');
+    }
+
+    function closeModal() {
+      document.getElementById('drillDownModal').classList.remove('open');
+    }
+
+    // Alteração de Modo do Autopilot
+    async function setAutopilotMode(mode) {
+      try {
+        const res = await fetch('/api/command-center', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'SET_AUTOPILOT_MODE', mode })
+        });
+        if (res.ok) {
+          loadDashboard();
+        }
+      } catch (e) {
+        console.warn('Erro ao atualizar modo:', e.message);
+      }
+    }
+
     async function triggerAction(action) {
       try {
         const btn = document.getElementById(action === 'EXECUTAR_AGORA' ? 'btnExecute' : 'btnPause');
@@ -839,21 +1210,19 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action })
         });
-        const json = await res.json();
+        await res.json();
         
         btn.innerHTML = origText;
         btn.disabled = false;
-        
-        // Recarrega dashboard após 500ms
-        setTimeout(loadDashboard, 500);
+        setTimeout(loadDashboard, 600);
       } catch (e) {
         alert('Erro ao enviar comando: ' + e.message);
       }
     }
 
-    // Inicialização e auto-refresh a cada 10 segundos
+    // Inicialização e auto-refresh a cada 8 segundos
     loadDashboard();
-    setInterval(loadDashboard, 10000);
+    setInterval(loadDashboard, 8000);
   </script>
 </body>
 </html>

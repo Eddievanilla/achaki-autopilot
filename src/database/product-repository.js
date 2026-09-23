@@ -702,15 +702,15 @@ export class ProductRepository {
         marketplaces: state.marketplaces || {
           mercadolivre: 'ATIVO',
           shopee: 'BLOQUEADO',
-          amazon: 'NAO_CONFIGURADO',
-          aliexpress: 'NAO_CONFIGURADO',
+          amazon: 'NÃO CONFIGURADO',
+          aliexpress: 'NÃO CONFIGURADO',
         },
         socialNetworks: state.social_networks || {
-          facebook: 'NAO_CONFIGURADO',
-          instagram: 'NAO_CONFIGURADO',
-          tiktok: 'EM_BREVE',
-          youtube: 'EM_BREVE',
-          x: 'EM_BREVE',
+          facebook: 'NÃO CONFIGURADO',
+          instagram: 'NÃO CONFIGURADO',
+          tiktok: 'EM BREVE',
+          youtube: 'EM BREVE',
+          x: 'EM BREVE',
         },
         topOffers,
         activityFeed: (logsData || []).map((l) => ({
@@ -719,6 +719,26 @@ export class ProductRepository {
           message: l.message,
           level: l.level,
         })),
+        // Metas reais do Autopilot
+        goals: {
+          targetClicks: state.target_clicks || 20,
+          currentClicks: 0, // Real: 0 cliques se nenhuma publicação ocorreu ainda
+          progressPercent: 0,
+          projectionToday: 0,
+          status: 'NO_PRAZO',
+        },
+        autopilotMode: state.autopilot_mode || 'ASSISTIDO',
+        currentStrategy: state.current_strategy || 'ACHADINHO',
+        activePublicationsCount: 0, // Zero mocks
+        clicksToday: 0, // Zero mocks
+        ctr: 0.0, // Zero mocks
+        retention: 'N/D', // Zero mocks: N/D quando indisponível
+        performance: {
+          clicksToday: 0,
+          activePublicationsCount: 0,
+          ctr: 0.0,
+          retention: 'N/D',
+        },
         updatedAt: new Date().toISOString(),
       };
     } catch (err) {
@@ -726,8 +746,186 @@ export class ProductRepository {
       throw err;
     }
   }
+
+  /**
+   * Inicia o registro de um ciclo de automação na tabela `automation_runs`.
+   *
+   * @param {string} taskName
+   * @returns {Promise<string|null>} runId
+   */
+  async recordAutomationRunStart(taskName = 'Pesquisando ofertas...') {
+    try {
+      const { data, error } = await this.client
+        .from('automation_runs')
+        .insert({
+          status: 'RUNNING',
+          current_task: taskName,
+          start_time: new Date().toISOString(),
+        })
+        .select('id')
+        .single();
+
+      if (error) {
+        logger.warn(`[ProductRepository] Erro ao registrar run start: ${error.message}`);
+        return null;
+      }
+      return data?.id || null;
+    } catch (err) {
+      logger.warn(`[ProductRepository] Exceção em recordAutomationRunStart: ${err.message}`);
+      return null;
+    }
+  }
+
+  /**
+   * Finaliza o registro do ciclo de automação.
+   *
+   * @param {string} runId
+   * @param {object} stats
+   */
+  async recordAutomationRunEnd(runId, stats = {}) {
+    if (!runId) return;
+    try {
+      const now = new Date().toISOString();
+      await this.client
+        .from('automation_runs')
+        .update({
+          status: 'COMPLETED',
+          end_time: now,
+          duration_seconds: stats.durationSeconds || 0,
+          items_found: stats.itemsFound || 0,
+          items_selected: stats.itemsSelected || 0,
+          strategy_used: stats.strategyUsed || 'ACHADINHO',
+          current_task: 'Ciclo concluído',
+        })
+        .eq('id', runId);
+    } catch (err) {
+      logger.warn(`[ProductRepository] Exceção em recordAutomationRunEnd: ${err.message}`);
+    }
+  }
+
+  /**
+   * Registra um evento no Diário do Robô (`automation_events`).
+   *
+   * @param {object} event
+   */
+  async recordAutomationEvent({ runId, productId, eventType, message, strategyId, details = {} }) {
+    try {
+      await this.client.from('automation_events').insert({
+        run_id: runId || null,
+        product_id: productId || null,
+        event_type: eventType,
+        message,
+        strategy_id: strategyId || null,
+        details,
+        created_at: new Date().toISOString(),
+      });
+    } catch (err) {
+      logger.warn(`[ProductRepository] Exceção em recordAutomationEvent: ${err.message}`);
+    }
+  }
+
+  /**
+   * Registra uma decisão do GoalOptimizer ("Por que o robô fez isso?").
+   *
+   * @param {object} decision
+   */
+  async recordOptimizerDecision({ runId, productId, decisionType, reason, actionTaken, metricsContext = {} }) {
+    try {
+      await this.client.from('optimizer_decisions').insert({
+        run_id: runId || null,
+        product_id: productId || null,
+        decision_type: decisionType,
+        reason,
+        action_taken: actionTaken,
+        metrics_context: metricsContext,
+        created_at: new Date().toISOString(),
+      });
+    } catch (err) {
+      logger.warn(`[ProductRepository] Exceção em recordOptimizerDecision: ${err.message}`);
+    }
+  }
+
+  /**
+   * Retorna os últimos eventos detalhados do Diário do Robô para visualização.
+   *
+   * @param {number} [limit=15]
+   * @returns {Promise<Array<object>>}
+   */
+  async getRobotDiary(limit = 15) {
+    try {
+      const { data, error } = await this.client
+        .from('automation_events')
+        .select(`
+          id,
+          event_type,
+          message,
+          strategy_id,
+          details,
+          created_at,
+          products (
+            id,
+            title,
+            marketplace,
+            product_url,
+            image_url,
+            category
+          ),
+          content_strategies (
+            id,
+            name,
+            objective
+          )
+        `)
+        .order('created_at', { ascending: false })
+        .limit(limit);
+
+      if (error) {
+        logger.warn(`[ProductRepository] Erro ao buscar Diário do Robô: ${error.message}`);
+        return [];
+      }
+
+      return (data || []).map((row) => ({
+        id: row.id,
+        eventType: row.event_type,
+        message: row.message,
+        time: new Date(row.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+        date: new Date(row.created_at).toLocaleDateString('pt-BR'),
+        strategy: row.content_strategies?.name || row.strategy_id || 'Padrão',
+        productTitle: row.products?.title || null,
+        marketplace: row.products?.marketplace || null,
+        productUrl: row.products?.product_url || null,
+        imageUrl: row.products?.image_url || null,
+        details: row.details || {},
+      }));
+    } catch (err) {
+      logger.warn(`[ProductRepository] Exceção em getRobotDiary: ${err.message}`);
+      return [];
+    }
+  }
+
+  /**
+   * Retorna as decisões recentes do otimizador ("Por que o robô fez isso?").
+   *
+   * @param {number} [limit=5]
+   * @returns {Promise<Array<object>>}
+   */
+  async getOptimizerDecisions(limit = 5) {
+    try {
+      const { data, error } = await this.client
+        .from('optimizer_decisions')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(limit);
+
+      if (error) return [];
+      return data || [];
+    } catch {
+      return [];
+    }
+  }
 }
 
 export default ProductRepository;
+
 
 

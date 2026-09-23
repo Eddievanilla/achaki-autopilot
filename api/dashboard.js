@@ -102,24 +102,84 @@ export default async function handler(req, res) {
       .from('offer_candidates')
       .select('*', { count: 'exact', head: true });
 
+    // 5. Diário do Robô (automation_events recentes)
+    const { data: diaryData } = await supabase
+      .from('automation_events')
+      .select(`
+        id,
+        event_type,
+        message,
+        strategy_id,
+        details,
+        created_at,
+        products (
+          id,
+          title,
+          marketplace,
+          product_url,
+          image_url,
+          category
+        ),
+        content_strategies (
+          id,
+          name,
+          objective
+        )
+      `)
+      .order('created_at', { ascending: false })
+      .limit(10);
+
+    // 6. Decisões do Otimizador ("Por que o robô fez isso?")
+    const { data: optimizerData } = await supabase
+      .from('optimizer_decisions')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(5);
+
+    // 7. Metas do Sistema
+    const { data: goalData } = await supabase
+      .from('goals')
+      .select('*')
+      .eq('metric_name', 'clicks_per_day')
+      .maybeSingle();
+
     const state = stateData || {};
+    const targetClicks = goalData?.target_value ? Number(goalData.target_value) : (state.target_clicks || 20);
 
     const payload = {
       robot: {
         status: state.status || 'ONLINE',
         currentStep: state.current_step || 'Aguardando próximo ciclo de coleta...',
+        startedAt: state.started_at || null,
         lastRunAt: state.last_run_at || new Date().toISOString(),
         lastDurationSeconds: state.last_duration_seconds || 48,
         nextRunAt: state.next_run_at || new Date(Date.now() + 25 * 60 * 1000).toISOString(),
       },
+      autopilotMode: state.autopilot_mode || 'ASSISTIDO',
+      currentStrategy: state.current_strategy || 'ACHADINHO',
       today: {
-        productsFound: state.today_products_found || totalProductsCount || 29,
-        offersSelected: state.today_offers_selected || totalCandidatesCount || 5,
+        productsFound: state.today_products_found || totalProductsCount || 0,
+        offersSelected: state.today_offers_selected || totalCandidatesCount || 0,
         publications: state.today_publications || 0,
         errors: state.today_errors || 0,
       },
+      goals: {
+        targetClicks,
+        currentClicks: 0, // Real: 0 cliques pois não há publicações ainda
+        progressPercent: 0,
+        projectionToday: 0,
+        status: 'NO_PRAZO',
+        dailyTarget: targetClicks,
+      },
+      // Histórico de Performance Real (Zero Mock Policy)
+      performance: {
+        clicksToday: 0,
+        activePublicationsCount: 0,
+        ctr: 0.0,
+        retention: 'N/D',
+      },
       ai: {
-        cacheHits: state.ai_cache_hits ?? 15,
+        cacheHits: state.ai_cache_hits ?? 0,
         jevCalls: state.ai_jev_calls ?? 0,
         gptCalls: state.ai_gpt_calls ?? 0,
         tokens: state.ai_tokens ?? 0,
@@ -144,6 +204,27 @@ export default async function handler(req, res) {
         time: new Date(l.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
         message: l.message,
         level: l.level,
+      })),
+      diary: (diaryData || []).map((d) => ({
+        id: d.id,
+        eventType: d.event_type,
+        message: d.message,
+        time: new Date(d.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+        date: new Date(d.created_at).toLocaleDateString('pt-BR'),
+        strategy: d.content_strategies?.name || d.strategy_id || 'Padrão',
+        productTitle: d.products?.title || null,
+        marketplace: d.products?.marketplace || null,
+        productUrl: d.products?.product_url || null,
+        imageUrl: d.products?.image_url || null,
+        details: d.details || {},
+      })),
+      optimizerDecisions: (optimizerData || []).map((o) => ({
+        id: o.id,
+        decisionType: o.decision_type,
+        reason: o.reason,
+        actionTaken: o.action_taken,
+        metricsContext: o.metrics_context,
+        time: new Date(o.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
       })),
       timestamp: new Date().toISOString(),
     };

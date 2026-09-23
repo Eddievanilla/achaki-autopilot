@@ -15,6 +15,8 @@
 import ProviderManager from './provider-manager.js';
 import ProductRepository from '../database/product-repository.js';
 import OfferIntelligenceService from './offer-intelligence.js';
+import OrganicStrategyEngine from './organic-strategy.js';
+import GoalOptimizer from '../agents/goal-optimizer.js';
 import JevAgent from '../agents/jev-agent.js';
 import { ML_CATEGORIES } from '../marketplaces/mercadolivre.js';
 import { SHOPEE_CATEGORIES } from '../marketplaces/shopee.js';
@@ -34,6 +36,8 @@ export class ProductSearchService {
     this.providerManager = new ProviderManager({ browserManager });
     this.productRepository = new ProductRepository();
     this.intelligenceService = new OfferIntelligenceService();
+    this.organicStrategyEngine = new OrganicStrategyEngine();
+    this.goalOptimizer = new GoalOptimizer();
   }
 
   /**
@@ -239,11 +243,20 @@ export class ProductSearchService {
   async searchAndSelect({ limit = 5, itemsPerMarketplace = 10 } = {}) {
     logger.info('[ProductSearch] Iniciando ciclo de pesquisa via ProviderManager (API-First)...');
     const cycleStartTime = Date.now();
+    let runId = null;
 
     try {
+      runId = await this.productRepository.recordAutomationRunStart('Pesquisando ofertas nos marketplaces...');
+      await this.productRepository.recordAutomationEvent({
+        runId,
+        eventType: 'CYCLE_START',
+        message: 'Ciclo de pesquisa iniciado nos marketplaces.',
+        details: { itemsPerMarketplace, limit },
+      });
       await this.productRepository.updateSystemState({
         status: 'TRABALHANDO',
         current_step: 'Pesquisando ofertas nos marketplaces...',
+        started_at: new Date().toISOString(),
       });
       await this.productRepository.logActivity('Pesquisa iniciada');
     } catch {
@@ -570,9 +583,19 @@ export class ProductSearchService {
     // 14. Aplicação de regra de DIVERSIDADE no TOP 5 (máximo 2 por categoria)
     // Ordena pelo maior finalScore
     const rankedCandidates = [...finalEvaluatedList].sort((a, b) => b.finalScore - a.finalScore);
-    const topOffers = this.intelligenceService.enforceDiversity(rankedCandidates, preSelected, limit, 2);
+    const topOffersRaw = this.intelligenceService.enforceDiversity(rankedCandidates, preSelected, limit, 2);
 
-    // 15. Salvar ofertas selecionadas em offer_candidates
+    // 15. Atribuir Estratégia Orgânica para cada oferta selecionada
+    const topOffers = topOffersRaw.map((item) => {
+      const strategy = this.organicStrategyEngine.selectStrategyForProduct(item);
+      return {
+        ...item,
+        strategy,
+        recommendedStrategy: strategy.code,
+      };
+    });
+
+    // 16. Salvar ofertas selecionadas em offer_candidates
     try {
       logger.info(`[ProductSearch] Registrando ${topOffers.length} ofertas selecionadas em offer_candidates...`);
       memoryStats.candidatesSaved = await this.productRepository.saveSelectedCandidates(topOffers);
@@ -582,8 +605,40 @@ export class ProductSearchService {
     }
 
     const topCategories = Array.from(new Set(topOffers.map((t) => t.category || 'outros')));
-
     const currentTokens = jevTokens.inputTokens + gptTokens;
+
+    // 17. GoalOptimizer: Avaliar meta de cliques/dia, projeção e recomendação de rotação
+    let optimizerPlan = null;
+    try {
+      optimizerPlan = await this.goalOptimizer.evaluateAndOptimize({
+        topOffers,
+        runStats: {
+          found: filtered.length,
+          selected: topOffers.length,
+          tokens: currentTokens,
+        },
+      });
+
+      if (optimizerPlan && runId) {
+        await this.productRepository.recordOptimizerDecision({
+          runId,
+          productId: topOffers[0]?.dbId || null,
+          decisionType: 'GOAL_STRATEGY_ROTATION',
+          reason: optimizerPlan.reason,
+          actionTaken: optimizerPlan.action,
+          metricsContext: optimizerPlan.metrics,
+        });
+
+        await this.productRepository.recordAutomationEvent({
+          runId,
+          eventType: 'OPTIMIZER_DECISION',
+          message: `GoalOptimizer: Projeção de ${optimizerPlan.metrics?.projectedTodayClicks ?? 0} cliques hoje. Decisão: ${optimizerPlan.action}`,
+          details: optimizerPlan,
+        });
+      }
+    } catch (optErr) {
+      logger.warn(`[ProductSearch] Falha não impeditiva no GoalOptimizer: ${optErr.message}`);
+    }
 
     // Cálculo de economia financeira estimada vs Fase 5 (baseline de 2.500 tokens GPT-4o-mini a $0.15/1M)
     const baselineGptCost = 2500 * (0.15 / 1000000);
@@ -597,12 +652,33 @@ export class ProductSearchService {
     }
     // Atualiza estado final do robô e registra conclusão no feed
     const durationSeconds = Math.max(1, Math.round((Date.now() - cycleStartTime) / 1000));
+    const primaryStrategy = topOffers[0]?.strategy?.code || 'ACHADINHO';
+
     try {
+      if (runId) {
+        await this.productRepository.recordAutomationRunEnd(runId, {
+          durationSeconds,
+          itemsFound: filtered.length,
+          itemsSelected: topOffers.length,
+          strategyUsed: primaryStrategy,
+        });
+
+        await this.productRepository.recordAutomationEvent({
+          runId,
+          eventType: 'CYCLE_COMPLETED',
+          message: `Ciclo concluído: ${topOffers.length} ofertas com estratégias orgânicas prontas para publicação.`,
+          details: {
+            topCategories,
+            strategies: topOffers.map((o) => ({ title: o.title.slice(0, 35), strategy: o.strategy?.name })),
+          },
+        });
+      }
+
       await this.productRepository.logActivity(`${filtered.length} produtos encontrados`);
       if (itemsFromCache.length > 0) {
         await this.productRepository.logActivity(`${itemsFromCache.length} decisões recuperadas do cache`);
       }
-      await this.productRepository.logActivity(`${topOffers.length} ofertas selecionadas`);
+      await this.productRepository.logActivity(`${topOffers.length} ofertas selecionadas (${primaryStrategy})`);
       await this.productRepository.logActivity('Ciclo concluído');
 
       const mlStatus = updatedStatuses['Mercado Livre Browser'] || updatedStatuses['Mercado Livre API'] || 'ATIVO';
@@ -611,6 +687,7 @@ export class ProductSearchService {
       await this.productRepository.updateSystemState({
         status: 'ONLINE',
         current_step: 'Aguardando próximo ciclo de coleta...',
+        started_at: null,
         last_run_at: new Date().toISOString(),
         last_duration_seconds: durationSeconds,
         next_run_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
@@ -623,6 +700,8 @@ export class ProductSearchService {
         ai_gpt_calls: gptCalls,
         ai_tokens: currentTokens,
         ai_savings_percent: savingsPercent,
+        autopilot_mode: 'ASSISTIDO',
+        current_strategy: primaryStrategy,
         marketplaces: {
           mercadolivre: mlStatus,
           shopee: shopeeStatus,
@@ -680,7 +759,8 @@ export class ProductSearchService {
           tokens: gptTokens,
           fallbackTriggered: jevFallbackTriggered || gptFallbackTriggered,
         },
-        estimatedSavings,
+        estimatedSavings: savingsPercent,
+        optimizerPlan,
       },
     };
   }
