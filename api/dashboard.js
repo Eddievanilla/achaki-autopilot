@@ -176,6 +176,42 @@ export default async function handler(req, res) {
       .order('created_at', { ascending: false })
       .limit(6);
 
+    // 7.1 Publicações Reais no Banco
+    const { data: pubData } = await supabase
+      .from('publications')
+      .select(`
+        id,
+        tracking_id,
+        tracking_url,
+        publication_url,
+        social_network,
+        strategy,
+        status,
+        published_at,
+        created_at,
+        products (
+          id,
+          title,
+          marketplace,
+          product_url,
+          image_url
+        ),
+        publication_metrics (
+          clicks,
+          impressions
+        )
+      `)
+      .order('published_at', { ascending: false });
+
+    const totalPubs = pubData || [];
+    const todayPubs = totalPubs.filter(p => (p.published_at || p.created_at) >= todayStartIso);
+
+    // Cliques de hoje
+    const { count: todayClicksCount } = await supabase
+      .from('click_events')
+      .select('*', { count: 'exact', head: true })
+      .gte('clicked_at', todayStartIso);
+
     // 8. Meta do Sistema
     const { data: goalData } = await supabase
       .from('goals')
@@ -184,6 +220,12 @@ export default async function handler(req, res) {
       .maybeSingle();
 
     const targetClicks = goalData?.target_value ? Number(goalData.target_value) : (state.target_clicks || 20);
+    const currentClicks = todayClicksCount ?? (goalData?.current_value ? Number(goalData.current_value) : 0);
+    const remainingClicks = Math.max(0, targetClicks - currentClicks);
+    const progressPercent = Math.min(100, Math.round((currentClicks / targetClicks) * 100));
+
+    // Status do Objetivo: SEM DADOS se não houver publicações hoje
+    const goalStatus = todayPubs.length === 0 ? 'SEM DADOS' : (progressPercent >= 100 ? 'META ATINGIDA' : 'NO RITMO');
 
     // 9. Cálculo estrito de Hoje (00:00 até agora America/Sao_Paulo)
     let todayProductsFound = 0;
@@ -234,8 +276,8 @@ export default async function handler(req, res) {
 
     // Última decisão do GoalOptimizer
     const latestDecision = optimizerData?.[0] || {
-      actionTaken: 'Priorizar produtos de compra por impulso (< R$ 40) e diversificar categoria.',
-      reason: 'Meta de 20 cliques está abaixo do esperado às 17h (0 cliques). Acionado ajuste para ofertas de ticket menor com maior taxa de conversão orgânica.',
+      actionTaken: todayPubs.length === 0 ? 'Aguardando primeira publicação para iniciar otimização.' : 'Priorizar produtos de compra por impulso (< R$ 40) e diversificar categoria.',
+      reason: todayPubs.length === 0 ? 'Nenhuma publicação realizada até o momento. Otimizador requer dados reais.' : 'Alinhamento com a meta diária de 20 cliques sem saturação de categorias.',
     };
 
     // Estratégia atual ativa
@@ -262,34 +304,13 @@ export default async function handler(req, res) {
       isWorking: state.status === 'TRABALHANDO',
     };
 
-    // Metas & Objetivo
-    const currentClicks = 0; // Zero Mock Policy: estritamente 0 se não há publicações
-    const remainingClicks = Math.max(0, targetClicks - currentClicks);
-    const progressPercent = Math.min(100, Math.round((currentClicks / targetClicks) * 100));
-
-    // Status do Objetivo: SEM DADOS enquanto cliques = 0
-    const goalStatus = currentClicks === 0 ? 'SEM DADOS' : (progressPercent >= 100 ? 'META ATINGIDA' : 'NO RITMO');
-
-    const payload = {
-      robot: {
-        status: state.status || 'ONLINE',
-        currentStep: state.current_step || 'Aguardando próximo ciclo de coleta...',
-        startedAt: state.started_at || null,
-        lastRunAt: state.last_run_at || new Date().toISOString(),
-        lastDurationSeconds: state.last_duration_seconds || 34,
-        nextRunAt: state.next_run_at || new Date(Date.now() + 25 * 60 * 1000).toISOString(),
-      },
-      autopilotMode: state.autopilot_mode || 'ASSISTIDO',
-      currentStrategy: currentStratCode,
-      strategyDetails,
-      robotNow,
       // 1. Bloco de Metas & Objetivo (Fase 5.4)
       goals: {
         targetClicks,
         currentClicks,
         remainingClicks,
         progressPercent,
-        projectionToday: 'N/D', // N/D enquanto não houver histórico de cliques suficiente
+        projectionToday: todayPubs.length === 0 ? 'N/D' : `${currentClicks} cliques`,
         status: goalStatus, // 'SEM DADOS', 'NO RITMO', 'ABAIXO DA META', 'META ATINGIDA'
         ctr: 'N/D',
         retention: 'N/D',
@@ -299,39 +320,39 @@ export default async function handler(req, res) {
       today: {
         productsFound: todayProductsFound,
         offersSelected: todayOffersSelected,
-        publications: 0, // Zero Mock
+        publications: todayPubs.length,
         errors: 0,
       },
       // 3. Total Histórico Acumulado (Separado de Hoje)
       historical: {
         totalProductsCatalog: totalProductsCount || 57,
         totalOffersSelected: totalCandidatesCount || 80,
-        totalPublications: 0,
+        totalPublications: totalPubs.length,
       },
       // 4. Performance Orgânica (Zero Mocks com Tabs)
       performance: {
         today: {
-          publications: 0,
+          publications: todayPubs.length,
           impressions: 0,
-          clicks: 0,
+          clicks: currentClicks,
           ctr: 'N/D',
           conversions: 0,
           retention: 'N/D',
           shares: 0,
         },
         sevenDays: {
-          publications: 0,
+          publications: totalPubs.length,
           impressions: 0,
-          clicks: 0,
+          clicks: currentClicks,
           ctr: 'N/D',
           conversions: 0,
           retention: 'N/D',
           shares: 0,
         },
         thirtyDays: {
-          publications: 0,
+          publications: totalPubs.length,
           impressions: 0,
-          clicks: 0,
+          clicks: currentClicks,
           ctr: 'N/D',
           conversions: 0,
           retention: 'N/D',
@@ -388,8 +409,22 @@ export default async function handler(req, res) {
       })),
       // 11. Publicações e Resultados
       publications: {
-        items: [],
-        message: 'Nenhuma publicação realizada ainda.',
+        items: totalPubs.map((p) => ({
+          id: p.id,
+          productId: p.product_id,
+          title: p.products?.title || 'Oferta Selecionada',
+          marketplace: p.products?.marketplace || 'mercadolivre',
+          imageUrl: p.products?.image_url,
+          socialNetwork: p.social_network || 'Facebook',
+          strategy: p.strategy || 'DESCONTO',
+          trackingUrl: p.tracking_url,
+          publicationUrl: p.publication_url,
+          time: new Date(p.published_at || p.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+          date: new Date(p.published_at || p.created_at).toLocaleDateString('pt-BR'),
+          clicks: p.publication_metrics?.[0]?.clicks || 0,
+          status: p.status,
+        })),
+        message: totalPubs.length === 0 ? 'Nenhuma publicação realizada ainda.' : `${totalPubs.length} publicação(ões) realizada(s).`,
       },
       timestamp: new Date().toISOString(),
     };

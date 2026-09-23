@@ -1,0 +1,5 @@
+{
+  "rewrites": [
+    { "source": "/go/:trackingId", "destination": "/api/go?trackingId=:trackingId" }
+  ]
+}

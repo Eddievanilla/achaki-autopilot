@@ -45,7 +45,27 @@ export class GoalOptimizer {
     const currentHour = now.getHours();
     const hoursRemaining = Math.max(1, 24 - currentHour);
     
-    // Projeção simples baseada no ritmo diário atual
+    // Se ainda não houver publicações realizadas, estado é SEM DADOS
+    if (publicationsToday === 0) {
+      return {
+        decisionType: 'AGUARDANDO_DADOS',
+        actionTaken: 'Aguardando primeira publicação para iniciar otimização de performance.',
+        reason: 'Nenhuma publicação realizada até o momento. Otimizador requer dados reais de engajamento.',
+        status: 'SEM DADOS',
+        projectedClicks: 0,
+        progressPercent: 0,
+        targetClicks,
+        currentClicks: 0,
+        safeguards: {
+          maxPostsPerDay: 8,
+          minCooldownMinutes: 45,
+          cooldownMinutes: 45,
+          maxCategoryFrequency: 2,
+        },
+      };
+    }
+
+    // Projeção baseada no ritmo diário atual quando já existem publicações
     const ratePerHour = currentHour > 0 ? currentClicks / currentHour : 0;
     const projectedClicks = Math.round(currentClicks + ratePerHour * hoursRemaining);
     const progressPercent = Math.round((currentClicks / targetClicks) * 100);
@@ -59,12 +79,7 @@ export class GoalOptimizer {
       status = 'ATENCAO';
       decisionType = 'ROTACIONAR_CATEGORIA';
       actionTaken = 'Priorizar produtos de compra por impulso (< R$ 40) e diversificar categoria.';
-      reason = `Meta de ${targetClicks} cliques está abaixo do esperado às ${currentHour}h (${currentClicks} cliques). Acionado ajuste para ofertas de ticket menor com maior taxa de conversão orgânica.`;
-    } else if (currentClicks === 0 && currentHour >= 12 && publicationsToday === 0) {
-      status = 'ATENCAO';
-      decisionType = 'ACELERAR_GARIMPO';
-      actionTaken = 'Focar em itens virais de alta validação social (Prova Social e Desconto Real).';
-      reason = `Início da tarde sem engajamento ativo registrado. Otimizador orientou foco em produtos com mais de 300 vendas confirmadas e desconto acima de 25%.`;
+      reason = `Meta de ${targetClicks} cliques: ritmo atual de ${currentClicks} cliques às ${currentHour}h. Ajustando para ofertas de ticket menor com maior taxa de conversão orgânica.`;
     } else if (progressPercent >= 100) {
       status = 'NO_PRAZO';
       decisionType = 'META_ATINGIDA';
