@@ -25,6 +25,7 @@ export default async function handler(req, res) {
 
   // Se o usuário cancelou ou a Meta retornou erro
   if (error) {
+    console.warn('[FacebookCallback] Acesso recusado ou erro retornado pela Meta:', error, error_description);
     return res.status(400).send(`
       <!DOCTYPE html>
       <html lang="pt-BR">
@@ -47,7 +48,7 @@ export default async function handler(req, res) {
     `);
   }
 
-  // Se a rota for acessada sem parâmetros (ex: verificação de liveness / healthcheck da rota)
+  // Se a rota for acessada sem parâmetros (liveness / healthcheck)
   if (!code) {
     return res.status(200).send(`
       <!DOCTYPE html>
@@ -74,6 +75,7 @@ export default async function handler(req, res) {
   // 4. Validação de segurança do state
   const expectedState = 'achaki_fb_auth';
   if (state && state !== expectedState) {
+    console.error('[FacebookCallback] Validação de state falhou. Recebido:', state, 'Esperado:', expectedState);
     return res.status(400).send(`
       <!DOCTYPE html>
       <html lang="pt-BR">
@@ -103,26 +105,32 @@ export default async function handler(req, res) {
     }
 
     if (!appSecret) {
+      console.error('[FacebookCallback] Falha: FACEBOOK_APP_SECRET ausente no ambiente e no backend.');
       throw new Error('Configuração de segurança da Meta pendente no backend.');
     }
 
     // 5. Trocar code por User Access Token via fluxo oficial Meta Graph API
+    console.log('[FacebookCallback] Iniciando troca do code por access token...');
     const tokenUrl = `https://graph.facebook.com/v19.0/oauth/access_token?client_id=${appId}&redirect_uri=${encodeURIComponent(redirectUri)}&client_secret=${appSecret}&code=${code}`;
     const tokenRes = await fetch(tokenUrl);
     const tokenData = await tokenRes.json();
 
     if (tokenData.error) {
+      console.error('[FacebookCallback] Erro na troca de código da Meta:', tokenData.error.message, 'Código:', tokenData.error.code);
       throw new Error(tokenData.error.message || 'Falha ao trocar código de autorização.');
     }
 
     const userAccessToken = tokenData.access_token;
+    console.log('[FacebookCallback] Token de usuário obtido com sucesso.');
 
     // 7. Consultar /me/accounts e localizar dinamicamente a Página ACHAki
+    console.log('[FacebookCallback] Consultando /me/accounts...');
     const accountsUrl = `https://graph.facebook.com/v19.0/me/accounts?access_token=${userAccessToken}`;
     const accountsRes = await fetch(accountsUrl);
     const accountsData = await accountsRes.json();
 
     if (accountsData.error) {
+      console.error('[FacebookCallback] Erro ao consultar /me/accounts:', accountsData.error.message);
       throw new Error('Falha ao consultar páginas autorizadas da Meta.');
     }
 
@@ -131,6 +139,8 @@ export default async function handler(req, res) {
                        pages.find((p) => (p.name || '').toLowerCase().includes('achadinhos')) ||
                        pages[0] ||
                        { id: '61587794361596', name: 'ACHAki Achadinhos e Ofertas' };
+
+    console.log('[FacebookCallback] Página localizada:', targetPage.name, '(ID:', targetPage.id, ')');
 
     // 8. Validar permissões concedidas (pages_show_list, pages_read_engagement, pages_manage_posts)
     let grantedPerms = [];
@@ -142,7 +152,7 @@ export default async function handler(req, res) {
         grantedPerms = permsData.data.filter((p) => p.status === 'granted').map((p) => p.permission);
       }
     } catch {
-      // Ignora erro secundário de leitura de permissões
+      // Ignora erro secundário
     }
 
     const hasShowList = grantedPerms.includes('pages_show_list') || true;
@@ -186,6 +196,8 @@ export default async function handler(req, res) {
       message: `Facebook OAuth concluído: Página autorizada "${targetPage.name || 'ACHAki Achadinhos e Ofertas'}" (ID: ${targetPage.id})`,
       level: 'info',
     });
+
+    console.log('[FacebookCallback] Autorização gravada com sucesso no Supabase.');
 
     // 10. Ao finalizar, mostrar no navegador apenas:
     // FACEBOOK OAUTH: OK
@@ -256,7 +268,7 @@ export default async function handler(req, res) {
     `);
 
   } catch (err) {
-    // Nunca exibir credenciais ou erros técnicos detalhados com tokens
+    console.error('[FacebookCallback] Exceção capturada:', err.message);
     return res.status(500).send(`
       <!DOCTYPE html>
       <html lang="pt-BR">
