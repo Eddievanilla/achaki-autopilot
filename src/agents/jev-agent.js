@@ -55,154 +55,156 @@ export class JevAgent {
     }
 
     const state = {
-      title: candidate.title,
-      marketplace: candidate.marketplace,
-      category: candidate.category || 'outros',
+      id: candidate.productId,
+      cat: candidate.category || 'outros',
       price: candidate.currentPrice,
-      original_price: candidate.originalPrice || undefined,
-      discount_percent: candidate.announcedDiscount || candidate.discountPercent || undefined,
-      real_discount_vs_avg: candidate.realDiscountVsAvg || undefined,
-      rating: candidate.rating || undefined,
-      sales: candidate.soldCount || undefined,
-      shipping: candidate.shipping || undefined,
-      local_score: candidate.localScore,
-      history_confidence: candidate.historyConfidence || 'LOW',
-      risk_signals: candidate.localPenalties || [],
+      desc: candidate.announcedDiscount || candidate.discountPercent || 0,
+      score: candidate.localScore,
+      hist: candidate.historyConfidence || 'LOW',
+      rate: candidate.rating || undefined,
+      revs: candidate.reviewCount || undefined,
+      reps: candidate.selectionFrequency || 0,
+      pub: candidate.isPublished || false,
     };
 
     const questions = {
       is_achadinho: {
         type: 'noul',
-        instructions: "Is this product an attractive 'achadinho' bargain deal for daily utility and impulse purchase?",
-        criteria: {
-          true: 'Affordable, useful, good rating, clear discount or great utility.',
-          false: 'Overpriced, low utility, poor reviews or misleading promotion.',
-        },
+        instructions: 'Is this an attractive deal for impulse buying?',
       },
       quality_tier: {
         type: 'choice',
-        instructions: 'What is the quality and appeal tier of this deal?',
+        instructions: 'Deal tier:',
         criteria: {
-          top_tier: 'Highly viral, outstanding price-to-value ratio, high rating.',
-          solid_deal: 'Standard good deal with reliable utility and fair price.',
-          mediocre_or_risky: 'Unimpressive discount, weak ratings, or high risk.',
-        },
-      },
-      risk_level: {
-        type: 'choice',
-        instructions: 'Assess consumer dissatisfaction or misleading deal risk.',
-        criteria: {
-          low_risk: 'High rating, verified seller, realistic discount, solid product.',
-          moderate_risk: 'Missing reviews or minor price fluctuations.',
-          high_risk: 'Inflated discount, negative sentiment, or questionable quality.',
-        },
-      },
-      needs_deep_analysis: {
-        type: 'noul',
-        instructions: 'Does this product require deeper LLM reasoning (escalation) due to ambiguity, borderline score, or high price?',
-        criteria: {
-          true: 'Borderline quality, high price (> R$250), ambiguous value, or uncertain discount.',
-          false: 'Clear-cut high quality bargain or obviously poor product with obvious decision.',
+          top: 'High viral appeal and great price',
+          solid: 'Standard useful deal with fair discount',
+          poor: 'Weak discount or low utility',
         },
       },
       decision_score: {
         type: 'score',
-        instructions: 'Rate overall suitability for affiliate publication (0 to 100 scale represented in 4 tiers)',
+        instructions: 'Affiliate suitability (0-100 scale):',
         criteria: [
-          'Reject (Score 0-50)',
-          'Neutral candidate (Score 51-70)',
-          'Recommended deal (Score 71-85)',
-          'Top viral deal (Score 86-100)',
+          'Reject',
+          'Neutral',
+          'Recommended',
+          'Top Pick',
         ],
       },
     };
 
     const body = {
       model: this.model,
-      state: { candidate: state },
+      state: { item: state },
       questions,
     };
 
-    try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+    // Função interna com suporte a 1 retry em caso de HTTP 529/429
+    const executeFetch = async (isRetry = false) => {
+      try {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), this.timeoutMs);
 
-      const response = await fetch(this.apiUrl, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/json',
-          'HTTP-Referer': 'https://achaki-autopilot.vercel.app',
-          'X-Title': 'ACHAki Autopilot JEV',
-        },
-        body: JSON.stringify(body),
-        signal: controller.signal,
-      });
+        const response = await fetch(this.apiUrl, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${this.apiKey}`,
+            'Content-Type': 'application/json',
+            'HTTP-Referer': 'https://achaki-autopilot.vercel.app',
+            'X-Title': 'ACHAki Autopilot JEV',
+          },
+          body: JSON.stringify(body),
+          signal: controller.signal,
+        });
 
-      clearTimeout(timer);
+        clearTimeout(timer);
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        return { ok: false, error: `HTTP ${response.status}: ${errorText.slice(0, 150)}` };
+        // Tratamento de HTTP 529 (overloaded) ou 429 com 1 retry
+        if ((response.status === 529 || response.status === 429) && !isRetry) {
+          logger.warn(`[JevAgent] HTTP ${response.status} detectado. Aguardando 1.5s para retry com backoff...`);
+          await new Promise((res) => setTimeout(res, 1500));
+          return executeFetch(true);
+        }
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          return { ok: false, status: response.status, error: `HTTP ${response.status}: ${errorText.slice(0, 100)}` };
+        }
+
+        const json = await response.json();
+        return { ok: true, json };
+      } catch (err) {
+        if (!isRetry) {
+          await new Promise((res) => setTimeout(res, 1000));
+          return executeFetch(true);
+        }
+        return { ok: false, error: err.message };
       }
+    };
 
-      const json = await response.json();
-      const answers = json.answers || {};
+    const fetchResult = await executeFetch();
 
-      // Interpretação dos valores estruturados
-      const isAchadinhoProb = answers.is_achadinho?.noul ?? 0.5;
-      const qualityTier = answers.quality_tier?.choice || 'solid_deal';
-      const riskLevel = answers.risk_level?.choice || 'low_risk';
-      const needsDeepAnalysisProb = answers.needs_deep_analysis?.noul ?? 0.2;
-
-      // Score JEV em escala 0-100 (0 a 3 mapeado para ~0 a 100)
-      const rawScore = answers.decision_score?.score ?? 2.0;
-      const jevScore = Math.max(0, Math.min(100, Math.round(rawScore * 33.33)));
-
-      // Determina escalonamento
-      // Escala se JEV indicar incerteza, ou se o preço for alto (> R$ 250) com score limítrofe
-      const needsEscalation =
-        needsDeepAnalysisProb >= 0.45 ||
-        (candidate.currentPrice > 250 && jevScore >= 65 && jevScore <= 80);
-
-      // Gera justificativa estruturada a partir das respostas do JEV
-      let reason = `Classificado como "${qualityTier}" pelo JEV (probabilidade de achadinho: ${Math.round(isAchadinhoProb * 100)}%).`;
-      if (candidate.realDiscountVsAvg > 5) {
-        reason += ` Desconto real de ${candidate.realDiscountVsAvg}% sobre a média histórica.`;
-      }
-
-      let risk = riskLevel === 'high_risk'
-        ? 'Risco alto identificado pelo modelo de decisão.'
-        : riskLevel === 'moderate_risk'
-        ? 'Risco moderado: atenção à validação de especificações.'
-        : 'Nenhum risco relevante detectado.';
-
+    if (!fetchResult.ok) {
+      // Se indisponível (ex: 529 persistente), usa LocalScore diretamente sem acionar GPT
       return {
-        ok: true,
-        data: {
-          jevDecisionScore: jevScore,
-          jevQualityTier: qualityTier,
-          jevIsAchadinho: Math.round(isAchadinhoProb * 100) / 100,
-          jevRiskLevel: riskLevel,
-          jevNeedsEscalation: needsEscalation,
-          aiScore: jevScore,
-          reasons: reason,
-          risks: risk,
-          confidence: answers.decision_score?.confidence ?? 0.85,
+        ok: false,
+        fallbackData: {
+          jevDecisionScore: candidate.localScore,
+          jevQualityTier: 'solid',
+          jevIsAchadinho: 0.7,
+          jevNeedsEscalation: false, // Nunca forçar escalonamento por falha de infraestrutura
+          aiScore: candidate.localScore,
+          reasons: 'Classificação orientada por regras locais (resiliência de infraestrutura).',
+          risks: 'Análise mantida sem escalonamento.',
+          confidence: 0.75,
         },
-        usage: json.usage || { input_tokens: 0, output_tokens: 0, cost: 0 },
+        error: fetchResult.error,
       };
-    } catch (err) {
-      return { ok: false, error: err.message };
     }
+
+    const answers = fetchResult.json?.answers || {};
+    const isAchadinhoProb = answers.is_achadinho?.noul ?? 0.6;
+    const qualityTier = answers.quality_tier?.choice || 'solid';
+
+    // Score JEV normalizado 0 a 100
+    const rawScore = answers.decision_score?.score ?? 2.0;
+    const jevScore = Math.max(0, Math.min(100, Math.round(rawScore * 33.33)));
+    const confidence = answers.decision_score?.confidence ?? 0.85;
+
+    // Regra estrita de escalonamento: somente ambiguidade real
+    // 1. Confiança baixa (< 0.50)
+    // 2. OU Conflito severo entre LocalScore e JEV (|local - jev| >= 35)
+    const severeConflict = Math.abs((candidate.localScore || 50) - jevScore) >= 35;
+    const isAmbiguous = confidence < 0.50;
+    const needsEscalation = isAmbiguous || severeConflict;
+
+    let reason = `Classificado como "${qualityTier}" pelo JEV (apelo de achadinho: ${Math.round(isAchadinhoProb * 100)}%).`;
+    if (candidate.realDiscountVsAvg > 5) {
+      reason += ` Desconto real de ${candidate.realDiscountVsAvg}% sobre a média histórica.`;
+    }
+
+    return {
+      ok: true,
+      data: {
+        jevDecisionScore: jevScore,
+        jevQualityTier: qualityTier,
+        jevIsAchadinho: Math.round(isAchadinhoProb * 100) / 100,
+        jevNeedsEscalation: needsEscalation,
+        aiScore: jevScore,
+        reasons: reason,
+        risks: qualityTier === 'poor' ? 'Qualidade ou apelo abaixo da média.' : 'Nenhum risco crítico identificado.',
+        confidence,
+      },
+      usage: fetchResult.json?.usage || { input_tokens: 0, output_tokens: 0, cost: 0 },
+    };
   }
 
   /**
-   * Avalia em lote uma lista de candidatos pré-selecionados.
+   * Avalia em lote uma lista de candidatos pré-selecionados com controle de taxa e concorrência.
    *
-   * @param {Array<object>} candidates - Lista de até 15 candidatos
+   * @param {Array<object>} candidates - Lista de candidatos competitivos
    * @param {object} [options]
-   * @param {number} [options.concurrency=4]
+   * @param {number} [options.concurrency=3]
    * @returns {Promise<{
    *   evaluated: Array<object>,
    *   tokensUsed: { inputTokens: number, outputTokens: number, totalCalls: number },
@@ -210,7 +212,7 @@ export class JevAgent {
    *   failures: number
    * }>}
    */
-  async evaluateCandidatesBatch(candidates, { concurrency = 4 } = {}) {
+  async evaluateCandidatesBatch(candidates, { concurrency = 3 } = {}) {
     const results = [];
     const tokensUsed = { inputTokens: 0, outputTokens: 0, totalCalls: 0 };
     let failures = 0;
@@ -219,9 +221,8 @@ export class JevAgent {
       return { evaluated: [], tokensUsed, needsEscalation: [], failures: 0 };
     }
 
-    logger.info(`[JevAgent] Iniciando avaliação de ${candidates.length} candidatos via ${this.model}...`);
+    logger.info(`[JevAgent] Iniciando avaliação otimizada de ${candidates.length} candidatos via ${this.model}...`);
 
-    // Processamento com concorrência controlada
     for (let i = 0; i < candidates.length; i += concurrency) {
       const slice = candidates.slice(i, i + concurrency);
       const promises = slice.map(async (cand) => {
@@ -237,25 +238,30 @@ export class JevAgent {
           };
         }
 
+        // Fallback seguro usando LocalScore
         failures++;
-        logger.warn(`[JevAgent] Falha na avaliação do item ${cand.productId}: ${res.error}`);
-        // Fallback individual no item
+        logger.warn(`[JevAgent] Resiliência ativada para item ${cand.productId}: ${res.error}`);
+        const fb = res.fallbackData || {};
         return {
           ...cand,
-          jevDecisionScore: cand.localScore,
-          jevQualityTier: 'unknown',
-          jevIsAchadinho: 0.5,
-          jevRiskLevel: 'unknown',
-          jevNeedsEscalation: true, // Se falhou no JEV, encaminha para análise se necessário
+          jevDecisionScore: fb.jevDecisionScore ?? cand.localScore,
+          jevQualityTier: fb.jevQualityTier ?? 'solid',
+          jevIsAchadinho: fb.jevIsAchadinho ?? 0.6,
+          jevNeedsEscalation: false, // Não escalar falhas de rede para o GPT
           aiScore: cand.localScore,
-          reasons: 'Classificação baseada em regras locais após indisponibilidade do JEV.',
-          risks: 'Análise não assistida por System One.',
-          modelUsed: 'local_fallback',
+          reasons: fb.reasons || 'Decisão baseada em regras locais determinísticas.',
+          risks: fb.risks || 'Análise mantida sem escalonamento.',
+          modelUsed: 'local_resilience',
         };
       });
 
       const batchResults = await Promise.all(promises);
       results.push(...batchResults);
+
+      // Pequena pausa entre lotes para prevenir sobrecarga de requisições no OpenRouter (HTTP 529)
+      if (i + concurrency < candidates.length) {
+        await new Promise((r) => setTimeout(r, 200));
+      }
     }
 
     const needsEscalation = results.filter((r) => r.jevNeedsEscalation);

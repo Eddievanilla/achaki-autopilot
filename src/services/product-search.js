@@ -387,21 +387,28 @@ export class ProductSearchService {
     const itemsForJev = preSelected.filter((p) => !cachedMap.has(p.productId));
     const itemsFromCache = preSelected.filter((p) => cachedMap.has(p.productId));
 
-    // 10. Camada de Decisão JEV (typesafe/jev-1.13)
+    // 10. Filtro Local Mais Forte: apenas candidatos verdadeiramente competitivos vão ao JEV
+    // Itens com score fraco/penalizados não gastam tokens desnecessariamente
+    const competitiveItemsForJev = itemsForJev.filter((p) => (p.localScore || 0) >= 65);
+    const itemsToEvaluate = competitiveItemsForJev.length > 0
+      ? competitiveItemsForJev.slice(0, 10)
+      : itemsForJev.slice(0, 5);
+    const nonCompetitiveItems = itemsForJev.filter((p) => !itemsToEvaluate.some((e) => e.productId === p.productId));
+
     let jevEvaluated = [];
     let jevTokens = { inputTokens: 0, outputTokens: 0, totalCalls: 0 };
     let jevStatus = 'OK';
     let jevFallbackTriggered = false;
 
-    if (itemsForJev.length > 0) {
+    if (itemsToEvaluate.length > 0) {
       try {
-        const jevResult = await this.jevAgent.evaluateCandidatesBatch(itemsForJev);
+        const jevResult = await this.jevAgent.evaluateCandidatesBatch(itemsToEvaluate);
         jevEvaluated = jevResult.evaluated;
         jevTokens = jevResult.tokensUsed;
-        if (jevResult.failures === itemsForJev.length && itemsForJev.length > 0) {
+        if (jevResult.failures === itemsToEvaluate.length && itemsToEvaluate.length > 0) {
           jevStatus = 'ERRO';
           jevFallbackTriggered = true;
-          logger.warn('[ProductSearch] JEV indisponível para todos os itens. Acionando fallback regras -> GPT.');
+          logger.warn('[ProductSearch] JEV indisponível para todos os itens. Acionando fallback regras locais.');
         }
       } catch (jevErr) {
         jevStatus = 'ERRO';
@@ -413,7 +420,7 @@ export class ProductSearchService {
     // 11. Montagem do conjunto unificado pré-escalonamento
     const unifiedCandidates = [];
 
-    // Adiciona itens vindos do cache
+    // Adiciona itens vindos do cache (0 tokens!)
     for (const item of itemsFromCache) {
       const cached = cachedMap.get(item.productId);
       unifiedCandidates.push({
@@ -436,24 +443,41 @@ export class ProductSearchService {
       unifiedCandidates.push(item);
     }
 
-    // 12. Camada de Escalonamento GPT-4o-mini (somente quando necessário)
+    // Adiciona itens que não precisaram de avaliação do JEV por score local
+    for (const item of nonCompetitiveItems) {
+      unifiedCandidates.push({
+        ...item,
+        jevDecisionScore: item.localScore,
+        jevQualityTier: 'solid',
+        jevIsAchadinho: 0.6,
+        jevRiskLevel: 'low',
+        jevNeedsEscalation: false,
+        aiScore: item.localScore,
+        reasons: 'Classificado localmente com base em histórico e preço determinístico.',
+        risks: 'Nenhum risco crítico.',
+        modelUsed: 'local_filter',
+        fromCache: false,
+      });
+    }
+
+    // 12. Camada de Escalonamento GPT-4o-mini (estritamente por exceção)
     let gptItems = [];
     let gptTokens = 0;
     let gptCalls = 0;
     let gptFallbackTriggered = false;
 
     if (jevFallbackTriggered) {
-      // Fallback 1: JEV falhou -> envia todo o payload pré-selecionado ao GPT (modo Fase 5)
-      gptItems = preSelected.slice(0, 15);
-      logger.info(`[ProductSearch] [FALLBACK] Enviando ${gptItems.length} candidatos diretamente ao GPT-4o-mini.`);
+      // Fallback: se JEV estiver completamente indisponível, seleciona os top 5 para GPT
+      gptItems = preSelected.slice(0, 5);
+      logger.info(`[ProductSearch] [FALLBACK] JEV indisponível: enviando ${gptItems.length} candidatos ao GPT-4o-mini.`);
     } else {
-      // Normal: Seleciona no máximo 5 a 8 produtos que precisam de raciocínio profundo
+      // Escalonamento estrito: somente itens com ambiguidade real, máximo de 3 itens
       const needingEscalation = unifiedCandidates.filter((c) => c.jevNeedsEscalation && !c.fromCache);
-      gptItems = needingEscalation.slice(0, 8);
+      gptItems = needingEscalation.slice(0, 3);
       if (gptItems.length > 0) {
-        logger.info(`[ProductSearch] [ESCALATION] ${gptItems.length} candidatos encaminhados ao GPT-4o-mini.`);
+        logger.info(`[ProductSearch] [ESCALATION] ${gptItems.length} candidatos com ambiguidade encaminhados ao GPT-4o-mini.`);
       } else {
-        logger.info('[ProductSearch] [FAST-PATH] Alta confiança estruturada do JEV: nenhuma chamada GPT necessária.');
+        logger.info('[ProductSearch] [FAST-PATH] Decisão JEV e regras determinísticas claras: zero chamadas GPT.');
       }
     }
 
@@ -591,7 +615,7 @@ export class ProductSearchService {
         jev: {
           status: jevStatus,
           model: this.jevAgent.model,
-          sentToJev: itemsForJev.length,
+          sentToJev: itemsToEvaluate.length,
           calls: jevTokens.totalCalls,
           tokens: jevTokens.inputTokens,
           cacheHits: itemsFromCache.length,
