@@ -18,9 +18,13 @@ const __dirname = path.dirname(__filename);
 const LOG_DIR = path.resolve(__dirname, '../../logs');
 const LOG_FILE = path.join(LOG_DIR, 'achaki.log');
 
-// Garante que o diretório de logs existe
-if (!fs.existsSync(LOG_DIR)) {
-  fs.mkdirSync(LOG_DIR, { recursive: true });
+// Garante que o diretório de logs existe (ignora em ambientes serverless como Vercel)
+try {
+  if (!fs.existsSync(LOG_DIR)) {
+    fs.mkdirSync(LOG_DIR, { recursive: true });
+  }
+} catch {
+  // Read-only filesystem no Vercel/AWS Lambda — logs permanecem no stdout/console
 }
 
 /**
