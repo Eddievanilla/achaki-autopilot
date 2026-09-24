@@ -720,7 +720,11 @@ class RobotWorker {
         runId,
       });
 
-      const topOffers = cycleResult?.topOffers || [];
+      const topOffers = (cycleResult?.topOffers || []).map(o => ({
+        ...o,
+        isLiveScrape: true,
+        source: 'live_scrape'
+      }));
 
       await eventLogger.success(
         'COLLECTOR',
@@ -815,6 +819,8 @@ class RobotWorker {
               score: 92,
               finalScore: 92,
               strategy: { code: 'DESCONTO', name: 'Desconto Real Comprovado' },
+              isCatalogCandidate: true,
+              isLiveScrape: false,
             };
           });
         }

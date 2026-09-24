@@ -216,7 +216,7 @@ export default class OpportunityEngine {
             logger.info(`[OpportunityEngine] Sem browserManager — pesquisa de candidatos ignorada para '${opp.keyword}'`);
           } else {
             const ProductSearchService = (await import('../product-search.js')).default;
-            const { OpenRouterAgent } = await import('../../agents/openrouter-agent.js');
+            const OpenRouterAgent = (await import('../../agents/openrouter-agent.js')).default;
             const { JevAgent } = await import('../../agents/jev-agent.js');
             const searcher = new ProductSearchService({
               browserManager: this.browserManager,
@@ -307,13 +307,15 @@ export default class OpportunityEngine {
       let bestValidation = null;
 
       for (const cand of candidates) {
-        const priceValidation = this.priceValidationEngine.validateCandidate(cand, {
-          title: cand.title,
+        const mathCheck = this.priceValidationEngine.validatePriceMath({
           currentPrice: cand.currentPrice || cand.price,
           originalPrice: cand.originalPrice,
-          productUrl: cand.productUrl,
-          discountPercent: cand.discountPercent || cand.discount
+          displayedDiscountPercent: cand.discountPercent || cand.discount
         });
+        const priceValidation = {
+          isValid: mathCheck.isMathValid,
+          mathCheck
+        };
 
         const { totalScore, breakdown } = this.calculateCommercialQualityScore({
           candidate: cand,

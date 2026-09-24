@@ -520,8 +520,10 @@ export class PriceValidationEngine {
     }
 
     // FONTE C: Página / Vitrine / Listagem Real acessível pelo browser
+    // Só é fonte independente se foi realmente coletada ao vivo no marketplace (não importada do próprio banco)
+    const isLiveScrape = Boolean(candidate.isLiveScrape || candidate.source === 'live_scrape' || (!candidate.isCatalogCandidate && !candidate.fromDatabase && candidate.marketplace));
     const candidatePrice = this.parseMoneyValue(candidate.currentPrice);
-    if (candidatePrice && candidatePrice > 0) {
+    if (isLiveScrape && candidatePrice && candidatePrice > 0) {
       const origPrice = this.parseMoneyValue(candidate.originalPrice);
       const discPercent = candidate.discountPercent ? Number(candidate.discountPercent) : null;
 
@@ -596,7 +598,7 @@ export class PriceValidationEngine {
                 discount: mathPdp.calculatedDiscount ?? rawPdp.discountPercent,
                 source: 'PRODUCT_PAGE',
                 captured_at: new Date().toISOString(),
-                confidence: 'MEDIUM',
+                confidence: 'HIGH',
                 product_id: productId,
               });
               sourceStatuses.pdp = 'AVAILABLE';
@@ -608,6 +610,23 @@ export class PriceValidationEngine {
         sourceStatuses.pdp = 'SOURCE_UNAVAILABLE';
         pdpNote = pdpNote || `PDP indisponível (${err.message}); validação realizada por fonte alternativa.`;
       }
+    }
+
+    // REGRA DE SEGURANÇA MÁXIMA DE PREÇO:
+    // Pelo menos UMA fonte AO VIVO (PRODUCT_PAGE ou STOREFRONT_LISTING ao vivo) deve estar presente.
+    // É terminantemente proibido validar preço comparando dados em cache com eles mesmos.
+    const hasLiveSource = sources.some(s => s.source === 'PRODUCT_PAGE' || (s.source === 'STOREFRONT_LISTING' && isLiveScrape));
+
+    if (!hasLiveSource) {
+      logger.warn(`[PriceValidationEngine] 🛑 Preço de #${productId} não pôde ser verificado ao vivo (sem acesso à PDP e sem vitrine recente). Validação REJEITADA por segurança.`);
+      return {
+        isValid: false,
+        confidence: 'LOW',
+        consensus: 'LOW',
+        validationCode: 'LIVE_PRICE_UNVERIFIABLE',
+        reason: 'Preço em tempo real não pôde ser confirmado no marketplace (PDP indisponível e sem fonte ao vivo). Publicação bloqueada para evitar divergência de preço.',
+        data: { product_id: productId, title: candidate.title, sources },
+      };
     }
 
     // CONSENSO DE PREÇO
