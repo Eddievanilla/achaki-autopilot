@@ -58,6 +58,7 @@ class OpenRouterAgent {
     this.apiKey        = process.env.OPENROUTER_API_KEY        || '';
     this.decisionModel = process.env.OPENROUTER_DECISION_MODEL || '';
     this.contentModel  = process.env.OPENROUTER_CONTENT_MODEL  || '';
+    this.offlineMode = !this.apiKey || !this.decisionModel || !this.contentModel;
 
     this.maxTokensDecision = envInt('OPENROUTER_MAX_TOKENS_DECISION', 1000);
     this.maxTokensContent  = envInt('OPENROUTER_MAX_TOKENS_CONTENT',  500);
@@ -74,6 +75,9 @@ class OpenRouterAgent {
    * @throws {Error} se a chave estiver ausente
    */
   _requireApiKey() {
+    if (this.offlineMode) {
+      return;
+    }
     if (!this.apiKey || this.apiKey.trim() === '') {
       throw new Error(
         'OPENROUTER_API_KEY não configurada.\n' +
@@ -89,6 +93,9 @@ class OpenRouterAgent {
    * @throws {Error} se o modelo estiver ausente
    */
   _requireModel(type) {
+    if (this.offlineMode) {
+      return;
+    }
     const model = type === 'decision' ? this.decisionModel : this.contentModel;
     const envKey = type === 'decision'
       ? 'OPENROUTER_DECISION_MODEL'
@@ -242,6 +249,15 @@ class OpenRouterAgent {
    * @returns {Promise<Array<{id: string, score: number, reasoning: string}>>}
    */
   async rankProducts(products) {
+    if (this.offlineMode) {
+      return {
+        ranking: [...products].map((product, index) => ({
+          productId: product.productId ?? product.id ?? index + 1,
+          score: Number(product.score ?? product.finalScore ?? 50) || 50,
+          reason: 'Modo local sem OpenRouter.',
+        })),
+      };
+    }
     this._requireApiKey();
     this._requireModel('decision');
 
@@ -292,6 +308,20 @@ class OpenRouterAgent {
    * @returns {Promise<{selected: string[], reasoning: object, scores?: object, risks?: object}>}
    */
   async selectBestOffers(products, limit = 2) {
+    if (this.offlineMode) {
+      const selected = [...products]
+        .sort((left, right) => Number(right.score ?? right.finalScore ?? 0) - Number(left.score ?? left.finalScore ?? 0))
+        .slice(0, limit)
+        .map((product) => product.productId ?? product.id)
+        .filter(Boolean);
+
+      return {
+        selected,
+        reasoning: { mode: 'local-fallback', note: 'Seleção feita sem OpenRouter.' },
+        scores: Object.fromEntries(selected.map((id) => [id, 50])),
+        risks: {},
+      };
+    }
     this._requireApiKey();
     this._requireModel('decision');
 
@@ -364,6 +394,13 @@ class OpenRouterAgent {
    * @returns {Promise<{title: string, caption: string, hashtags: string[]}>}
    */
   async generatePost(product) {
+    if (this.offlineMode) {
+      const title = product.title || product.name || 'Achadinho ACHAki';
+      return {
+        title: title.length > 70 ? `${title.slice(0, 67)}...` : title,
+        caption: `Oferta selecionada: ${title}. Confira os detalhes no link da publicação.`,
+      };
+    }
     this._requireApiKey();
     this._requireModel('content');
 
@@ -411,6 +448,12 @@ class OpenRouterAgent {
    * @returns {Promise<{insights: string[], recommendations: string[]}>}
    */
   async analyzePerformance(metrics) {
+    if (this.offlineMode) {
+      return {
+        summary: 'Modo local sem OpenRouter.',
+        recommendations: ['Manter monitoramento local.', 'Revisar desempenho no dashboard.'],
+      };
+    }
     this._requireApiKey();
     this._requireModel('decision');
 

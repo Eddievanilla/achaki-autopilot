@@ -82,6 +82,13 @@ export class MercadoLivreAffiliateProvider {
           actionLabel: 'Abrir Página do Desafio ↗',
           metadata: { currentUrl, productUrl },
         }).catch(() => {});
+
+        // Depois da intervenção humana, tenta recarregar a página para aproveitar a sessão recém-validada.
+        await page.waitForTimeout(2000);
+        await page.goto('https://www.mercadolivre.com.br/afiliados/linkbuilder#hub', {
+          waitUntil: 'domcontentloaded',
+          timeout: 30000,
+        });
       }
 
       // Aguarda 1.5s para hidratação do cliente

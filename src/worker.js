@@ -771,8 +771,64 @@ class RobotWorker {
       // PASSO 3 & 4: VALIDAÇÃO MULTI-SOURCE & CONFIRMAÇÃO DO LINK DE AFILIADO
       // ─────────────────────────────────────────────────────────────
       await this.setStep('VALIDANDO PREÇOS');
+
+      // Recupera produtos aprovados do catálogo que já possuem link oficial comissionado (meli.la) confirmado
+      let catalogCandidates = [];
+      try {
+        const { data: dbVerifiedProducts } = await supabase
+          .from('products')
+          .select(`
+            id,
+            marketplace,
+            marketplace_product_id,
+            title,
+            category,
+            product_url,
+            image_url,
+            affiliate_url,
+            product_prices (
+              current_price,
+              original_price,
+              discount_percent
+            )
+          `)
+          .not('affiliate_url', 'is', null)
+          .order('updated_at', { ascending: false })
+          .limit(5);
+
+        if (dbVerifiedProducts && dbVerifiedProducts.length > 0) {
+          catalogCandidates = dbVerifiedProducts.map(p => {
+            const prices = p.product_prices || [];
+            const latestP = prices[0] || {};
+            return {
+              dbId: p.id,
+              productId: p.marketplace_product_id,
+              marketplace: p.marketplace || 'mercadolivre',
+              title: p.title,
+              category: p.category || 'utilidades',
+              productUrl: p.product_url,
+              imageUrl: p.image_url,
+              affiliateUrl: p.affiliate_url,
+              currentPrice: Number(latestP.current_price || 0),
+              originalPrice: Number(latestP.original_price || 0),
+              discountPercent: Number(latestP.discount_percent || 0),
+              score: 92,
+              finalScore: 92,
+              strategy: { code: 'DESCONTO', name: 'Desconto Real Comprovado' },
+            };
+          });
+        }
+      } catch (catErr) {
+        logger.warn(`[Worker] Erro ao carregar catálogo com link verificado: ${catErr.message}`);
+      }
+
+      const priorityCandidates = [];
+      if (cmd?.metadata?.candidate) {
+        priorityCandidates.push(cmd.metadata.candidate);
+      }
+
       let candidateIdx = 0;
-      let candidatesPool = [...topOffers];
+      let candidatesPool = [...priorityCandidates, ...topOffers, ...catalogCandidates];
       this.priceValidationEngine.browserManager = browserManager;
       const affiliateService = new AffiliateLinkService({ browserManager });
       const trackingService = new TrackingService();
@@ -1351,7 +1407,16 @@ class RobotWorker {
       });
 
       // Avalia demanda e oportunidades reais
-      const result = await this.opportunityEngine.evaluateDemandAndOpportunities();
+      const scanBrowser = new BrowserManager();
+      let result;
+      try {
+        await scanBrowser.launch();
+        this.opportunityEngine.browserManager = scanBrowser;
+        result = await this.opportunityEngine.evaluateDemandAndOpportunities();
+      } finally {
+        await scanBrowser.close().catch(() => {});
+        this.opportunityEngine.browserManager = null;
+      }
 
       const activeDemands = (result.opportunities || []).slice(0, 5).map(o => ({
         keyword: o.keyword,

@@ -1848,10 +1848,11 @@
         }
       }
 
-      if (data.history) {
-        el('cardTotalProducts', data.history.totalProducts ?? 0);
-        el('cardTotalSelected', data.history.totalSelected ?? 0);
-        el('cardTotalPublications', data.history.totalPublications ?? 0);
+      const hist = data.history || data.historical;
+      if (hist) {
+        el('cardTotalProducts', hist.totalProducts ?? hist.totalProductsCatalog ?? 0);
+        el('cardTotalSelected', hist.totalSelected ?? hist.totalOffersSelected ?? 0);
+        el('cardTotalPublications', hist.totalPublications ?? 0);
       }
 
       // 9. Curadoria IA
