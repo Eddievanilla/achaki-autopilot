@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ACHAki Autopilot — Centro de Comando e Painel Operacional</title>
+  <title>ACHAki Autopilot — Cockpit Studio</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -11,11 +11,14 @@
   <style>
     :root {
       --bg: #07090e;
-      --card-bg: rgba(14, 20, 32, 0.82);
-      --card-border: rgba(255, 255, 255, 0.08);
-      --card-hover: rgba(22, 31, 52, 0.9);
+      --sidebar-bg: rgba(10, 15, 26, 0.95);
+      --topbar-bg: rgba(10, 15, 26, 0.85);
+      --card-bg: rgba(14, 20, 32, 0.78);
+      --card-border: rgba(255, 255, 255, 0.07);
+      --card-hover: rgba(20, 30, 48, 0.85);
       --primary: #3b82f6;
-      --primary-glow: rgba(59, 130, 246, 0.3);
+      --primary-glow: rgba(59, 130, 246, 0.35);
+      --accent-cyan: #06b6d4;
       --emerald: #10b981;
       --emerald-glow: rgba(16, 185, 129, 0.3);
       --amber: #f59e0b;
@@ -27,2185 +30,1656 @@
       --text: #f8fafc;
       --text-muted: #94a3b8;
       --text-dim: #64748b;
+      --sidebar-w: 240px;
+      --sidebar-w-collapsed: 68px;
+      --topbar-h: 56px;
       --radius-sm: 8px;
-      --radius-md: 14px;
-      --radius-lg: 20px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --radius-pill: 9999px;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-      background: radial-gradient(circle at 50% 0%, #111a38 0%, var(--bg) 75%);
+      background: #07090e;
       color: var(--text);
       min-height: 100vh;
-      padding: 24px 16px;
-      display: flex;
-      justify-content: center;
+      overflow: hidden;
+      font-size: 13px;
     }
 
-    .container {
-      max-width: 1280px;
-      width: 100%;
+    /* APP LAYOUT */
+    .app-layout {
+      display: flex;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background: radial-gradient(circle at 40% -10%, #131c38 0%, var(--bg) 60%);
+    }
+
+    /* SIDEBAR */
+    .app-sidebar {
+      width: var(--sidebar-w);
+      height: 100vh;
+      background: var(--sidebar-bg);
+      backdrop-filter: blur(24px);
+      border-right: 1px solid var(--card-border);
       display: flex;
       flex-direction: column;
-      gap: 22px;
+      flex-shrink: 0;
+      transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 50;
+      position: relative;
     }
 
-    /* HEADER */
-    header {
-      background: var(--card-bg);
-      backdrop-filter: blur(20px);
-      border: 1px solid var(--card-border);
-      border-radius: var(--radius-lg);
-      padding: 22px 28px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 16px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    .app-sidebar.collapsed {
+      width: var(--sidebar-w-collapsed);
     }
 
-    .brand-wrap {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-    }
-
-    .brand-logo {
-      width: 48px;
-      height: 48px;
-      background: linear-gradient(135deg, #2563eb, #10b981);
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 800;
-      font-size: 1.35rem;
-      letter-spacing: -0.05em;
-      box-shadow: 0 0 20px rgba(37, 99, 235, 0.4);
-    }
-
-    .brand-text h1 {
-      font-size: 1.4rem;
-      font-weight: 800;
-      letter-spacing: -0.02em;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .brand-text h1 span {
-      font-size: 0.75rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      padding: 2px 8px;
-      border-radius: 6px;
-      background: rgba(59, 130, 246, 0.2);
-      color: #93c5fd;
-      border: 1px solid rgba(59, 130, 246, 0.4);
-    }
-
-    .brand-text p {
-      font-size: 0.82rem;
-      color: var(--text-muted);
-    }
-
-    .header-controls {
+    .sidebar-header {
+      padding: 16px;
       display: flex;
       align-items: center;
       gap: 12px;
-      flex-wrap: wrap;
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    .brand-logo {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, #2563eb, #06b6d4);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 1.15rem;
+      letter-spacing: -0.05em;
+      box-shadow: 0 0 16px rgba(37, 99, 235, 0.4);
+      flex-shrink: 0;
+    }
+
+    .brand-info {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      white-space: nowrap;
+      transition: opacity 0.2s;
+    }
+
+    .brand-title {
+      font-weight: 800;
+      font-size: 0.95rem;
+      letter-spacing: -0.02em;
+      color: #fff;
+    }
+
+    .brand-sub {
+      font-size: 0.68rem;
+      color: var(--text-dim);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .app-sidebar.collapsed .brand-info,
+    .app-sidebar.collapsed .sidebar-status-box,
+    .app-sidebar.collapsed .nav-label,
+    .app-sidebar.collapsed .nav-badge,
+    .app-sidebar.collapsed .sidebar-mode-box {
+      display: none !important;
+    }
+
+    /* SIDEBAR STATUS */
+    .sidebar-status-box {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--card-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
     }
 
     .status-badge {
       display: inline-flex;
       align-items: center;
-      gap: 8px;
-      padding: 8px 16px;
-      border-radius: 999px;
-      font-size: 0.85rem;
+      gap: 6px;
+      padding: 3px 9px;
+      border-radius: var(--radius-pill);
+      font-size: 0.7rem;
       font-weight: 700;
       letter-spacing: 0.04em;
+      text-transform: uppercase;
     }
 
     .status-badge.ONLINE {
-      background: rgba(16, 185, 129, 0.12);
-      color: var(--emerald);
-      border: 1px solid rgba(16, 185, 129, 0.3);
-      box-shadow: 0 0 15px var(--emerald-glow);
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      color: #34d399;
     }
 
     .status-badge.TRABALHANDO {
-      background: rgba(59, 130, 246, 0.15);
-      color: #93c5fd;
-      border: 1px solid rgba(59, 130, 246, 0.4);
-      box-shadow: 0 0 15px var(--primary-glow);
+      background: rgba(168, 85, 247, 0.2);
+      border: 1px solid rgba(168, 85, 247, 0.4);
+      color: #d8b4fe;
     }
 
     .status-badge.AGUARDANDO {
-      background: rgba(245, 158, 11, 0.12);
-      color: var(--amber);
-      border: 1px solid rgba(245, 158, 11, 0.3);
-    }
-
-    .status-badge.PAUSADO {
-      background: rgba(148, 163, 184, 0.12);
-      color: var(--text-muted);
-      border: 1px solid rgba(148, 163, 184, 0.3);
+      background: rgba(245, 158, 11, 0.15);
+      border: 1px solid rgba(245, 158, 11, 0.35);
+      color: #fbbf24;
     }
 
     .status-badge.OFFLINE {
-      background: rgba(244, 63, 94, 0.12);
-      color: #fb7185;
+      background: rgba(244, 63, 94, 0.15);
       border: 1px solid rgba(244, 63, 94, 0.35);
-      box-shadow: 0 0 10px rgba(244, 63, 94, 0.2);
+      color: #fb7185;
     }
 
     .pulse-dot {
-      width: 8px;
-      height: 8px;
+      width: 7px;
+      height: 7px;
       border-radius: 50%;
       background: currentColor;
+      box-shadow: 0 0 8px currentColor;
       animation: pulse 1.8s infinite;
     }
 
     @keyframes pulse {
-      0% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.3; transform: scale(0.85); }
-      100% { opacity: 1; transform: scale(1); }
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
     }
 
-    .btn {
-      padding: 9px 16px;
-      border-radius: var(--radius-sm);
-      font-size: 0.84rem;
-      font-weight: 600;
-      cursor: pointer;
-      border: 1px solid var(--card-border);
-      background: rgba(255, 255, 255, 0.05);
-      color: var(--text);
-      transition: all 0.2s ease;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .btn:hover {
-      background: rgba(255, 255, 255, 0.1);
-      border-color: rgba(255, 255, 255, 0.2);
-    }
-
-    .btn-primary {
-      background: #2563eb;
-      border-color: #3b82f6;
-      color: white;
-    }
-
-    .btn-primary:hover {
-      background: #1d4ed8;
-      box-shadow: 0 0 15px var(--primary-glow);
-    }
-
-    /* 1. BLOCO PRINCIPAL: AUTOPILOT & META DE HOJE */
-    .hero-command-bar {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-    }
-
-    @media (max-width: 860px) {
-      .hero-command-bar { grid-template-columns: 1fr; }
-    }
-
-    .hero-card {
-      background: var(--card-bg);
-      backdrop-filter: blur(16px);
-      border: 1px solid var(--card-border);
-      border-radius: var(--radius-md);
-      padding: 20px 24px;
+    /* SIDEBAR NAVIGATION */
+    .sidebar-nav {
+      flex: 1;
+      padding: 14px 10px;
       display: flex;
       flex-direction: column;
-      gap: 12px;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+      gap: 4px;
+      overflow-y: auto;
     }
 
-    .hero-header {
+    .nav-item {
       display: flex;
       align-items: center;
-      justify-content: space-between;
+      gap: 12px;
+      padding: 9px 12px;
+      border-radius: var(--radius-md);
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 0.82rem;
+      font-weight: 600;
+      text-align: left;
+      transition: all 0.15s ease;
+      width: 100%;
     }
 
-    .hero-title {
-      font-size: 0.82rem;
+    .nav-item:hover {
+      background: rgba(255, 255, 255, 0.04);
+      color: #fff;
+    }
+
+    .nav-item.active {
+      background: rgba(59, 130, 246, 0.12);
+      border-color: rgba(59, 130, 246, 0.28);
+      color: #60a5fa;
+    }
+
+    .nav-icon {
+      font-size: 1.05rem;
+      flex-shrink: 0;
+      width: 22px;
+      text-align: center;
+    }
+
+    .nav-label {
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .nav-badge {
+      font-size: 0.65rem;
+      padding: 2px 7px;
+      border-radius: var(--radius-pill);
+      background: rgba(59, 130, 246, 0.2);
+      color: #93c5fd;
       font-weight: 700;
-      color: var(--text-dim);
+    }
+
+    /* SIDEBAR MODE FOOTER */
+    .sidebar-mode-box {
+      padding: 14px 16px;
+      border-top: 1px solid var(--card-border);
+      background: rgba(0, 0, 0, 0.2);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .sidebar-section-title {
+      font-size: 0.68rem;
+      font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.06em;
+      color: var(--text-dim);
     }
 
     .mode-switch-group {
-      display: flex;
-      align-items: center;
-      background: rgba(0, 0, 0, 0.35);
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      background: rgba(0, 0, 0, 0.4);
       border: 1px solid var(--card-border);
-      border-radius: 999px;
-      padding: 4px;
-      gap: 4px;
-      width: fit-content;
+      border-radius: var(--radius-sm);
+      padding: 3px;
+      gap: 3px;
     }
 
     .mode-switch-btn {
+      padding: 5px 0;
       background: transparent;
       border: none;
+      border-radius: 5px;
       color: var(--text-dim);
-      font-size: 0.78rem;
+      font-size: 0.7rem;
       font-weight: 700;
-      padding: 6px 16px;
-      border-radius: 999px;
       cursor: pointer;
-      transition: all 0.25s ease;
+      text-align: center;
+      transition: all 0.15s ease;
+    }
+
+    .mode-switch-btn:hover {
+      color: var(--text-muted);
     }
 
     .mode-switch-btn.active {
-      background: var(--primary);
-      color: white;
-      box-shadow: 0 0 15px var(--primary-glow);
+      background: #2563eb;
+      color: #fff;
+      box-shadow: 0 0 10px rgba(37, 99, 235, 0.4);
     }
 
     .mode-desc {
-      font-size: 0.82rem;
-      color: var(--text-muted);
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      line-height: 1.35;
     }
 
-    /* META DE HOJE SUMMARY */
-    .goal-hero-stats {
+    /* MAIN AREA */
+    .app-main {
+      flex: 1;
+      height: 100vh;
       display: flex;
-      align-items: baseline;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* TOPBAR */
+    .app-topbar {
+      height: var(--topbar-h);
+      background: var(--topbar-bg);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--card-border);
+      padding: 0 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-shrink: 0;
+      z-index: 40;
+    }
+
+    .topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .sidebar-toggle-btn {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--card-border);
+      color: var(--text-muted);
+      width: 32px;
+      height: 32px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 0.95rem;
+      transition: all 0.15s;
+    }
+
+    .sidebar-toggle-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+    }
+
+    .topbar-breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.8rem;
+    }
+
+    .bc-root {
+      color: var(--text-dim);
+      font-weight: 500;
+    }
+
+    .bc-sep {
+      color: var(--card-border);
+      font-size: 0.75rem;
+    }
+
+    .bc-current {
+      color: #fff;
+      font-weight: 700;
+    }
+
+    .topbar-center {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    /* COMPACT GOAL PILL */
+    .topbar-goal-pill {
+      background: rgba(14, 20, 32, 0.9);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-pill);
+      padding: 4px 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.76rem;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .topbar-goal-pill:hover {
+      border-color: rgba(59, 130, 246, 0.4);
+      background: rgba(20, 30, 48, 0.95);
+    }
+
+    .t-goal-icon { font-size: 0.85rem; }
+    .t-goal-label { color: var(--text-dim); font-weight: 500; }
+    .t-goal-value strong { color: #fff; }
+    .t-goal-pct { color: #34d399; font-weight: 700; }
+
+    .t-goal-track {
+      width: 50px;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+
+    .t-goal-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #2563eb, #10b981);
+      border-radius: 99px;
+      transition: width 0.3s ease;
+    }
+
+    .topbar-right {
+      display: flex;
+      align-items: center;
       gap: 10px;
     }
 
-    .goal-hero-number {
-      font-size: 2.2rem;
-      font-weight: 800;
+    .topbar-clock {
       font-family: 'JetBrains Mono', monospace;
-      color: var(--text);
-    }
-
-    .goal-hero-total {
-      font-size: 1.1rem;
-      color: var(--text-dim);
-      font-family: 'JetBrains Mono', monospace;
-    }
-
-    .progress-track {
-      width: 100%;
-      height: 10px;
-      background: rgba(255, 255, 255, 0.06);
-      border-radius: 999px;
-      overflow: hidden;
-    }
-
-    .progress-fill {
-      height: 100%;
-      background: linear-gradient(90deg, #3b82f6, #10b981);
-      width: 0%;
-      transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    .goal-hero-subtags {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      font-size: 0.8rem;
-      color: var(--text-dim);
-      flex-wrap: wrap;
-    }
-
-    .goal-hero-subtags strong {
-      color: var(--text);
-      font-family: 'JetBrains Mono', monospace;
-    }
-
-    /* 2 & 3. CARDS DE DESTAQUE: ROBÔ AGORA & OBJETIVO */
-    .highlight-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-    }
-
-    @media (max-width: 900px) {
-      .highlight-grid { grid-template-columns: 1fr; }
-    }
-
-    .highlight-card {
-      background: var(--card-bg);
-      backdrop-filter: blur(16px);
-      border: 1px solid var(--card-border);
-      border-radius: var(--radius-md);
-      padding: 22px 24px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .highlight-card.featured {
-      border-color: rgba(59, 130, 246, 0.35);
-      background: linear-gradient(145deg, rgba(20, 30, 55, 0.85) 0%, rgba(10, 15, 26, 0.85) 100%);
-    }
-
-    .highlight-label {
-      font-size: 0.82rem;
-      font-weight: 700;
-      color: #93c5fd;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .status-tag {
       font-size: 0.72rem;
-      font-weight: 800;
-      padding: 3px 10px;
-      border-radius: 6px;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-    }
-
-    .status-tag.SEM_DADOS {
-      background: rgba(148, 163, 184, 0.15);
-      color: var(--text-muted);
-      border: 1px solid rgba(148, 163, 184, 0.3);
-    }
-
-    .status-tag.NO_RITMO {
-      background: rgba(16, 185, 129, 0.15);
-      color: var(--emerald);
-      border: 1px solid rgba(16, 185, 129, 0.3);
-    }
-
-    .status-tag.ABAIXO_DA_META {
-      background: rgba(245, 158, 11, 0.15);
-      color: var(--amber);
-      border: 1px solid rgba(245, 158, 11, 0.3);
-    }
-
-    .status-tag.AGUARDANDO_APROVACAO {
-      background: rgba(245, 158, 11, 0.2);
-      color: #fbbf24;
-      border: 1px solid rgba(245, 158, 11, 0.45);
-      box-shadow: 0 0 10px rgba(245, 158, 11, 0.25);
-    }
-
-    .highlight-info-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-      gap: 12px;
-      margin-top: 4px;
-    }
-
-    .info-subitem {
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-    }
-
-    .info-subitem span {
-      font-size: 0.74rem;
       color: var(--text-dim);
+      padding: 4px 8px;
+      background: rgba(0, 0, 0, 0.25);
+      border-radius: var(--radius-sm);
+      border: 1px solid rgba(255, 255, 255, 0.04);
     }
 
-    .info-subitem strong {
-      font-size: 1.05rem;
-      font-family: 'JetBrains Mono', monospace;
+    .topbar-btn {
+      padding: 6px 13px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--card-border);
+      background: rgba(255, 255, 255, 0.05);
       color: var(--text);
-    }
-
-    /* 4. ESTRATÉGIA ORGÂNICA */
-    .strategy-card {
-      background: var(--card-bg);
-      backdrop-filter: blur(16px);
-      border: 1px solid rgba(168, 85, 247, 0.25);
-      border-radius: var(--radius-md);
-      padding: 22px 24px;
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-      background: linear-gradient(145deg, rgba(28, 20, 48, 0.75) 0%, rgba(12, 14, 25, 0.85) 100%);
-    }
-
-    .strategy-badge-main {
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
       display: inline-flex;
       align-items: center;
-      gap: 8px;
-      padding: 4px 12px;
-      border-radius: 8px;
-      background: rgba(168, 85, 247, 0.2);
-      border: 1px solid rgba(168, 85, 247, 0.4);
-      color: #e9d5ff;
-      font-weight: 700;
-      font-size: 0.95rem;
-    }
-
-    .strategy-grid-meta {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 12px;
-      font-size: 0.82rem;
-    }
-
-    .strategy-meta-item {
-      background: rgba(255, 255, 255, 0.02);
-      border: 1px solid var(--card-border);
-      border-radius: var(--radius-sm);
-      padding: 10px 14px;
-    }
-
-    .strategy-meta-item span {
-      display: block;
-      color: var(--text-dim);
-      font-size: 0.72rem;
-      margin-bottom: 2px;
-    }
-
-    .strategy-meta-item strong {
-      color: var(--text);
-    }
-
-    /* SECTION TITLES */
-    .section-title {
-      font-size: 0.95rem;
-      font-weight: 700;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      margin-bottom: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    /* GRIDS & CARDS */
-    .metrics-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 14px;
-    }
-
-    .card {
-      background: var(--card-bg);
-      backdrop-filter: blur(16px);
-      border: 1px solid var(--card-border);
-      border-radius: var(--radius-md);
-      padding: 18px 20px;
-      display: flex;
-      flex-direction: column;
       gap: 6px;
-      transition: all 0.2s ease;
+      transition: all 0.15s;
     }
 
-    .card:hover {
-      border-color: rgba(255, 255, 255, 0.15);
-      transform: translateY(-1px);
+    .topbar-btn:hover {
+      background: rgba(255, 255, 255, 0.09);
+      color: #fff;
     }
 
-    .card-label {
-      font-size: 0.78rem;
-      color: var(--text-dim);
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
+    .topbar-btn-primary {
+      background: #2563eb;
+      border-color: #3b82f6;
+      color: #fff;
+      box-shadow: 0 0 12px rgba(37, 99, 235, 0.3);
     }
 
-    .card-value {
-      font-size: 1.85rem;
-      font-weight: 800;
-      font-family: 'JetBrains Mono', monospace;
-      color: var(--text);
-      line-height: 1.2;
+    .topbar-btn-primary:hover {
+      background: #1d4ed8;
+      box-shadow: 0 0 16px rgba(37, 99, 235, 0.5);
     }
 
-    .card-sub {
-      font-size: 0.75rem;
-      color: var(--text-dim);
-    }
-
-    .tag-highlight {
-      font-size: 0.68rem;
-      font-weight: 700;
-      padding: 2px 6px;
-      border-radius: 4px;
-      background: rgba(16, 185, 129, 0.15);
-      color: var(--emerald);
-      border: 1px solid rgba(16, 185, 129, 0.3);
-    }
-
-    /* PERFORMANCE TABS */
-    .tabs-wrap {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .tab-btn {
-      background: transparent;
-      border: 1px solid var(--card-border);
-      color: var(--text-dim);
-      font-size: 0.75rem;
-      font-weight: 700;
-      padding: 4px 12px;
-      border-radius: 6px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-
-    .tab-btn.active {
-      background: rgba(59, 130, 246, 0.2);
-      border-color: var(--primary);
-      color: #93c5fd;
-    }
-
-    /* CENTRAL DE INTERVENÇÃO OPERACIONAL */
-    .intervention-banner {
-      background: linear-gradient(135deg, rgba(239, 68, 68, 0.12) 0%, rgba(245, 158, 11, 0.12) 100%);
-      border: 1px solid rgba(245, 158, 11, 0.4);
-      border-radius: var(--radius-md);
-      padding: 16px 20px;
-      margin-bottom: 24px;
+    /* SCROLL CONTENT AREA */
+    .app-content-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 24px 110px 24px;
       display: flex;
       flex-direction: column;
-      gap: 12px;
-      box-shadow: 0 4px 20px rgba(245, 158, 11, 0.1);
-      animation: fadeIn 0.3s ease;
+      gap: 18px;
     }
+
+    /* Custom Scrollbar */
+    .app-content-scroll::-webkit-scrollbar,
+    .sidebar-nav::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .app-content-scroll::-webkit-scrollbar-thumb,
+    .sidebar-nav::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 99px;
+    }
+
+    /* TAB PANES */
+    .tab-pane {
+      display: none;
+      flex-direction: column;
+      gap: 18px;
+      animation: fadeIn 0.18s ease-in-out;
+    }
+
+    .tab-pane.active {
+      display: flex;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(3px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* INTERVENTION BANNER (ALERTA NO TOPO) */
+    .intervention-banner {
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(15, 23, 42, 0.95));
+      border: 1px solid rgba(239, 68, 68, 0.45);
+      border-radius: var(--radius-md);
+      padding: 14px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      box-shadow: 0 8px 24px rgba(239, 68, 68, 0.18);
+    }
+
     .intervention-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 12px;
-      flex-wrap: wrap;
     }
+
     .intervention-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
       font-size: 0.72rem;
       font-weight: 800;
       letter-spacing: 0.05em;
       text-transform: uppercase;
-      padding: 4px 10px;
-      border-radius: 6px;
-      background: rgba(239, 68, 68, 0.2);
       color: #f87171;
-      border: 1px solid rgba(239, 68, 68, 0.4);
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
     }
+
     .intervention-actions {
       display: flex;
       align-items: center;
       gap: 10px;
       flex-wrap: wrap;
     }
+
     .btn-intervention-direct {
-      background: linear-gradient(135deg, #f59e0b, #d97706);
-      color: #000;
+      background: #dc2626;
+      border: 1px solid #ef4444;
+      color: #ffffff;
+      padding: 7px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 0.78rem;
       font-weight: 700;
-      font-size: 0.82rem;
-      padding: 8px 16px;
-      border-radius: 8px;
       text-decoration: none;
+      cursor: pointer;
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      transition: all 0.2s ease;
-      border: none;
-      cursor: pointer;
+      box-shadow: 0 0 14px rgba(220, 38, 38, 0.4);
     }
+
     .btn-intervention-direct:hover {
-      filter: brightness(1.1);
-      transform: translateY(-1px);
+      background: #b91c1c;
     }
+
     .btn-intervention-resolve {
-      background: rgba(255, 255, 255, 0.08);
-      color: var(--text-dim);
-      font-size: 0.78rem;
-      padding: 7px 14px;
-      border-radius: 8px;
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-    .btn-intervention-resolve:hover {
       background: rgba(16, 185, 129, 0.15);
-      color: var(--emerald);
-      border-color: rgba(16, 185, 129, 0.3);
-    }
-
-    /* DIÁRIO DO ROBÔ */
-    .diary-list {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      max-height: 380px;
-      overflow-y: auto;
-    }
-
-    .diary-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      padding: 12px 16px;
-      background: rgba(255, 255, 255, 0.02);
-      border: 1px solid var(--card-border);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      color: #34d399;
+      padding: 7px 14px;
       border-radius: var(--radius-sm);
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-
-    .diary-item:hover {
-      background: rgba(255, 255, 255, 0.05);
-      border-color: rgba(255, 255, 255, 0.18);
-    }
-
-    .diary-left {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .diary-time {
-      font-family: 'JetBrains Mono', monospace;
-      color: var(--text-dim);
-      font-size: 0.8rem;
-      flex-shrink: 0;
-    }
-
-    .diary-msg {
-      color: var(--text);
-      font-size: 0.85rem;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .diary-strat-tag {
-      font-size: 0.7rem;
+      font-size: 0.78rem;
       font-weight: 700;
-      padding: 2px 8px;
-      border-radius: 4px;
-      background: rgba(168, 85, 247, 0.15);
-      color: #d8b4fe;
-      flex-shrink: 0;
+      cursor: pointer;
     }
 
-    /* TOP 5 OFERTAS */
-    .offers-list {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
+    .btn-intervention-resolve:hover {
+      background: rgba(16, 185, 129, 0.25);
     }
 
-    .offer-card {
+    /* CARDS & PANELS */
+    .card {
       background: var(--card-bg);
       backdrop-filter: blur(16px);
       border: 1px solid var(--card-border);
       border-radius: var(--radius-md);
-      padding: 18px 22px;
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-      transition: all 0.2s ease;
-    }
-
-    .offer-card:hover {
-      border-color: rgba(255, 255, 255, 0.2);
-    }
-
-    .offer-main-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-      flex-wrap: wrap;
-    }
-
-    .offer-left {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      flex: 1;
-      min-width: 280px;
-    }
-
-    .offer-img {
-      width: 68px;
-      height: 68px;
-      border-radius: 10px;
-      object-fit: cover;
-      background: #1e293b;
-      border: 1px solid var(--card-border);
-      flex-shrink: 0;
-    }
-
-    .offer-details {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    .offer-title {
-      font-size: 0.95rem;
-      font-weight: 700;
-      line-height: 1.35;
-      color: var(--text);
-    }
-
-    .offer-tags {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 0.75rem;
-      color: var(--text-dim);
-      flex-wrap: wrap;
-    }
-
-    .offer-tag {
-      padding: 2px 8px;
-      background: rgba(255, 255, 255, 0.05);
-      border-radius: 6px;
-      text-transform: capitalize;
-    }
-
-    .offer-right {
-      display: flex;
-      align-items: center;
-      gap: 18px;
-    }
-
-    .offer-price-wrap {
-      text-align: right;
-    }
-
-    .offer-price {
-      font-size: 1.35rem;
-      font-weight: 800;
-      color: var(--emerald);
-      font-family: 'JetBrains Mono', monospace;
-    }
-
-    .offer-discount {
-      font-size: 0.76rem;
-      color: var(--text-muted);
-    }
-
-    .score-circle {
-      width: 48px;
-      height: 48px;
-      border-radius: 50%;
-      background: rgba(59, 130, 246, 0.12);
-      border: 2px solid var(--primary);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.88rem;
-      font-weight: 800;
-      color: #93c5fd;
-      box-shadow: 0 0 10px var(--primary-glow);
-    }
-
-    .score-circle span {
-      font-size: 0.55rem;
-      text-transform: uppercase;
-      opacity: 0.7;
-    }
-
-    /* EXPANDABLE REASON ("Por que esta oferta?") */
-    .offer-expand-btn {
-      background: transparent;
-      border: 1px solid var(--card-border);
-      color: #93c5fd;
-      font-size: 0.78rem;
-      padding: 5px 12px;
-      border-radius: 6px;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      align-self: flex-start;
-    }
-
-    .offer-expand-btn:hover {
-      background: rgba(59, 130, 246, 0.1);
-      border-color: rgba(59, 130, 246, 0.3);
-    }
-
-    .offer-drawer {
-      display: none;
-      padding: 14px 16px;
-      background: rgba(0, 0, 0, 0.25);
-      border: 1px solid var(--card-border);
-      border-radius: var(--radius-sm);
-      font-size: 0.82rem;
-      color: var(--text-muted);
-      line-height: 1.45;
-    }
-
-    .offer-drawer.open {
-      display: block;
-    }
-
-    .drawer-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-      gap: 10px;
-      margin-top: 10px;
-      padding-top: 10px;
-      border-top: 1px solid rgba(255, 255, 255, 0.06);
-    }
-
-    .drawer-item span {
-      display: block;
-      font-size: 0.7rem;
-      color: var(--text-dim);
-    }
-
-    .drawer-item strong {
-      color: var(--text);
-      font-family: 'JetBrains Mono', monospace;
-    }
-
-    /* MODAL */
-    .modal-backdrop {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.75);
-      backdrop-filter: blur(8px);
-      z-index: 1000;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-    }
-
-    .modal-backdrop.open {
-      display: flex;
-    }
-
-    .modal-content {
-      background: #0f172a;
-      border: 1px solid var(--card-border);
-      border-radius: var(--radius-lg);
-      max-width: 620px;
-      width: 100%;
-      padding: 24px;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8);
-    }
-
-    .modal-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      border-bottom: 1px solid var(--card-border);
-      padding-bottom: 12px;
-    }
-
-    .modal-header h3 {
-      font-size: 1.1rem;
-      color: var(--text);
-    }
-
-    .modal-close {
-      background: transparent;
-      border: none;
-      color: var(--text-dim);
-      font-size: 1.4rem;
-      cursor: pointer;
-    }
-
-    .modal-body {
-      font-size: 0.88rem;
-      line-height: 1.5;
-      color: var(--text-muted);
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    pre.code-block {
-      background: #070a12;
-      border: 1px solid var(--card-border);
-      border-radius: var(--radius-sm);
-      padding: 12px;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.78rem;
-      color: #93c5fd;
-      overflow-x: auto;
-      max-height: 220px;
-    }
-
-    /* 🤖 LOG AO VIVO EM TEMPO REAL */
-    .live-logs-card {
-      background: var(--card-bg);
-      backdrop-filter: blur(20px);
-      border: 1px solid var(--card-border);
-      border-radius: var(--radius-md);
-      padding: 18px 20px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
-    }
-
-    .live-logs-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 12px;
-      padding-bottom: 10px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-    }
-
-    .live-logs-title-wrap {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .live-logs-title {
-      font-size: 0.95rem;
-      font-weight: 800;
-      letter-spacing: -0.01em;
-      color: #f8fafc;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .realtime-status-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 0.7rem;
-      font-weight: 700;
-      padding: 3px 10px;
-      border-radius: 20px;
-      letter-spacing: 0.04em;
-      transition: all 0.3s ease;
-    }
-
-    .realtime-status-pill.online {
-      background: rgba(16, 185, 129, 0.15);
-      color: #34d399;
-      border: 1px solid rgba(16, 185, 129, 0.35);
-      box-shadow: 0 0 10px rgba(16, 185, 129, 0.2);
-    }
-
-    .realtime-status-pill.reconnecting {
-      background: rgba(245, 158, 11, 0.15);
-      color: #fbbf24;
-      border: 1px solid rgba(245, 158, 11, 0.35);
-      box-shadow: 0 0 10px rgba(245, 158, 11, 0.2);
-    }
-
-    .realtime-status-pill.offline {
-      background: rgba(244, 63, 94, 0.15);
-      color: #fb7185;
-      border: 1px solid rgba(244, 63, 94, 0.35);
-      box-shadow: 0 0 10px rgba(244, 63, 94, 0.2);
-    }
-
-    .live-logs-actions {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .log-action-btn {
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid var(--card-border);
-      color: var(--text-dim);
-      font-size: 0.72rem;
-      font-weight: 600;
-      padding: 4px 10px;
-      border-radius: 6px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-    }
-
-    .log-action-btn:hover {
-      background: rgba(255, 255, 255, 0.08);
-      color: var(--text);
-      border-color: rgba(255, 255, 255, 0.15);
-    }
-
-    .log-action-btn.active-pause {
-      background: rgba(245, 158, 11, 0.2);
-      border-color: rgba(245, 158, 11, 0.4);
-      color: #fbbf24;
-    }
-
-    .live-logs-filter-bar {
-      display: flex;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 6px;
-    }
-
-    .log-filter-pill {
-      background: transparent;
-      border: 1px solid var(--card-border);
-      color: var(--text-dim);
-      font-size: 0.7rem;
-      font-weight: 700;
-      padding: 3px 10px;
-      border-radius: 6px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-
-    .log-filter-pill:hover {
-      border-color: rgba(255, 255, 255, 0.18);
-      color: var(--text);
-    }
-
-    .log-filter-pill.active {
-      background: rgba(59, 130, 246, 0.18);
-      border-color: var(--primary);
-      color: #93c5fd;
-    }
-
-    .log-count-indicator {
-      margin-left: auto;
-      font-size: 0.7rem;
-      color: var(--text-dim);
-      font-family: 'JetBrains Mono', monospace;
-    }
-
-    .live-logs-terminal {
-      background: #040711;
-      border: 1px solid rgba(255, 255, 255, 0.06);
-      border-radius: var(--radius-sm);
-      height: 280px;
-      overflow-y: auto;
-      padding: 8px 10px;
-      display: flex;
-      flex-direction: column;
-      gap: 3px;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.78rem;
-    }
-
-    .log-row {
-      display: flex;
-      align-items: baseline;
-      gap: 8px;
-      padding: 4px 8px;
-      border-radius: 4px;
-      cursor: pointer;
-      transition: background 0.15s ease;
-      line-height: 1.4;
-    }
-
-    .log-row:hover {
-      background: rgba(255, 255, 255, 0.05);
-    }
-
-    .log-time {
-      color: #64748b;
-      font-size: 0.73rem;
-      min-width: 62px;
-      flex-shrink: 0;
-    }
-
-    .log-cat {
-      font-weight: 700;
-      font-size: 0.68rem;
-      min-width: 90px;
-      text-transform: uppercase;
-      flex-shrink: 0;
-    }
-
-    .log-badge-icon {
-      font-weight: 800;
-      font-size: 0.75rem;
-      width: 14px;
-      text-align: center;
-      flex-shrink: 0;
-    }
-
-    .log-msg {
-      color: #cbd5e1;
-      flex: 1;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .log-dur {
-      color: #64748b;
-      font-size: 0.7rem;
-      margin-left: 6px;
-      flex-shrink: 0;
-    }
-
-    /* Cores discretas por nível */
-    .log-level-SUCCESS .log-cat { color: #34d399; }
-    .log-level-SUCCESS .log-badge-icon { color: #10b981; }
-    .log-level-SUCCESS .log-msg { color: #e2e8f0; }
-
-    .log-level-INFO .log-cat { color: #38bdf8; }
-    .log-level-INFO .log-badge-icon { color: #0284c7; }
-    .log-level-INFO .log-msg { color: #cbd5e1; }
-
-    .log-level-WARNING .log-cat { color: #fbbf24; }
-    .log-level-WARNING .log-badge-icon { color: #f59e0b; }
-    .log-level-WARNING .log-msg { color: #fef08a; }
-
-    .log-level-ERROR .log-cat { color: #f87171; }
-    .log-level-ERROR .log-badge-icon { color: #ef4444; }
-    .log-level-ERROR .log-msg { color: #fecdd3; }
-
-    .log-level-DEBUG .log-cat { color: #94a3b8; }
-    .log-level-DEBUG .log-badge-icon { color: #64748b; }
-    .log-level-DEBUG .log-msg { color: #94a3b8; }
-
-    .log-empty-msg {
-      color: var(--text-dim);
-      font-size: 0.78rem;
-      text-align: center;
-      padding: 30px;
-    }
-
-    /* FOOTER */
-    footer {
-      text-align: center;
-      padding: 20px 0;
-      font-size: 0.8rem;
-      color: var(--text-dim);
-    }
-
-    footer a {
-      color: var(--text-muted);
-      text-decoration: none;
-    }
-
-    footer a:hover {
-      text-decoration: underline;
-    }
-
-    /* 📣 CARD PUBLICAÇÃO PREPARADA */
-    .prepared-card {
-      background: linear-gradient(145deg, rgba(22, 33, 62, 0.95), rgba(15, 23, 42, 0.95));
-      border: 2px solid rgba(59, 130, 246, 0.5);
-      box-shadow: 0 0 35px rgba(59, 130, 246, 0.25), inset 0 0 20px rgba(59, 130, 246, 0.08);
-      border-radius: var(--radius-lg);
-      padding: 24px 28px;
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-      transition: all 0.3s ease;
+      padding: 16px 20px;
       position: relative;
-      overflow: hidden;
     }
 
-    .prepared-card::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 4px;
-      background: linear-gradient(90deg, #3b82f6, #10b981, #f59e0b);
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .card-title {
+      font-size: 0.84rem;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      letter-spacing: -0.01em;
+    }
+
+    /* GRIDS */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+
+    .grid-4 {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+    }
+
+    @media (max-width: 1024px) {
+      .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+    }
+
+    /* STATUS STEPS & META DATA */
+    .stat-kpi-num {
+      font-size: 1.55rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      color: #fff;
+      margin: 4px 0;
+    }
+
+    .stat-kpi-sub {
+      font-size: 0.72rem;
+      color: var(--text-dim);
+    }
+
+    .status-tag {
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: var(--radius-sm);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .status-tag.NO_RITMO { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+    .status-tag.ABAIXO_DA_META { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+    .status-tag.SEM_DADOS { background: rgba(100, 116, 139, 0.15); color: #94a3b8; }
+    .status-tag.AGUARDANDO_APROVACAO { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+
+    /* PREPARED PUBLICATION CARD */
+    .prepared-card {
+      background: linear-gradient(135deg, rgba(37, 99, 235, 0.1), rgba(15, 23, 42, 0.95));
+      border: 1px solid rgba(59, 130, 246, 0.35);
+      border-radius: var(--radius-lg);
+      padding: 18px 22px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
     }
 
     .prepared-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 12px;
-      padding-bottom: 14px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      margin-bottom: 14px;
     }
 
-    .prepared-title-group {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .prepared-title {
-      font-size: 1.2rem;
-      font-weight: 800;
-      color: #f8fafc;
-      letter-spacing: -0.01em;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .prepared-badge-pulse {
-      background: rgba(245, 158, 11, 0.18);
-      color: #fbbf24;
-      border: 1px solid rgba(245, 158, 11, 0.4);
-      padding: 4px 12px;
-      border-radius: 999px;
-      font-size: 0.75rem;
-      font-weight: 700;
-      letter-spacing: 0.04em;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      box-shadow: 0 0 15px rgba(245, 158, 11, 0.25);
-    }
-
-    .prepared-grid {
+    .prepared-body-split {
       display: grid;
-      grid-template-columns: 280px 1fr;
-      gap: 24px;
+      grid-template-columns: 200px 1fr;
+      gap: 20px;
     }
 
-    @media (max-width: 900px) {
-      .prepared-grid {
-        grid-template-columns: 1fr;
-      }
+    @media (max-width: 768px) {
+      .prepared-body-split { grid-template-columns: 1fr; }
     }
 
-    .prepared-media-col {
-      display: flex;
-      flex-direction: column;
+    .prepared-img {
+      width: 100%;
+      height: 160px;
+      object-fit: cover;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--card-border);
+    }
+
+    .prep-copy-box {
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      font-size: 0.8rem;
+      color: #cbd5e1;
+      white-space: pre-wrap;
+      line-height: 1.45;
+      max-height: 110px;
+      overflow-y: auto;
+      margin: 10px 0;
+    }
+
+    /* RADAR DE OFERTAS (CARDS COMPACTOS EM GRADE) */
+    .offers-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
       gap: 14px;
     }
 
-    .prepared-img-box {
-      width: 100%;
-      height: 240px;
+    .offer-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
       border-radius: var(--radius-md);
-      overflow: hidden;
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      background: #000;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      transition: all 0.15s ease;
       position: relative;
     }
 
-    .prepared-img-box img {
-      width: 100%;
-      height: 100%;
+    .offer-card:hover {
+      border-color: rgba(59, 130, 246, 0.35);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+    }
+
+    .offer-top-row {
+      display: flex;
+      gap: 12px;
+    }
+
+    .offer-img {
+      width: 68px;
+      height: 68px;
       object-fit: cover;
-      transition: transform 0.3s ease;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--card-border);
+      flex-shrink: 0;
     }
 
-    .prepared-img-box:hover img {
-      transform: scale(1.03);
-    }
-
-    .prepared-img-overlay-badges {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      right: 10px;
+    .offer-info {
+      flex: 1;
       display: flex;
-      justify-content: space-between;
-      pointer-events: none;
+      flex-direction: column;
+      gap: 4px;
+      overflow: hidden;
     }
 
-    .prepared-pill {
-      font-size: 0.7rem;
+    .offer-title {
+      font-size: 0.82rem;
       font-weight: 700;
-      padding: 3px 8px;
-      border-radius: 6px;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-    }
-
-    .prepared-pill-mp {
-      background: rgba(255, 230, 0, 0.2);
-      color: #ffe600;
-      border: 1px solid rgba(255, 230, 0, 0.4);
-      backdrop-filter: blur(8px);
-    }
-
-    .prepared-pill-disc {
-      background: rgba(239, 68, 68, 0.85);
       color: #fff;
-      font-weight: 800;
-      box-shadow: 0 2px 10px rgba(239, 68, 68, 0.5);
+      line-height: 1.35;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
     }
 
-    .prepared-meta-list {
+    .offer-tags {
       display: flex;
-      flex-direction: column;
-      gap: 8px;
-      font-size: 0.78rem;
-      background: rgba(0, 0, 0, 0.25);
-      padding: 12px 14px;
-      border-radius: var(--radius-sm);
-      border: 1px solid rgba(255, 255, 255, 0.05);
+      gap: 5px;
+      flex-wrap: wrap;
     }
 
-    .prepared-meta-row {
-      display: flex;
-      justify-content: space-between;
+    .offer-tag {
+      font-size: 0.65rem;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.06);
       color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
     }
 
-    .prepared-meta-row strong {
-      color: var(--text);
-      font-family: 'JetBrains Mono', monospace;
-    }
-
-    .prepared-content-col {
+    .offer-bottom-row {
       display: flex;
-      flex-direction: column;
-      gap: 16px;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: 8px;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
     }
 
-    .prepared-product-title {
-      font-size: 1.15rem;
-      font-weight: 700;
-      color: var(--text);
-      line-height: 1.4;
-    }
-
-    .prepared-price-banner {
-      display: flex;
-      align-items: baseline;
-      gap: 14px;
-      background: rgba(16, 185, 129, 0.08);
-      border: 1px solid rgba(16, 185, 129, 0.25);
-      padding: 12px 18px;
-      border-radius: var(--radius-sm);
-    }
-
-    .prepared-price-current {
-      font-size: 1.8rem;
+    .offer-price {
+      font-size: 1.05rem;
       font-weight: 800;
-      font-family: 'JetBrains Mono', monospace;
       color: #34d399;
     }
 
-    .prepared-price-orig {
-      font-size: 1.05rem;
-      color: var(--text-dim);
-      text-decoration: line-through;
-      font-family: 'JetBrains Mono', monospace;
+    .offer-discount {
+      font-size: 0.7rem;
+      color: #f59e0b;
+      font-weight: 700;
     }
 
-    .prepared-price-save {
-      margin-left: auto;
-      font-size: 0.82rem;
-      font-weight: 700;
-      color: #10b981;
-      background: rgba(16, 185, 129, 0.15);
-      padding: 4px 10px;
-      border-radius: 6px;
-      border: 1px solid rgba(16, 185, 129, 0.3);
-    }
-
-    .prepared-copy-label {
-      font-size: 0.78rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: var(--text-dim);
-      display: flex;
+    .score-circle {
+      display: inline-flex;
       align-items: center;
-      gap: 6px;
+      gap: 4px;
+      font-size: 0.72rem;
+      font-weight: 800;
+      color: #60a5fa;
+      background: rgba(59, 130, 246, 0.15);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      padding: 2px 7px;
+      border-radius: var(--radius-pill);
     }
 
-    .prepared-copy-box {
-      background: #060913;
-      border: 1px solid rgba(255, 255, 255, 0.1);
+    .offer-expand-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-dim);
+      font-size: 0.7rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 0;
+    }
+
+    .offer-expand-btn:hover {
+      color: #60a5fa;
+    }
+
+    .offer-drawer {
+      display: none;
+      font-size: 0.74rem;
+      color: var(--text-muted);
+      background: rgba(0, 0, 0, 0.3);
       border-radius: var(--radius-sm);
-      padding: 16px;
-      font-size: 0.88rem;
-      line-height: 1.6;
-      color: #e2e8f0;
-      white-space: pre-wrap;
-      font-family: inherit;
-      max-height: 220px;
-      overflow-y: auto;
-      box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.4);
+      padding: 8px 10px;
+      margin-top: 4px;
+      line-height: 1.4;
     }
 
-    .prepared-link-box {
+    .offer-drawer.open {
+      display: block;
+    }
+
+    /* LOG AO VIVO EM TEMPO REAL */
+    .live-logs-card {
+      background: rgba(10, 15, 26, 0.88);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-md);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .live-logs-header {
+      padding: 12px 18px;
+      border-bottom: 1px solid var(--card-border);
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 12px;
-      background: rgba(59, 130, 246, 0.08);
-      border: 1px solid rgba(59, 130, 246, 0.25);
-      padding: 10px 14px;
-      border-radius: var(--radius-sm);
-      font-size: 0.8rem;
+      flex-wrap: wrap;
+      gap: 10px;
     }
 
-    .prepared-link-text {
+    .live-logs-filters {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .filter-chip {
+      padding: 4px 9px;
+      border-radius: var(--radius-pill);
+      border: 1px solid var(--card-border);
+      background: transparent;
+      color: var(--text-dim);
+      font-size: 0.7rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .filter-chip:hover {
+      color: #fff;
+    }
+
+    .filter-chip.active {
+      background: rgba(59, 130, 246, 0.2);
+      border-color: rgba(59, 130, 246, 0.4);
       color: #93c5fd;
+    }
+
+    .live-logs-feed {
+      height: 380px;
+      overflow-y: auto;
+      padding: 10px 14px;
       font-family: 'JetBrains Mono', monospace;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      text-decoration: none;
+      font-size: 0.74rem;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      background: rgba(4, 7, 13, 0.6);
     }
 
-    .prepared-link-text:hover {
-      text-decoration: underline;
+    .log-item {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      padding: 3px 6px;
+      border-radius: 4px;
+      line-height: 1.4;
+      word-break: break-word;
     }
 
-    .prepared-actions-row {
+    .log-item:hover {
+      background: rgba(255, 255, 255, 0.025);
+    }
+
+    .log-time { color: var(--text-dim); font-size: 0.68rem; flex-shrink: 0; }
+    .log-category { font-weight: 700; font-size: 0.66rem; padding: 1px 5px; border-radius: 3px; flex-shrink: 0; }
+    .log-category.ROBOT { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
+    .log-category.PRICE { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+    .log-category.AFFILIATE { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+    .log-category.AI { background: rgba(168, 85, 247, 0.15); color: #d8b4fe; }
+    .log-category.FACEBOOK { background: rgba(59, 130, 246, 0.15); color: #93c5fd; }
+    .log-category.COLLECTOR { background: rgba(6, 182, 212, 0.15); color: #67e8f9; }
+    .log-msg { color: #e2e8f0; flex: 1; }
+
+    /* MODERN FLOATING ACTION DOCK (FAB) */
+    .floating-action-dock {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(15, 23, 42, 0.88);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: var(--radius-pill);
+      padding: 6px 14px;
       display: flex;
       align-items: center;
       gap: 12px;
-      flex-wrap: wrap;
-      margin-top: 8px;
-      padding-top: 14px;
-      border-top: 1px solid rgba(255, 255, 255, 0.08);
-    }
-
-    .btn-approve-post {
-      background: linear-gradient(135deg, #059669, #10b981);
-      color: #ffffff;
-      font-weight: 800;
-      font-size: 0.92rem;
-      padding: 12px 24px;
-      border-radius: 10px;
-      border: 1px solid rgba(16, 185, 129, 0.4);
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      box-shadow: 0 0 20px rgba(16, 185, 129, 0.35);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.65), 0 0 24px rgba(37, 99, 235, 0.2);
+      z-index: 100;
       transition: all 0.2s ease;
     }
 
-    .btn-approve-post:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 0 30px rgba(16, 185, 129, 0.6);
-      background: linear-gradient(135deg, #047857, #059669);
+    .floating-action-dock:hover {
+      border-color: rgba(59, 130, 246, 0.4);
+      box-shadow: 0 20px 48px rgba(0, 0, 0, 0.75), 0 0 30px rgba(37, 99, 235, 0.35);
     }
 
-    .btn-reject-post {
-      background: rgba(244, 63, 94, 0.1);
-      color: #f87171;
+    .dock-status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.72rem;
       font-weight: 700;
-      font-size: 0.85rem;
-      padding: 10px 18px;
-      border-radius: 8px;
-      border: 1px solid rgba(244, 63, 94, 0.3);
+      color: #94a3b8;
+      padding: 4px 10px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: var(--radius-pill);
+      white-space: nowrap;
+    }
+
+    .dock-divider {
+      width: 1px;
+      height: 18px;
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .dock-btn {
+      padding: 7px 14px;
+      border-radius: var(--radius-pill);
+      border: 1px solid transparent;
+      font-size: 0.76rem;
+      font-weight: 700;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      transition: all 0.2s ease;
+      transition: all 0.15s;
     }
 
-    .btn-reject-post:hover {
-      background: rgba(244, 63, 94, 0.2);
-      border-color: rgba(244, 63, 94, 0.5);
-      color: #fca5a5;
+    .dock-btn-primary {
+      background: linear-gradient(135deg, #2563eb, #06b6d4);
+      color: #fff;
+      box-shadow: 0 0 14px rgba(37, 99, 235, 0.4);
     }
 
-    .btn-another-post {
-      background: rgba(59, 130, 246, 0.1);
-      color: #93c5fd;
-      font-weight: 700;
-      font-size: 0.85rem;
-      padding: 10px 18px;
-      border-radius: 8px;
-      border: 1px solid rgba(59, 130, 246, 0.3);
-      cursor: pointer;
-      display: inline-flex;
+    .dock-btn-primary:hover {
+      box-shadow: 0 0 20px rgba(6, 182, 212, 0.6);
+      transform: scale(1.02);
+    }
+
+    .dock-btn-ghost {
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text-muted);
+      border-color: var(--card-border);
+    }
+
+    .dock-btn-ghost:hover {
+      background: rgba(255, 255, 255, 0.12);
+      color: #fff;
+    }
+
+    /* MODAL */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(8px);
+      display: none;
       align-items: center;
-      gap: 6px;
-      transition: all 0.2s ease;
+      justify-content: center;
+      z-index: 200;
+      padding: 16px;
     }
 
-    .btn-another-post:hover {
-      background: rgba(59, 130, 246, 0.2);
-      border-color: rgba(59, 130, 246, 0.5);
-      color: #bfdbfe;
+    .modal-overlay.open {
+      display: flex;
+    }
+
+    .modal-window {
+      background: #0d1322;
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-lg);
+      width: 100%;
+      max-width: 580px;
+      padding: 22px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <!-- HEADER -->
-    <header>
-      <div class="brand-wrap">
+  <div class="app-layout">
+    <!-- ══════════════════════════════════════════════════════════
+         1. SIDEBAR LATERAL RETRÁTIL
+         ══════════════════════════════════════════════════════════ -->
+    <aside class="app-sidebar" id="appSidebar">
+      <div class="sidebar-header">
         <div class="brand-logo">A</div>
-        <div class="brand-text">
-          <h1>ACHAki Autopilot <span>Centro de Comando</span></h1>
-          <p>Operador Orgânico, Metas Diárias e Curadoria IA</p>
+        <div class="brand-info">
+          <span class="brand-title">ACHAki Autopilot</span>
+          <span class="brand-sub">Centro de Comando</span>
         </div>
       </div>
-      <div class="header-controls">
+
+      <!-- Quick Status Box -->
+      <div class="sidebar-status-box">
         <div id="robotStatusBadge" class="status-badge ONLINE">
           <span class="pulse-dot"></span>
           <span id="robotStatusText">ONLINE</span>
         </div>
-        <button id="btnExecute" class="btn btn-primary" onclick="triggerAction('EXECUTAR_AGORA')">
-          ⚡ Executar Agora
-        </button>
-        <button id="btnPause" class="btn" onclick="triggerAction('PAUSAR')">
-          ⏸ Pausar
-        </button>
       </div>
-    </header>
 
-    <!-- 🚨 CENTRAL DE INTERVENÇÃO OPERACIONAL (DESAFIOS, CAPTCHAS, SESSÕES) -->
-    <div id="interventionContainer" style="display: none; margin-bottom: 24px;"></div>
+      <!-- Navigation Menu -->
+      <nav class="sidebar-nav">
+        <button class="nav-item active" data-tab="tab-cockpit" onclick="switchTab('tab-cockpit', 'Cockpit Operacional')">
+          <span class="nav-icon">⚡</span>
+          <span class="nav-label">Cockpit Geral</span>
+        </button>
+        <button class="nav-item" data-tab="tab-offers" onclick="switchTab('tab-offers', 'Radar & Ofertas')">
+          <span class="nav-icon">🎯</span>
+          <span class="nav-label">Radar de Ofertas</span>
+          <span class="nav-badge" id="navOffersCount">5</span>
+        </button>
+        <button class="nav-item" data-tab="tab-metrics" onclick="switchTab('tab-metrics', 'Métricas & Metas')">
+          <span class="nav-icon">📊</span>
+          <span class="nav-label">Métricas & Metas</span>
+        </button>
+        <button class="nav-item" data-tab="tab-logs" onclick="switchTab('tab-logs', 'Log ao Vivo & Diário')">
+          <span class="nav-icon">📜</span>
+          <span class="nav-label">Log ao Vivo & Diário</span>
+        </button>
+        <button class="nav-item" data-tab="tab-channels" onclick="switchTab('tab-channels', 'Canais & Conexões')">
+          <span class="nav-icon">🌐</span>
+          <span class="nav-label">Canais & Conexões</span>
+        </button>
+      </nav>
 
-    <!-- 1. BLOCO PRINCIPAL: MODO AUTOPILOT & META DE HOJE -->
-    <div class="hero-command-bar">
-      <!-- MODO AUTOPILOT -->
-      <div class="hero-card">
-        <div class="hero-header">
-          <div class="hero-title">🕹️ Modo Autopilot</div>
-          <span style="font-size: 0.72rem; color: var(--emerald);" id="modeLiveStatus">● Sistema Ativo</span>
-        </div>
+      <!-- Sidebar Mode Box -->
+      <div class="sidebar-mode-box">
+        <div class="sidebar-section-title">Modo Autopilot</div>
         <div class="mode-switch-group">
           <button id="modeOff" class="mode-switch-btn" onclick="setAutopilotMode('OFF')">OFF</button>
-          <button id="modeAssist" class="mode-switch-btn active" onclick="setAutopilotMode('ASSISTIDO')">ASSISTIDO</button>
-          <button id="modeAuto" class="mode-switch-btn" onclick="setAutopilotMode('AUTONOMO')">AUTÔNOMO</button>
+          <button id="modeAssist" class="mode-switch-btn active" onclick="setAutopilotMode('ASSISTIDO')">ASSIST</button>
+          <button id="modeAuto" class="mode-switch-btn" onclick="setAutopilotMode('AUTONOMO')">AUTO</button>
         </div>
         <div class="mode-desc" id="modeDesc">
-          <strong>ASSISTIDO:</strong> O robô pesquisa, seleciona e prepara estratégias orgânicas, aguardando validação para canais externos.
+          <strong>ASSISTIDO:</strong> O robô pesquisa, seleciona e prepara estratégias orgânicas.
         </div>
+        <div style="display:none;" id="modeLiveStatus">● Sistema Ativo</div>
       </div>
+    </aside>
 
-      <!-- META DE HOJE -->
-      <div class="hero-card">
-        <div class="hero-header">
-          <div class="hero-title">🎯 Meta de Hoje</div>
-          <span class="tag-highlight" id="goalClicksTag">Meta: 20 Cliques</span>
+    <!-- ══════════════════════════════════════════════════════════
+         2. MAIN WRAPPER (TOPBAR + SCROLL VIEW)
+         ══════════════════════════════════════════════════════════ -->
+    <div class="app-main">
+      <!-- TOPBAR COMPACTA -->
+      <header class="app-topbar">
+        <div class="topbar-left">
+          <button class="sidebar-toggle-btn" onclick="toggleSidebar()" title="Recolher / Expandir Menu">☰</button>
+          <div class="topbar-breadcrumb">
+            <span class="bc-root">ACHAki</span>
+            <span class="bc-sep">/</span>
+            <span class="bc-current" id="currentTabLabel">Cockpit Operacional</span>
+          </div>
         </div>
-        <div class="goal-hero-stats">
-          <div class="goal-hero-number" id="heroCurrentClicks">0</div>
-          <div class="goal-hero-total">/ 20 cliques</div>
-          <span style="font-size: 0.85rem; color: var(--text-dim); margin-left: auto;" id="heroProgressPercent">0%</span>
-        </div>
-        <div class="progress-track">
-          <div class="progress-fill" id="heroProgressBar" style="width: 0%;"></div>
-        </div>
-        <div class="goal-hero-subtags">
-          <span>CTR: <strong id="heroCtr">N/D</strong></span>
-          <span>Retenção: <strong id="heroRetention">N/D</strong></span>
-          <span>Conversões: <strong id="heroConversions">0</strong></span>
-        </div>
-      </div>
-    </div>
 
-    <!-- 🤖 PAINEL: LOG AO VIVO EM TEMPO REAL -->
-    <div class="live-logs-card">
-      <div class="live-logs-header">
-        <div class="live-logs-title-wrap">
-          <span class="live-logs-title">🤖 LOG AO VIVO</span>
-          <span id="realtimeStatusBadge" class="realtime-status-pill online">
-            <span class="pulse-dot"></span>
-            <span id="realtimeStatusLabel">TEMPO REAL</span>
-          </span>
+        <div class="topbar-center">
+          <div class="topbar-goal-pill" onclick="switchTab('tab-metrics', 'Métricas & Metas')" title="Ver detalhes da Meta de Cliques">
+            <span class="t-goal-icon">🎯</span>
+            <span class="t-goal-label">Meta Hoje:</span>
+            <span class="t-goal-value"><strong id="heroCurrentClicks">0</strong> / <span id="goalClicksTag">20 cliques</span></span>
+            <span class="t-goal-pct" id="heroProgressPercent">0%</span>
+            <div class="t-goal-track">
+              <div class="t-goal-fill" id="heroProgressBar" style="width: 0%;"></div>
+            </div>
+          </div>
         </div>
-        <div class="live-logs-actions">
-          <button id="btnPauseLiveLogs" class="log-action-btn" onclick="togglePauseLiveLogs()">
-            ⏸ Pausar Visualização
+
+        <div class="topbar-right">
+          <div class="topbar-clock" id="topbarClock">--:--:--</div>
+          <button id="btnExecute" class="topbar-btn topbar-btn-primary" onclick="triggerAction('EXECUTAR_AGORA')">
+            ⚡ Executar Agora
           </button>
-          <button id="btnClearLiveLogs" class="log-action-btn" onclick="clearLiveLogsUI()">
-            🧹 Limpar Tela
+          <button id="btnPause" class="topbar-btn" onclick="triggerAction('PAUSAR')">
+            ⏸ Pausar
           </button>
         </div>
-      </div>
+      </header>
 
-      <!-- FILTROS COMPACTOS -->
-      <div class="live-logs-filter-bar">
-        <button id="filterBtn_TODOS" class="log-filter-pill active" onclick="setLogFilter('TODOS')">TODOS</button>
-        <button id="filterBtn_ROBO" class="log-filter-pill" onclick="setLogFilter('ROBO')">ROBÔ</button>
-        <button id="filterBtn_MARKETPLACE" class="log-filter-pill" onclick="setLogFilter('MARKETPLACE')">MARKETPLACE</button>
-        <button id="filterBtn_IA" class="log-filter-pill" onclick="setLogFilter('IA')">IA</button>
-        <button id="filterBtn_FACEBOOK" class="log-filter-pill" onclick="setLogFilter('FACEBOOK')">FACEBOOK</button>
-        <button id="filterBtn_ERROS" class="log-filter-pill" onclick="setLogFilter('ERROS')">ERROS</button>
-        <span class="log-count-indicator" id="liveLogCount">0 eventos</span>
-      </div>
+      <!-- CONTENT SCROLLER INDEPENDENTE -->
+      <main class="app-content-scroll" id="contentScroll">
+        <!-- 🚨 CENTRAL DE INTERVENÇÃO OPERACIONAL (SEMPRE VISÍVEL NO TOPO SE HOUVER DESAFIO) -->
+        <div id="interventionContainer" style="display: none;"></div>
 
-      <!-- FEED DE LOGS EM TEMPO REAL -->
-      <div class="live-logs-terminal" id="liveLogsFeed">
-        <div class="log-empty-msg">Conectando ao canal de telemetria em tempo real...</div>
-      </div>
-    </div>
-
-    <!-- 📣 CARD: PUBLICAÇÃO PREPARADA (AGUARDANDO APROVAÇÃO HUMANA) -->
-    <div id="preparedPublicationCard" class="prepared-card" style="display: none;">
-      <div class="prepared-header">
-        <div class="prepared-title-group">
-          <span class="prepared-title">📣 PUBLICAÇÃO PREPARADA</span>
-          <span class="prepared-badge-pulse">
-            <span class="pulse-dot" style="background: #fbbf24;"></span>
-            AGUARDANDO APROVAÇÃO HUMANA
-          </span>
-        </div>
-        <div style="font-size: 0.78rem; color: var(--text-dim);" id="prepValidatedTime">
-          Última validação: Há instantes
-        </div>
-      </div>
-
-      <div class="prepared-grid">
-        <!-- COLUNA DA ESQUERDA: IMAGEM E METADADOS -->
-        <div class="prepared-media-col">
-          <div class="prepared-img-box">
-            <img id="prepImage" src="" alt="Imagem do produto">
-            <div class="prepared-img-overlay-badges">
-              <span class="prepared-pill prepared-pill-mp" id="prepMarketplace">Mercado Livre</span>
-              <span class="prepared-pill prepared-pill-disc" id="prepDiscountBadge">-30% OFF</span>
+        <!-- ══════════════════════════════════════════════════════════
+             ABA 1: COCKPIT OPERACIONAL
+             ══════════════════════════════════════════════════════════ -->
+        <section class="tab-pane active" id="tab-cockpit">
+          <!-- 📣 PUBLICAÇÃO PREPARADA (MODO ASSISTIDO) -->
+          <div id="preparedPublicationContainer" style="display: none;" class="prepared-card">
+            <div class="prepared-header">
+              <div style="font-size: 0.85rem; font-weight: 800; color: #fbbf24; text-transform: uppercase;">
+                📣 Publicação Preparada (Aguardando Aprovação Humana)
+              </div>
+              <span class="status-tag AGUARDANDO_APROVACAO" id="prepStatusTag">Revisão Pendente</span>
+            </div>
+            <div class="prepared-body-split">
+              <div>
+                <img id="prepImg" src="" alt="Imagem do Produto" class="prepared-img" onerror="this.src='https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=400'">
+                <div style="display: flex; gap: 6px; margin-top: 8px;">
+                  <span class="offer-tag" id="prepMarketplaceTag">ML</span>
+                  <span class="offer-tag" id="prepStrategyTag">DESCONTO</span>
+                </div>
+              </div>
+              <div>
+                <div style="font-size: 0.95rem; font-weight: 700; color: #fff;" id="prepTitle">Título do Produto</div>
+                <div style="display: flex; align-items: baseline; gap: 8px; margin: 6px 0;">
+                  <span style="font-size: 1.15rem; font-weight: 800; color: #34d399;" id="prepPrice">R$ 0,00</span>
+                  <span style="font-size: 0.75rem; color: var(--text-dim); text-decoration: line-through;" id="prepOriginalPrice"></span>
+                  <span class="status-tag NO_RITMO" id="prepDiscountTag"></span>
+                </div>
+                <div class="prep-copy-box" id="prepFbCopy">Carregando copy do post...</div>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px;">
+                  <button id="btnApprovePub" class="topbar-btn topbar-btn-primary" onclick="approvePreparedPublication()">
+                    ✓ Aprovar e Publicar Agora
+                  </button>
+                  <button id="btnRejectPub" class="topbar-btn" onclick="rejectPreparedPublication()">
+                    ✖ Rejeitar
+                  </button>
+                  <button id="btnChooseAnother" class="topbar-btn" onclick="chooseAnotherOffer()">
+                    🔄 Escolher Outra Oferta
+                  </button>
+                  <a id="prepAffiliateLink" href="#" target="_blank" rel="noopener noreferrer" class="topbar-btn" style="text-decoration:none;">
+                    🔗 Testar Link Oficial
+                  </a>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div class="prepared-meta-list">
-            <div class="prepared-meta-row">
-              <span>ID Marketplace:</span>
-              <strong id="prepProductId">MLB-00000000</strong>
+          <!-- 📣 PUBLICADO AGORA -->
+          <div id="publishedNowContainer" style="display: none;" class="card" style="border-color: rgba(16,185,129,0.35);">
+            <div class="card-header">
+              <span class="card-title" style="color:#34d399;">✓ Publicado com Sucesso no Facebook!</span>
+              <span class="status-tag NO_RITMO" id="pubNowTime">Agora</span>
             </div>
-            <div class="prepared-meta-row">
-              <span>Estratégia:</span>
-              <strong id="prepStrategy" style="color: #d8b4fe;">DESCONTO</strong>
-            </div>
-            <div class="prepared-meta-row">
-              <span>Score Comercial:</span>
-              <strong id="prepScore" style="color: #34d399;">92 / 100</strong>
-            </div>
-            <div class="prepared-meta-row">
-              <span>Categoria:</span>
-              <strong id="prepCategory" style="color: #38bdf8;">Geral</strong>
-            </div>
-            <div class="prepared-meta-row">
-              <span>Canal Destino:</span>
-              <strong style="color: #60a5fa;">Facebook (ACHAki)</strong>
-            </div>
-          </div>
-        </div>
-
-        <!-- COLUNA DA DIREITA: PREÇO, COPY, LINK E BOTÕES DE APROVAÇÃO -->
-        <div class="prepared-content-col">
-          <div class="prepared-product-title" id="prepTitle">Título do produto</div>
-
-          <div class="prepared-price-banner">
-            <div>
-              <div style="font-size: 0.72rem; color: var(--text-dim); text-transform: uppercase; font-weight: 700;">Preço Revalidado</div>
-              <div class="prepared-price-current" id="prepCurrentPrice">R$ 0,00</div>
-            </div>
-            <div id="prepOrigPriceWrap" style="display: none;">
-              <div style="font-size: 0.72rem; color: var(--text-dim); text-transform: uppercase; font-weight: 700;">Preço Anterior</div>
-              <div class="prepared-price-orig" id="prepOriginalPrice">R$ 0,00</div>
-            </div>
-            <div class="prepared-price-save" id="prepSavingsTag">Desconto Real</div>
-          </div>
-
-          <div>
-            <div class="prepared-copy-label">
-              <span>📝 Copy formatada para o post no Facebook</span>
-            </div>
-            <div class="prepared-copy-box" id="prepCopy">Carregando copy preparada...</div>
-          </div>
-
-          <div>
-            <div class="prepared-copy-label" style="margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
-              <span id="prepAffiliateLabel">🔗 Link Oficial de Afiliado</span>
-              <span id="prepAffiliateBadge" style="font-size: 0.7rem; font-weight: 800; padding: 2px 8px; border-radius: 4px;"></span>
-            </div>
-            <div class="prepared-link-box" id="prepAffiliateBox">
-              <a id="prepAffiliateLink" href="#" target="_blank" rel="noopener noreferrer" class="prepared-link-text">
-                https://meli.la/...
+            <div style="display: flex; gap: 14px; align-items: center;">
+              <img id="pubNowImg" src="" style="width: 50px; height: 50px; border-radius: 8px; object-fit: cover;">
+              <div style="flex:1;">
+                <div style="font-size: 0.85rem; font-weight: 700; color: #fff;" id="pubNowTitle">Produto</div>
+                <div style="font-size: 0.75rem; color: #34d399;" id="pubNowPrice">R$ 0,00</div>
+              </div>
+              <a id="pubNowPostLink" href="#" target="_blank" rel="noopener noreferrer" class="topbar-btn topbar-btn-primary" style="text-decoration:none;">
+                Ver Post no Facebook ↗
               </a>
-              <button class="log-action-btn" onclick="copyAffiliateLink()">📋 Copiar Link</button>
             </div>
           </div>
 
-          <!-- BOTÕES DE DECISÃO HUMANA -->
-          <div class="prepared-actions-row">
-            <button id="btnApprovePub" class="btn-approve-post" onclick="approvePreparedPublication()">
-              ✅ APROVAR E PUBLICAR
-            </button>
-            <button id="btnRejectPub" class="btn-reject-post" onclick="rejectPreparedPublication()">
-              ❌ REJEITAR
-            </button>
-            <button id="btnChooseAnother" class="btn-another-post" onclick="chooseAnotherOffer()">
-              🔄 ESCOLHER OUTRA OFERTA
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+          <!-- GRID 2-1: ROBÔ AGORA & DEMANDA AGORA -->
+          <div class="grid-2">
+            <!-- ROBÔ AGORA -->
+            <div class="card">
+              <div class="card-header">
+                <span class="card-title">🤖 Robô Agora</span>
+                <span class="status-tag NO_RITMO" id="cardRobotStatus">TRABALHANDO</span>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 8px;">
+                <div>
+                  <div style="font-size: 0.72rem; color: var(--text-dim); text-transform: uppercase; font-weight: 700;">Etapa Atual</div>
+                  <div style="font-size: 0.95rem; font-weight: 700; color: #fff;" id="cardCurrentStep">Aguardando próximo ciclo...</div>
+                </div>
+                <div class="grid-2" style="margin-top: 4px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.05);">
+                  <div>
+                    <span style="font-size: 0.7rem; color: var(--text-dim);">Última Ação:</span>
+                    <div style="font-size: 0.78rem; font-weight: 600; color: var(--text-muted);" id="cardLastAction">—</div>
+                  </div>
+                  <div>
+                    <span style="font-size: 0.7rem; color: var(--text-dim);">Estratégia:</span>
+                    <div style="font-size: 0.78rem; font-weight: 600; color: #d8b4fe;" id="cardCurrentStrategy">ACHADINHO</div>
+                  </div>
+                </div>
+                <div style="font-size: 0.72rem; color: var(--text-dim); margin-top: 2px;">
+                  Próxima Ação: <span style="color:#cbd5e1; font-weight: 600;" id="cardNextAction">Coleta em breve</span>
+                </div>
+              </div>
+            </div>
 
-    <!-- 🚀 CARD: PUBLICADO AGORA (FEEDBACK LOOP AUTÔNOMO) -->
-    <div id="latestPublishedCard" class="prepared-card" style="display: none; border-color: rgba(52,211,153,0.4); background: linear-gradient(180deg, rgba(16,185,129,0.06) 0%, rgba(15,23,42,0.95) 100%);">
-      <div class="prepared-header">
-        <div class="prepared-title-group">
-          <span class="prepared-title" style="color: #34d399;">🚀 PUBLICADO AGORA</span>
-          <span class="prepared-badge-pulse" style="background: rgba(16,185,129,0.15); border-color: rgba(16,185,129,0.3); color: #34d399;">
-            <span class="pulse-dot" style="background: #34d399;"></span>
-            FEEDBACK LOOP ATIVO
-          </span>
-        </div>
-        <div style="font-size: 0.78rem; color: var(--text-dim);" id="pubNowTime">
-          Horário: —
-        </div>
-      </div>
-      <div class="prepared-grid">
-        <div class="prepared-media-col">
-          <div class="prepared-img-box">
-            <img id="pubNowImage" src="" alt="Imagem do produto publicado">
-            <div class="prepared-img-overlay-badges">
-              <span class="prepared-pill prepared-pill-mp">Facebook</span>
-              <span class="prepared-pill prepared-pill-disc" id="pubNowDiscount">OFERTA</span>
+            <!-- DEMANDA AGORA -->
+            <div class="card">
+              <div class="card-header">
+                <span class="card-title" style="color: #fb923c;">
+                  <span id="demandDecisionIcon">🎯</span> Demanda Agora
+                </span>
+                <span class="status-tag NO_RITMO" id="demandActionTag">MONITORANDO</span>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:6px;">
+                <div style="font-size: 0.8rem; color: #cbd5e1;" id="demandDecisionText">
+                  Monitorando sinais de compra e tendências em tempo real.
+                </div>
+                <div id="demandSignalsList" style="display: flex; gap: 6px; flex-wrap: wrap; margin: 4px 0;"></div>
+                <div id="demandBestOppBox" style="display:none; padding: 6px 10px; background: rgba(0,0,0,0.25); border-radius: 6px; font-size: 0.75rem;">
+                  <span style="color:var(--text-dim);">Melhor Oportunidade:</span>
+                  <strong style="color:#34d399;" id="demandOppTitle">—</strong>
+                  (<span id="demandOppPrice">R$ 0</span> • Score <span id="demandOppScore">0</span>)
+                </div>
+                <div style="font-size: 0.68rem; color: var(--text-dim); margin-top: 2px;">
+                  Status: <span id="demandStatusLabel">AGUARDANDO</span> • Última varredura: <span id="demandLastScan">—</span>
+                </div>
+              </div>
             </div>
           </div>
-          <div class="prepared-meta-list">
-            <div class="prepared-meta-row">
-              <span>Estratégia:</span>
-              <strong id="pubNowStrategy" style="color: #d8b4fe;">DESCONTO</strong>
+
+          <!-- ESTRATÉGIA ATIVA -->
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title" style="color: #d8b4fe;">🧠 Estratégia Orgânica Ativa</span>
+              <button class="topbar-btn" onclick="openDecisionModal()" style="font-size: 0.7rem; padding: 3px 8px;">
+                Por que o robô escolheu isso? ↗
+              </button>
             </div>
-            <div class="prepared-meta-row">
-              <span>Demanda Relacionada:</span>
-              <strong id="pubNowDemand" style="color: #fb923c;">—</strong>
+            <div style="display:flex; flex-direction:column; gap:6px;">
+              <div style="font-size: 0.88rem; font-weight: 700; color: #fff;" id="activeStrategyTitle">Achadinho Exclusivo</div>
+              <div style="font-size: 0.78rem; color: var(--text-muted);" id="activeStrategyReason">
+                Otimizador focado em identificar oferta de alta intenção comercial para gerar tração orgânica.
+              </div>
+              <div class="grid-3" style="margin-top: 6px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.05);">
+                <div>
+                  <span style="font-size:0.68rem; color:var(--text-dim);">Categoria Priorizada</span>
+                  <div style="font-weight:600; font-size:0.78rem; color:#fff;" id="activeCategory">Moda/Vestuário</div>
+                </div>
+                <div>
+                  <span style="font-size:0.68rem; color:var(--text-dim);">Horário Comercial</span>
+                  <div style="font-weight:600; font-size:0.78rem; color:#fff;" id="activePeakHours">12:00 - 18:00 (Pico)</div>
+                </div>
+                <div>
+                  <span style="font-size:0.68rem; color:var(--text-dim);">Canal de Post</span>
+                  <div style="font-weight:600; font-size:0.78rem; color:#60a5fa;" id="activeNetwork">Facebook Page</div>
+                </div>
+              </div>
             </div>
-            <div class="prepared-meta-row">
-              <span>Resultado Acumulado:</span>
-              <strong id="pubNowResults" style="color: #34d399;">0 cliques</strong>
+          </div>
+        </section>
+
+        <!-- ══════════════════════════════════════════════════════════
+             ABA 2: RADAR & OFERTAS (GRID RESPONSIVO)
+             ══════════════════════════════════════════════════════════ -->
+        <section class="tab-pane" id="tab-offers">
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">🎯 Catálogo Selecionado & Curadoria IA (TOP 5)</span>
+              <span style="font-size: 0.75rem; color: var(--text-dim);">Classificado por Score de Conversão JEV</span>
+            </div>
+            <!-- Grid de Cards de Produtos Modernos -->
+            <div class="offers-grid" id="offersContainer">
+              <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-dim);">
+                Carregando catálogo de ofertas selecionadas...
+              </div>
             </div>
           </div>
-        </div>
-        <div class="prepared-content-col">
-          <div class="prepared-product-title" id="pubNowTitle">Título do produto publicado</div>
-          <div class="prepared-price-banner">
-            <div>
-              <div style="font-size: 0.72rem; color: var(--text-dim); text-transform: uppercase; font-weight: 700;">Preço Publicado</div>
-              <div class="prepared-price-current" id="pubNowPrice">R$ 0,00</div>
+        </section>
+
+        <!-- ══════════════════════════════════════════════════════════
+             ABA 3: MÉTRICAS & METAS (BENTO GRID)
+             ══════════════════════════════════════════════════════════ -->
+        <section class="tab-pane" id="tab-metrics">
+          <!-- CARD META DIÁRIA DETALHADA -->
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">🎯 Meta Diária e Projeção</span>
+              <span class="status-tag NO_RITMO" id="goalStatusBadge">NO RITMO</span>
             </div>
-            <div class="prepared-price-save" id="pubNowSaveTag">Publicação Ativa</div>
+            <div class="grid-4" style="margin-top: 4px;">
+              <div>
+                <span class="stat-kpi-sub">Meta Diária</span>
+                <div class="stat-kpi-num" id="cardTargetClicks">20</div>
+                <span class="stat-kpi-sub">cliques/dia</span>
+              </div>
+              <div>
+                <span class="stat-kpi-sub">Cliques Reais</span>
+                <div class="stat-kpi-num" style="color:#34d399;" id="cardCurrentClicks">0</div>
+                <span class="stat-kpi-sub">rastreados hoje</span>
+              </div>
+              <div>
+                <span class="stat-kpi-sub">Faltam</span>
+                <div class="stat-kpi-num" style="color:#fbbf24;" id="cardRemainingClicks">20</div>
+                <span class="stat-kpi-sub">para a meta</span>
+              </div>
+              <div>
+                <span class="stat-kpi-sub">Projeção Hoje</span>
+                <div class="stat-kpi-num" style="color:#60a5fa;" id="cardProjectedClicks">0</div>
+                <span class="stat-kpi-sub">baseado no ritmo</span>
+              </div>
+            </div>
+            <div class="grid-3" style="margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.05);">
+              <div><span class="stat-kpi-sub">CTR Médio:</span> <strong id="heroCtr">N/D</strong></div>
+              <div><span class="stat-kpi-sub">Retenção Estimada:</span> <strong id="heroRetention">N/D</strong></div>
+              <div><span class="stat-kpi-sub">Conversões:</span> <strong id="heroConversions">0</strong></div>
+            </div>
           </div>
-          <div style="margin: 10px 0; padding: 10px 14px; background: rgba(255,255,255,0.03); border-radius: 8px; border: 1px solid rgba(255,255,255,0.08); font-size: 0.82rem;">
-            <div style="font-weight: 700; color: var(--text-dim); text-transform: uppercase; font-size: 0.72rem; margin-bottom: 4px;">Motivo da Decisão</div>
-            <div id="pubNowReason" style="color: var(--text);">—</div>
-          </div>
-          <div style="display: flex; gap: 10px; align-items: center; margin-top: 12px;">
-            <a id="pubNowFbLink" href="#" target="_blank" rel="noopener noreferrer" class="btn btn-primary" style="background: #1877f2; border-color: #1877f2; padding: 8px 18px; font-size: 0.82rem; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
-              VER NO FACEBOOK ↗
-            </a>
-            <a id="pubNowAffLink" href="#" target="_blank" rel="noopener noreferrer" class="btn" style="padding: 8px 14px; font-size: 0.82rem; text-decoration: none;">
-              Link de Afiliado (meli.la) ↗
-            </a>
-          </div>
-        </div>
-      </div>
-    </div>
 
-    <!-- 2 & 3. CARDS DE DESTAQUE: ROBÔ AGORA & STATUS DO OBJETIVO -->
-    <div class="highlight-grid">
-      <!-- 🤖 ROBÔ AGORA -->
-      <div class="highlight-card featured">
-        <div class="highlight-label">
-          <span>🤖 Robô Agora</span>
-          <span class="status-tag NO_RITMO" id="cardRobotStatus">AGUARDANDO</span>
-        </div>
-        <div style="font-size: 1.15rem; font-weight: 700; color: var(--text);" id="cardRobotStep">
-          Aguardando próximo ciclo de coleta...
-        </div>
-        <div class="highlight-info-grid">
-          <div class="info-subitem">
-            <span>Última ação</span>
-            <strong id="cardRobotLastAction">5 ofertas selecionadas</strong>
-          </div>
-          <div class="info-subitem">
-            <span>Estratégia atual</span>
-            <strong id="cardRobotStrategy" style="color: #d8b4fe;">DESCONTO</strong>
-          </div>
-          <div class="info-subitem">
-            <span>Próxima ação</span>
-            <strong id="cardRobotNextAction">Nova coleta em 25 min</strong>
-          </div>
-        </div>
-      </div>
+          <!-- BENTO GRID: PRODUÇÃO HOJE & HISTÓRICO -->
+          <div class="grid-2">
+            <!-- PRODUÇÃO HOJE -->
+            <div class="card">
+              <div class="card-header">
+                <span class="card-title">📊 Produção de Hoje</span>
+                <span style="font-size:0.7rem; color:var(--text-dim);">Timezone São Paulo</span>
+              </div>
+              <div class="grid-4">
+                <div>
+                  <span class="stat-kpi-sub">Encontrados</span>
+                  <div class="stat-kpi-num" id="cardTodayFound">0</div>
+                </div>
+                <div>
+                  <span class="stat-kpi-sub">Selecionados</span>
+                  <div class="stat-kpi-num" id="cardTodaySelected">0</div>
+                </div>
+                <div>
+                  <span class="stat-kpi-sub">Publicações</span>
+                  <div class="stat-kpi-num" style="color:#34d399;" id="cardTodayPublications">0</div>
+                </div>
+                <div>
+                  <span class="stat-kpi-sub">Erros</span>
+                  <div class="stat-kpi-num" style="color:#94a3b8;" id="cardTodayErrors">0</div>
+                </div>
+              </div>
+              <div class="stat-kpi-sub" style="margin-top: 8px;" id="cardTodayPublicationsSub">0 publicações realizadas hoje.</div>
+            </div>
 
-      <!-- 🎯 OBJETIVO DO ROBÔ -->
-      <div class="highlight-card">
-        <div class="highlight-label">
-          <span>🎯 Objetivo do Robô</span>
-          <span class="status-tag SEM_DADOS" id="cardGoalStatusTag">SEM DADOS</span>
-        </div>
-        <div class="highlight-info-grid">
-          <div class="info-subitem">
-            <span>Meta Diária</span>
-            <strong id="cardGoalTarget">20 cliques/dia</strong>
+            <!-- TOTAL HISTÓRICO -->
+            <div class="card">
+              <div class="card-header">
+                <span class="card-title">🗄️ Histórico Acumulado</span>
+                <span style="font-size:0.7rem; color:var(--text-dim);">Supabase Storage</span>
+              </div>
+              <div class="grid-3">
+                <div>
+                  <span class="stat-kpi-sub">Catálogo Total</span>
+                  <div class="stat-kpi-num" id="cardTotalProducts">0</div>
+                </div>
+                <div>
+                  <span class="stat-kpi-sub">Seleções Feitas</span>
+                  <div class="stat-kpi-num" id="cardTotalSelected">0</div>
+                </div>
+                <div>
+                  <span class="stat-kpi-sub">Posts Realizados</span>
+                  <div class="stat-kpi-num" style="color:#34d399;" id="cardTotalPublications">0</div>
+                </div>
+              </div>
+            </div>
           </div>
-          <div class="info-subitem">
-            <span>Atual Real</span>
-            <strong id="cardGoalActual">0</strong>
+
+          <!-- CURADORIA IA & ECONOMIA DE TOKENS -->
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title" style="color: #a855f7;">⚡ Curadoria IA & Economia de Tokens</span>
+              <span class="status-tag NO_RITMO" id="cardTokensEconomySub">Economia Estimada: 63%</span>
+            </div>
+            <div class="grid-4">
+              <div>
+                <span class="stat-kpi-sub">Cache Operacional</span>
+                <div class="stat-kpi-num" style="color:#34d399;" id="cardCacheDecisions">0</div>
+                <span class="stat-kpi-sub">0 tokens consumidos</span>
+              </div>
+              <div>
+                <span class="stat-kpi-sub">Chamadas JEV</span>
+                <div class="stat-kpi-num" id="cardJevCalls">0</div>
+                <span class="stat-kpi-sub">typesafe/jev-1.13</span>
+              </div>
+              <div>
+                <span class="stat-kpi-sub">Chamadas GPT</span>
+                <div class="stat-kpi-num" id="cardGptCalls">0</div>
+                <span class="stat-kpi-sub">escalonamento estrito</span>
+              </div>
+              <div>
+                <span class="stat-kpi-sub">Tokens Consumidos</span>
+                <div class="stat-kpi-num" style="color:#60a5fa;" id="cardTokensEconomy">0</div>
+                <span class="stat-kpi-sub">no ciclo</span>
+              </div>
+            </div>
           </div>
-          <div class="info-subitem">
-            <span>Faltam</span>
-            <strong id="cardGoalRemaining">20</strong>
+
+          <!-- PERFORMANCE ORGÂNICA TABS -->
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">📈 Performance Orgânica Real</span>
+              <div style="display:flex; gap:4px;">
+                <button class="filter-chip active" id="perfTabToday" onclick="setPerfTab('today')">Hoje</button>
+                <button class="filter-chip" id="perfTab7Days" onclick="setPerfTab('7days')">7 dias</button>
+                <button class="filter-chip" id="perfTab30Days" onclick="setPerfTab('30days')">30 dias</button>
+              </div>
+            </div>
+            <div class="grid-4">
+              <div>
+                <span class="stat-kpi-sub">Publicações</span>
+                <div class="stat-kpi-num" id="perfPublications">0</div>
+              </div>
+              <div>
+                <span class="stat-kpi-sub">Impressões</span>
+                <div class="stat-kpi-num" id="perfImpressions">0</div>
+              </div>
+              <div>
+                <span class="stat-kpi-sub">Cliques</span>
+                <div class="stat-kpi-num" style="color:#34d399;" id="perfClicks">0</div>
+              </div>
+              <div>
+                <span class="stat-kpi-sub">CTR Médio</span>
+                <div class="stat-kpi-num" id="perfCtr">N/D</div>
+              </div>
+            </div>
+            <div class="grid-3" style="margin-top:10px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.05);">
+              <div><span class="stat-kpi-sub">Conversões:</span> <strong id="perfConversions">0</strong></div>
+              <div><span class="stat-kpi-sub">Retenção:</span> <strong id="perfRetention">N/D</strong></div>
+              <div><span class="stat-kpi-sub">Compartilhamentos:</span> <strong id="perfShares">0</strong></div>
+            </div>
           </div>
-          <div class="info-subitem">
-            <span>Projeção</span>
-            <strong id="cardGoalProjection">N/D</strong>
+        </section>
+
+        <!-- ══════════════════════════════════════════════════════════
+             ABA 4: LOG AO VIVO & DIÁRIO
+             ══════════════════════════════════════════════════════════ -->
+        <section class="tab-pane" id="tab-logs">
+          <!-- LOG AO VIVO CARD -->
+          <div class="live-logs-card">
+            <div class="live-logs-header">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span style="font-weight:700; color:#fff;">🤖 LOG AO VIVO (TEMPO REAL)</span>
+                <span class="status-tag NO_RITMO" id="realtimeLiveIndicator">● CONECTADO</span>
+              </div>
+              <div class="live-logs-filters">
+                <button class="filter-chip active" id="filterLogAll" onclick="filterLogs('TODOS')">TODOS</button>
+                <button class="filter-chip" id="filterLogRobot" onclick="filterLogs('ROBOT')">ROBÔ</button>
+                <button class="filter-chip" id="filterLogMarket" onclick="filterLogs('PRICE')">PREÇO</button>
+                <button class="filter-chip" id="filterLogAi" onclick="filterLogs('AI')">IA</button>
+                <button class="filter-chip" id="filterLogFb" onclick="filterLogs('FACEBOOK')">FACEBOOK</button>
+                <button class="filter-chip" id="filterLogError" onclick="filterLogs('ERROR')">ERROS</button>
+                <button class="filter-chip" id="btnPauseLogs" onclick="togglePauseLogs()" style="margin-left:8px;">⏸ Pausar</button>
+                <button class="filter-chip" onclick="clearLogs()">🧹 Limpar</button>
+                <span style="font-size:0.68rem; color:var(--text-dim); margin-left:6px;" id="logEventCount">0 eventos</span>
+              </div>
+            </div>
+            <div class="live-logs-feed" id="liveLogsContainer">
+              <div style="color:var(--text-dim); padding:10px;">Aguardando eventos do worker...</div>
+            </div>
           </div>
-        </div>
-        <!-- 🤖 AÇÃO PARA A META -->
-        <div style="margin-top: 10px; padding: 8px 12px; background: rgba(59,130,246,0.08); border: 1px solid rgba(59,130,246,0.25); border-radius: 8px; font-size: 0.82rem; display: flex; align-items: center; gap: 8px;">
-          <span style="font-weight: 700; color: #60a5fa; white-space: nowrap;">🤖 AÇÃO PARA A META:</span>
-          <span id="cardGoalAction" style="color: var(--text); font-weight: 600;">Pesquisando categoria com maior intenção de compra.</span>
-        </div>
-        <div class="card-sub" id="cardGoalSubHelp" style="margin-top: 8px;">
-          Status calculado em tempo real com base no catálogo e no ritmo de cliques rastreados.
-        </div>
-      </div>
-    </div>
 
-    <!-- 🔥 DEMANDA AGORA: Detector de Demanda + Oportunidade -->
-    <div id="demandNowCard" class="live-logs-card" style="border-top: 3px solid #f97316; margin-top: 0;">
-      <div class="live-logs-header">
-        <div class="live-logs-title-wrap">
-          <span class="live-logs-title" style="color: #fb923c;">🔥 DEMANDA AGORA</span>
-          <span id="demandStatusPill" class="realtime-status-pill" style="background: rgba(249,115,22,0.15); border-color: rgba(249,115,22,0.4); color: #fb923c;">
-            <span class="pulse-dot" style="background: #fb923c;"></span>
-            <span id="demandStatusLabel">MONITORANDO</span>
-          </span>
-        </div>
-        <div style="font-size: 0.75rem; color: var(--text-dim);">
-          Ciclo de <strong style="color: var(--text);">20 min</strong> — Publica apenas se Score ≥ 75/100
-        </div>
-      </div>
+          <!-- DIÁRIO & PUBLICAÇÕES -->
+          <div class="grid-2">
+            <!-- DIÁRIO DO ROBÔ -->
+            <div class="card">
+              <div class="card-header">
+                <span class="card-title">📖 Diário de Decisões</span>
+                <button class="topbar-btn" onclick="openFullDiaryModal()" style="font-size:0.7rem; padding:3px 8px;">
+                  Histórico Completo ↗
+                </button>
+              </div>
+              <div id="robotDiaryContainer" style="display:flex; flex-direction:column; gap:6px; max-height:260px; overflow-y:auto;">
+                <div style="color:var(--text-dim); font-size:0.75rem;">Carregando diário operacional...</div>
+              </div>
+            </div>
 
-      <!-- DECISÃO ATUAL DO ENGINE -->
-      <div style="display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: rgba(249,115,22,0.07); border-radius: 8px; border: 1px solid rgba(249,115,22,0.2);">
-        <div style="font-size: 1.4rem;" id="demandDecisionIcon">⏸</div>
-        <div style="flex: 1;">
-          <div style="font-size: 0.78rem; color: var(--text-dim); text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em;">Decisão do Ciclo</div>
-          <div id="demandDecisionText" style="font-size: 0.95rem; font-weight: 700; color: var(--text); margin-top: 2px;">Aguardando próximo ciclo de monitoramento...</div>
-        </div>
-        <div id="demandActionTag" style="font-size: 0.72rem; font-weight: 800; padding: 4px 12px; border-radius: 999px; background: rgba(100,116,139,0.2); border: 1px solid rgba(100,116,139,0.3); color: #94a3b8; letter-spacing: 0.05em; flex-shrink: 0;">
-          NÃO PUBLICAR
-        </div>
-      </div>
+            <!-- PUBLICAÇÕES REALIZADAS -->
+            <div class="card">
+              <div class="card-header">
+                <span class="card-title">📣 Publicações nas Redes</span>
+                <span style="font-size:0.7rem; color:var(--text-dim);" id="pubStatusTitle">Histórico de posts</span>
+              </div>
+              <div id="publicationsList" style="display:flex; flex-direction:column; gap:8px; max-height:260px; overflow-y:auto;">
+                <div style="color:var(--text-dim); font-size:0.75rem;">Nenhuma publicação realizada ainda.</div>
+              </div>
+            </div>
+          </div>
+        </section>
 
-      <!-- SINAIS DE DEMANDA ATIVOS -->
-      <div>
-        <div style="font-size: 0.75rem; color: var(--text-dim); font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px;">Sinais de Demanda Detectados</div>
-        <div id="demandSignalsList" style="display: flex; flex-wrap: wrap; gap: 6px;">
-          <span style="font-size: 0.78rem; color: var(--text-dim);">Aguardando primeiro ciclo de monitoramento...</span>
+        <!-- ══════════════════════════════════════════════════════════
+             ABA 5: CANAIS & CONEXÕES
+             ══════════════════════════════════════════════════════════ -->
+        <section class="tab-pane" id="tab-channels">
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">🌐 Conexões de Canais e Marketplaces</span>
+            </div>
+            <div class="grid-3">
+              <div style="padding:14px; background:rgba(0,0,0,0.25); border-radius:8px; border:1px solid var(--card-border);">
+                <div style="font-weight:700; color:#fff; margin-bottom:4px;">📘 Facebook Page</div>
+                <div style="font-size:0.75rem; color:#34d399;">● Conectada (ACHAki Ofertas)</div>
+                <div style="font-size:0.7rem; color:var(--text-dim); margin-top:4px;">Token permanente ativo</div>
+              </div>
+              <div style="padding:14px; background:rgba(0,0,0,0.25); border-radius:8px; border:1px solid var(--card-border);">
+                <div style="font-weight:700; color:#fff; margin-bottom:4px;">🛒 Mercado Livre</div>
+                <div style="font-size:0.75rem; color:#fbbf24;">● Coleta ativa / Sessão Gerador</div>
+                <div style="font-size:0.7rem; color:var(--text-dim); margin-top:4px;">Links meli.la comissionados</div>
+              </div>
+              <div style="padding:14px; background:rgba(0,0,0,0.25); border-radius:8px; border:1px solid var(--card-border);">
+                <div style="font-weight:700; color:#fff; margin-bottom:4px;">🛍️ Shopee</div>
+                <div style="font-size:0.75rem; color:#94a3b8;">● Em integração</div>
+                <div style="font-size:0.7rem; color:var(--text-dim); margin-top:4px;">Programa de afiliados parceiro</div>
+              </div>
+            </div>
+            <div style="margin-top:16px; padding-top:14px; border-top:1px solid rgba(255,255,255,0.05); font-size:0.78rem; color:var(--text-dim);">
+              Gateway OAuth: <a href="/achaki/oauth/callback" target="_blank" style="color:#60a5fa; text-decoration:none;">/achaki/oauth/callback ↗</a> • Modo Produção Seguro
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <!-- ══════════════════════════════════════════════════════════
+           3. MODERN FLOATING ACTION DOCK (FAB)
+           ══════════════════════════════════════════════════════════ -->
+      <div class="floating-action-dock" id="floatingDock">
+        <div class="dock-status-pill">
+          <span class="pulse-dot" style="background:#34d399;"></span>
+          <span id="dockStatusText">ROBÔ ONLINE</span>
         </div>
-      </div>
-
-      <!-- MELHOR OPORTUNIDADE -->
-      <div id="demandBestOppBox" style="display: none; padding: 10px 14px; background: rgba(16,185,129,0.07); border-radius: 8px; border: 1px solid rgba(16,185,129,0.2);">
-        <div style="font-size: 0.75rem; color: #34d399; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px;">🎯 Melhor Oportunidade</div>
-        <div id="demandOppTitle" style="font-size: 0.9rem; font-weight: 700; color: var(--text); margin-bottom: 4px;">—</div>
-        <div style="display: flex; gap: 14px; font-size: 0.78rem; color: var(--text-dim);">
-          <span>Score: <strong id="demandOppScore" style="color: #34d399;">—</strong></span>
-          <span>Palavra-chave: <strong id="demandOppKeyword" style="color: #a7f3d0;">—</strong></span>
-          <span>Preço: <strong id="demandOppPrice" style="color: var(--text);">—</strong></span>
-        </div>
-      </div>
-
-      <!-- ÚLTIMO SCAN -->
-      <div style="font-size: 0.73rem; color: var(--text-dim); text-align: right;">
-        Último scan: <span id="demandLastScan">—</span>
-        &nbsp;·&nbsp;
-        Próximo: <span id="demandNextScan">em ~20 min</span>
-      </div>
-    </div>
-
-    <!-- 4. ESTRATÉGIA ATUAL -->
-    <div class="strategy-card">
-      <div class="hero-header">
-        <div class="hero-title" style="color: #d8b4fe;">🧠 Estratégia Orgânica Ativa</div>
-        <button class="btn" style="background: rgba(168, 85, 247, 0.2); border-color: rgba(168, 85, 247, 0.4); color: #e9d5ff;" onclick="openOptimizerDecisionModal()">
-          Por que o robô escolheu isso? ↗
+        <div class="dock-divider"></div>
+        <button class="dock-btn dock-btn-primary" onclick="triggerAction('EXECUTAR_AGORA')" title="Executar ciclo imediatamente">
+          <span>⚡ Executar Ciclo</span>
+        </button>
+        <button class="dock-btn dock-btn-ghost" onclick="triggerAction('PAUSAR')" title="Pausar o robô">
+          <span>⏸ Pausar</span>
+        </button>
+        <div class="dock-divider"></div>
+        <button class="dock-btn dock-btn-ghost" onclick="switchTab('tab-logs', 'Log ao Vivo & Diário')" title="Ver logs em tempo real">
+          <span>📜 Logs</span>
         </button>
       </div>
-      <div>
-        <div class="strategy-badge-main" id="stratBadge">
-          <span>🎯</span> <span id="stratName">Desconto Real Comprovado</span>
-        </div>
-      </div>
-      <div style="font-size: 0.88rem; color: var(--text-muted); line-height: 1.45;" id="stratReason">
-        Vantagem de preço comprovada com desconto expressivo vs histórico de preços, selecionada para maximizar tração sem saturação.
-      </div>
-      <div class="strategy-grid-meta">
-        <div class="strategy-meta-item">
-          <span>Categoria Priorizada</span>
-          <strong id="stratCategory">Cozinha & Organização</strong>
-        </div>
-        <div class="strategy-meta-item">
-          <span>Horário Priorizado</span>
-          <strong id="stratTime">12:00 - 18:00 (Pico comercial)</strong>
-        </div>
-        <div class="strategy-meta-item">
-          <span>Rede Priorizada</span>
-          <strong id="stratNetwork">NÃO CONFIGURADA</strong>
-        </div>
-      </div>
-    </div>
-
-    <!-- 8. PRODUÇÃO DE HOJE vs TOTAL HISTÓRICO -->
-    <div>
-      <div class="section-title">
-        <span>📊 Produção de Hoje (00:00 até agora)</span>
-        <span style="font-size: 0.72rem; color: var(--text-dim);">Timezone America/Sao_Paulo</span>
-      </div>
-      <div class="metrics-grid">
-        <div class="card">
-          <div class="card-label">Produtos Encontrados Hoje</div>
-          <div class="card-value" id="cardTodayFound">14</div>
-          <div class="card-sub">Processados e filtrados hoje</div>
-        </div>
-        <div class="card">
-          <div class="card-label">Ofertas Selecionadas Hoje</div>
-          <div class="card-value" id="cardTodaySelected">5</div>
-          <div class="card-sub">Aprovadas com estratégia orgânica</div>
-        </div>
-        <div class="card">
-          <div class="card-label">Publicações Hoje</div>
-          <div class="card-value" id="cardTodayPublications">0</div>
-          <div class="card-sub" id="cardTodayPublicationsSub">Nenhuma publicação realizada hoje.</div>
-        </div>
-        <div class="card">
-          <div class="card-label">Erros de Execução</div>
-          <div class="card-value" id="cardTodayErrors">0</div>
-          <div class="card-sub">Zero falhas impeditivas</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 8 (continuação): TOTAL HISTÓRICO SEPARADO -->
-    <div>
-      <div class="section-title">
-        <span>🗄️ Total Histórico Acumulado</span>
-        <span style="font-size: 0.72rem; color: var(--text-dim);">Memória Operacional Supabase</span>
-      </div>
-      <div class="metrics-grid">
-        <div class="card">
-          <div class="card-label">Catálogo Total de Produtos</div>
-          <div class="card-value" id="cardTotalProducts">57</div>
-          <div class="card-sub">Registros únicos salvos no banco</div>
-        </div>
-        <div class="card">
-          <div class="card-label">Total de Seleções Históricas</div>
-          <div class="card-value" id="cardTotalCandidates">80</div>
-          <div class="card-sub">Ofertas já avaliadas e rankeadas</div>
-        </div>
-        <div class="card">
-          <div class="card-label">Publicações Históricas</div>
-          <div class="card-value" id="cardTotalPublications">0</div>
-          <div class="card-sub">Histórico acumulado de posts</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 9. MÉTRICAS JEV / CACHE / ECONOMIA -->
-    <div>
-      <div class="section-title">⚡ Curadoria IA & Economia de Tokens</div>
-      <div class="metrics-grid">
-        <div class="card">
-          <div class="card-label">
-            Decisões por Cache
-            <span class="tag-highlight">0 Tokens</span>
-          </div>
-          <div class="card-value" id="cardCacheHits">14</div>
-          <div class="card-sub">Reutilizadas do cache operacional</div>
-        </div>
-        <div class="card">
-          <div class="card-label">Chamadas JEV</div>
-          <div class="card-value" id="cardJevCalls">5</div>
-          <div class="card-sub">typesafe/jev-1.13 decisions</div>
-        </div>
-        <div class="card">
-          <div class="card-label">Chamadas GPT</div>
-          <div class="card-value" id="cardGptCalls">0</div>
-          <div class="card-sub">Escalonamento estrito por exceção</div>
-        </div>
-        <div class="card">
-          <div class="card-label">
-            Economia Estimada
-            <span class="tag-highlight" id="cardSavings">63%</span>
-          </div>
-          <div class="card-value" id="cardTokens">2.413</div>
-          <div class="card-sub">Tokens consumidos no ciclo</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 6. PERFORMANCE ORGÂNICA COM TABS (ZERO MOCKS) -->
-    <div>
-      <div class="section-title">
-        <span>📈 Performance Orgânica</span>
-        <div class="tabs-wrap">
-          <button class="tab-btn active" onclick="switchPerfTab('today')">Hoje</button>
-          <button class="tab-btn" onclick="switchPerfTab('sevenDays')">7 dias</button>
-          <button class="tab-btn" onclick="switchPerfTab('thirtyDays')">30 dias</button>
-        </div>
-      </div>
-      <div class="metrics-grid">
-        <div class="card">
-          <div class="card-label">Publicações</div>
-          <div class="card-value" id="perfPubs">0</div>
-          <div class="card-sub">Posts realizados no período</div>
-        </div>
-        <div class="card">
-          <div class="card-label">Impressões</div>
-          <div class="card-value" id="perfImpr">0</div>
-          <div class="card-sub">Visualizações de conteúdo</div>
-        </div>
-        <div class="card">
-          <div class="card-label">Cliques</div>
-          <div class="card-value" id="perfClicks">0</div>
-          <div class="card-sub">Cliques nos links de afiliado</div>
-        </div>
-        <div class="card">
-          <div class="card-label">CTR Médio</div>
-          <div class="card-value" id="perfCtr">N/D</div>
-          <div class="card-sub">Taxa de clique por visualização</div>
-        </div>
-        <div class="card">
-          <div class="card-label">Conversões</div>
-          <div class="card-value" id="perfConv">0</div>
-          <div class="card-sub">Vendas registradas</div>
-        </div>
-        <div class="card">
-          <div class="card-label">Retenção Média</div>
-          <div class="card-value" id="perfRet">N/D</div>
-          <div class="card-sub">Tempo de permanência</div>
-        </div>
-        <div class="card">
-          <div class="card-label">Compartilhamentos</div>
-          <div class="card-value" id="perfShares">0</div>
-          <div class="card-sub">Engajamento viral</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 5 & 7. DOIS BLOCOS: DIÁRIO DO ROBÔ & PUBLICAÇÕES E RESULTADOS -->
-    <div class="highlight-grid">
-      <!-- 5. 📖 DIÁRIO DO ROBÔ COM DRILL-DOWN -->
-      <div class="card">
-        <div class="section-title">
-          <span>📖 Diário do Robô</span>
-          <span style="font-size: 0.72rem; color: var(--text-dim);">Clique para expandir</span>
-        </div>
-        <div class="diary-list" id="robotDiaryContainer">
-          <div class="diary-item">
-            <div class="diary-left">
-              <span class="diary-time">--:--</span>
-              <span class="diary-msg">Carregando eventos operacionais...</span>
-            </div>
-            <span class="diary-strat-tag">SISTEMA</span>
-          </div>
-        </div>
-        <div style="margin-top: 10px; text-align: center;">
-          <button class="btn" style="width: 100%; justify-content: center;" onclick="openFullDiaryModal()">
-            Ver Histórico Completo ↗
-          </button>
-        </div>
-      </div>
-
-      <!-- 7. 📣 PUBLICAÇÕES E RESULTADOS (ZERO MOCK) -->
-      <div class="card">
-        <div class="section-title">
-          <span>📣 Publicações e Resultados</span>
-          <span style="font-size: 0.72rem; color: var(--text-dim);">Redes Sociais</span>
-        </div>
-        <div id="publicationsContainer" style="display: flex; flex-direction: column; gap: 10px; min-height: 220px;">
-          <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 220px; text-align: center; gap: 8px; color: var(--text-dim);">
-            <div style="font-size: 2rem;">📭</div>
-            <div style="font-size: 0.95rem; font-weight: 600; color: var(--text-muted);" id="pubStatusTitle">
-              Nenhuma publicação realizada ainda.
-            </div>
-            <div style="font-size: 0.78rem; max-width: 380px;">
-              A Fase 5.4 prepara a curadoria orgânica, metas e telemetria. As postagens automáticas nos canais serão habilitadas na próxima fase de publicação.
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 10. TOP 5 OFERTAS SELECIONADAS COM DETALHES EXPANSÍVEIS -->
-    <div>
-      <div class="section-title">⭐ TOP 5 Ofertas com Estratégia Orgânica</div>
-      <div class="offers-list" id="offersContainer">
-        <!-- Renderizado dinamicamente -->
-      </div>
-    </div>
-
-    <!-- FOOTER -->
-    <footer>
-      ACHAki Autopilot • <a href="/achaki/oauth/callback">OAuth Gateway</a> • Ambiente Seguro de Produção • Zero Mock Policy
-    </footer>
-  </div>
-
-  <!-- MODAL: DETALHES DE DECISÃO / EVENTO -->
-  <div class="modal-backdrop" id="genericModal" onclick="closeModal(event)">
-    <div class="modal-content" onclick="event.stopPropagation()">
-      <div class="modal-header">
-        <h3 id="modalTitle">Detalhes Operacionais</h3>
-        <button class="modal-close" onclick="closeModal()">&times;</button>
-      </div>
-      <div class="modal-body" id="modalBody">
-        <!-- Preenchido dinamicamente -->
-      </div>
     </div>
   </div>
 
+  <!-- MODAL GENÉRICO / DETALHES -->
+  <div class="modal-overlay" id="genericModal" onclick="closeModal(event)">
+    <div class="modal-window" onclick="event.stopPropagation()">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h3 id="modalTitle" style="font-size:1rem; color:#fff;">Detalhes</h3>
+        <button onclick="closeModal()" style="background:transparent; border:none; color:var(--text-dim); font-size:1.1rem; cursor:pointer;">✖</button>
+      </div>
+      <div id="modalBody" style="font-size:0.8rem; color:var(--text-muted); line-height:1.5;"></div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════
+       4. SCRIPTS DE CONTROLE, APIS E REALTIME
+       ══════════════════════════════════════════════════════════ -->
   <script>
     let dashboardState = null;
     let currentPerfTab = 'today';
+    let currentTabId = 'tab-cockpit';
 
+    // ─────────────────────────────────────────────────────────────
+    // NAVEGAÇÃO ENTRE ABAS
+    // ─────────────────────────────────────────────────────────────
+    function switchTab(tabId, label) {
+      currentTabId = tabId;
+      document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
+      const targetPane = document.getElementById(tabId);
+      if (targetPane) targetPane.classList.add('active');
+
+      document.querySelectorAll('.nav-item').forEach(el => {
+        el.classList.toggle('active', el.getAttribute('data-tab') === tabId);
+      });
+
+      if (label) {
+        const lblEl = document.getElementById('currentTabLabel');
+        if (lblEl) lblEl.textContent = label;
+      }
+
+      const scroller = document.getElementById('contentScroll');
+      if (scroller) scroller.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function toggleSidebar() {
+      const sidebar = document.getElementById('appSidebar');
+      if (sidebar) sidebar.classList.toggle('collapsed');
+    }
+
+    // Relógio da Topbar
+    setInterval(() => {
+      const clockEl = document.getElementById('topbarClock');
+      if (clockEl) {
+        const now = new Date();
+        clockEl.textContent = now.toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo' }) + ' SP';
+      }
+    }, 1000);
+
+    // ─────────────────────────────────────────────────────────────
+    // CARREGAMENTO DO DASHBOARD
+    // ─────────────────────────────────────────────────────────────
     async function loadDashboard() {
       try {
-        const res = await fetch('/api/dashboard');
+        const res = await fetch('/api/dashboard?t=' + Date.now());
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const data = await res.json();
         dashboardState = data;
         renderDashboard(data);
       } catch (err) {
-        console.warn('Falha ao carregar dashboard ao vivo:', err.message);
+        console.warn('Falha ao consultar dashboard:', err.message);
       }
     }
 
     function renderDashboard(data) {
       if (!data) return;
 
-      // Header Status
+      // 1. Status do Robô (Sidebar & Dock)
       const statusBadge = document.getElementById('robotStatusBadge');
       const statusText = document.getElementById('robotStatusText');
+      const dockStatus = document.getElementById('dockStatusText');
+
       if (statusBadge && statusText && data.robot) {
+        let label = data.robot.status || 'ONLINE';
+        let cls = 'status-badge ONLINE';
+
         if (data.robot.isAwaitingApproval || data.robot.status === 'AGUARDANDO APROVAÇÃO' || data.preparedPublication) {
-          statusText.textContent = 'AGUARDANDO APROVAÇÃO';
-          statusBadge.className = 'status-badge AGUARDANDO';
+          label = 'AGUARDANDO APROVAÇÃO';
+          cls = 'status-badge AGUARDANDO';
         } else if (!data.robot.isWorkerOnline) {
-          statusText.textContent = 'WORKER OFFLINE';
-          statusBadge.className = 'status-badge OFFLINE';
-        } else {
-          statusText.textContent = data.robot.status;
-          statusBadge.className = 'status-badge ' + (data.robot.status === 'TRABALHANDO' ? 'TRABALHANDO' : (data.robot.status === 'AGUARDANDO' ? 'AGUARDANDO' : 'ONLINE'));
+          label = 'WORKER OFFLINE';
+          cls = 'status-badge OFFLINE';
+        } else if (data.robot.status === 'TRABALHANDO') {
+          label = 'TRABALHANDO';
+          cls = 'status-badge TRABALHANDO';
         }
-      // 0. CENTRAL DE INTERVENÇÃO OPERACIONAL (DESAFIOS, CAPTCHAS, SESSÕES)
+
+        statusText.textContent = label;
+        statusBadge.className = cls;
+        if (dockStatus) dockStatus.textContent = label;
+      }
+
+      // 2. Intervenções Operacionais (Checkpoints, Desafios)
       const intContainer = document.getElementById('interventionContainer');
       if (intContainer) {
         if (data.interventions && data.interventions.length > 0) {
@@ -2220,8 +1694,8 @@
                 <span style="font-size:0.75rem; color:var(--text-dim);">Detectado às ${item.time || ''}</span>
               </div>
               <div>
-                <div style="font-size:0.95rem; font-weight:700; color:#fff; margin-bottom:4px;">${item.title}</div>
-                <div style="font-size:0.82rem; color:#cbd5e1; line-height:1.4;">${item.message}</div>
+                <div style="font-size:0.92rem; font-weight:700; color:#fff; margin-bottom:4px;">${item.title}</div>
+                <div style="font-size:0.8rem; color:#cbd5e1; line-height:1.4;">${item.message}</div>
               </div>
               <div class="intervention-actions">
                 <a href="${item.targetUrl}" target="_blank" rel="noopener noreferrer" class="btn-intervention-direct">
@@ -2239,875 +1713,66 @@
         }
       }
 
-      // 1. Modo Autopilot
+      // 3. Modo Autopilot
       const currentMode = data.autopilotMode || 'ASSISTIDO';
-      document.getElementById('modeOff').className = 'mode-switch-btn' + (currentMode === 'OFF' ? ' active' : '');
-      document.getElementById('modeAssist').className = 'mode-switch-btn' + (currentMode === 'ASSISTIDO' ? ' active' : '');
-      document.getElementById('modeAuto').className = 'mode-switch-btn' + (currentMode === 'AUTONOMO' ? ' active' : '');
+      const modeOff = document.getElementById('modeOff');
+      const modeAssist = document.getElementById('modeAssist');
+      const modeAuto = document.getElementById('modeAuto');
+      if (modeOff) modeOff.className = 'mode-switch-btn' + (currentMode === 'OFF' ? ' active' : '');
+      if (modeAssist) modeAssist.className = 'mode-switch-btn' + (currentMode === 'ASSISTIDO' ? ' active' : '');
+      if (modeAuto) modeAuto.className = 'mode-switch-btn' + (currentMode === 'AUTONOMO' ? ' active' : '');
 
       const modeDescriptions = {
-        OFF: 'Robô desativado. Nenhuma coleta ou curadoria é realizada.',
-        ASSISTIDO: 'O robô pesquisa, seleciona e prepara estratégias orgânicas, aguardando validação para canais externos.',
-        AUTONOMO: 'O robô opera continuamente cumprindo metas diárias e rotação de catálogo de forma independente.'
+        OFF: 'Robô desativado.',
+        ASSISTIDO: 'Pesquisa e prepara ofertas para aprovação humana.',
+        AUTONOMO: 'Opera continuamente cumprindo metas com rotação inteligente.'
       };
-      document.getElementById('modeDesc').innerHTML = `<strong>${currentMode}:</strong> ${modeDescriptions[currentMode] || modeDescriptions.ASSISTIDO}`;
+      const descEl = document.getElementById('modeDesc');
+      if (descEl) {
+        descEl.innerHTML = `<strong>${currentMode}:</strong> ${modeDescriptions[currentMode] || modeDescriptions.ASSISTIDO}`;
+      }
 
-      // 1 (continuação): Meta de Hoje
+      // 4. Meta de Hoje
       const targetClicks = data.goals?.targetClicks || 20;
       const currentClicks = data.goals?.currentClicks || 0;
       const progressPercent = data.goals?.progressPercent || 0;
-      document.getElementById('goalClicksTag').textContent = `Meta: ${targetClicks} Cliques`;
-      document.getElementById('heroCurrentClicks').textContent = currentClicks;
-      document.getElementById('heroProgressPercent').textContent = `${progressPercent}%`;
-      document.getElementById('heroProgressBar').style.width = `${progressPercent}%`;
-      document.getElementById('heroCtr').textContent = data.goals?.ctr || 'N/D';
-      document.getElementById('heroRetention').textContent = data.goals?.retention || 'N/D';
-      document.getElementById('heroConversions').textContent = data.goals?.conversions ?? 0;
+      const goalClicksTag = document.getElementById('goalClicksTag');
+      if (goalClicksTag) goalClicksTag.textContent = `${targetClicks} cliques`;
+      const heroCurrentClicks = document.getElementById('heroCurrentClicks');
+      if (heroCurrentClicks) heroCurrentClicks.textContent = currentClicks;
+      const heroProgressPercent = document.getElementById('heroProgressPercent');
+      if (heroProgressPercent) heroProgressPercent.textContent = `${progressPercent}%`;
+      const heroProgressBar = document.getElementById('heroProgressBar');
+      if (heroProgressBar) heroProgressBar.style.width = `${Math.min(100, progressPercent)}%`;
 
-      // 2. Status do Objetivo
-      const goalStatus = data.goals?.status || 'SEM DADOS';
-      const goalTag = document.getElementById('cardGoalStatusTag');
-      goalTag.textContent = goalStatus;
-      const statusClasses = {
-        'META ATINGIDA': 'NO_RITMO',
-        'NO RITMO': 'NO_RITMO',
-        'ABAIXO DO RITMO': 'ABAIXO_DA_META',
-        'SEM DADOS': 'SEM_DADOS',
-      };
-      goalTag.className = 'status-tag ' + (statusClasses[goalStatus] || 'SEM_DADOS');
-      document.getElementById('cardGoalTarget').textContent = `${targetClicks} cliques/dia`;
-      document.getElementById('cardGoalActual').textContent = currentClicks;
-      document.getElementById('cardGoalRemaining').textContent = data.goals?.remainingClicks ?? targetClicks;
-      document.getElementById('cardGoalProjection').textContent = data.goals?.projectionToday != null ? `${data.goals.projectionToday} cliques` : '0 cliques';
+      const el = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val; };
+      el('heroCtr', data.goals?.ctr || 'N/D');
+      el('heroRetention', data.goals?.retention || 'N/D');
+      el('heroConversions', data.goals?.conversions || 0);
 
-      const actionGoalEl = document.getElementById('cardGoalAction');
-      if (actionGoalEl && data.goals?.actionForGoal) {
-        actionGoalEl.textContent = data.goals.actionForGoal;
+      // Meta Detalhada
+      el('cardTargetClicks', targetClicks);
+      el('cardCurrentClicks', currentClicks);
+      el('cardRemainingClicks', data.goals?.remainingClicks ?? 20);
+      el('cardProjectedClicks', data.goals?.projectedClicks ?? 0);
+      const goalBadge = document.getElementById('goalStatusBadge');
+      if (goalBadge && data.goals?.status) {
+        goalBadge.textContent = data.goals.status;
+        goalBadge.className = 'status-tag ' + (data.goals.status === 'NO RITMO' ? 'NO_RITMO' : 'ABAIXO_DA_META');
       }
 
-      // 📣 CARD PUBLICAÇÃO PREPARADA (MODO ASSISTIDO)
-      const prepCard = document.getElementById('preparedPublicationCard');
-      if (data.preparedPublication) {
-        const pub = data.preparedPublication;
-        currentPreparedPublicationId = pub.id;
-        if (prepCard) prepCard.style.display = 'flex';
-
-        const prepTitleEl = document.getElementById('prepTitle');
-        if (prepTitleEl) prepTitleEl.textContent = pub.title || 'Oferta Selecionada';
-
-        const prepImgEl = document.getElementById('prepImage');
-        if (prepImgEl) prepImgEl.src = pub.imageUrl || 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=400';
-
-        const prepMpEl = document.getElementById('prepMarketplace');
-        if (prepMpEl) prepMpEl.textContent = (pub.marketplace || 'mercadolivre').toUpperCase();
-
-        const prepProdIdEl = document.getElementById('prepProductId');
-        if (prepProdIdEl) prepProdIdEl.textContent = pub.marketplaceProductId || pub.productId || 'MLB';
-
-        const prepStratEl = document.getElementById('prepStrategy');
-        if (prepStratEl) prepStratEl.textContent = pub.strategy || 'DESCONTO';
-
-        const prepScoreEl = document.getElementById('prepScore');
-        if (prepScoreEl) prepScoreEl.textContent = `${pub.score || 85} / 100`;
-
-        const curPriceNum = pub.currentPrice != null ? Number(pub.currentPrice) : 0;
-        const prepPriceEl = document.getElementById('prepCurrentPrice');
-        if (prepPriceEl) prepPriceEl.textContent = `R$ ${curPriceNum.toFixed(2)}`;
-
-        const origPriceNum = pub.originalPrice != null ? Number(pub.originalPrice) : null;
-        const origWrap = document.getElementById('prepOrigPriceWrap');
-        const prepOrigEl = document.getElementById('prepOriginalPrice');
-        if (origPriceNum && origPriceNum > curPriceNum) {
-          if (origWrap) origWrap.style.display = 'block';
-          if (prepOrigEl) prepOrigEl.textContent = `R$ ${origPriceNum.toFixed(2)}`;
-        } else {
-          if (origWrap) origWrap.style.display = 'none';
-        }
-
-        const disc = pub.discountPercent || 0;
-        const prepDiscEl = document.getElementById('prepDiscountBadge');
-        if (prepDiscEl) prepDiscEl.textContent = disc > 0 ? `-${disc}% OFF` : 'OFERTA';
-        const prepSavEl = document.getElementById('prepSavingsTag');
-        if (prepSavEl) prepSavEl.textContent = disc > 0 ? `${disc}% de Desconto Real` : 'Preço Competitivo';
-
-        const prepCopyEl = document.getElementById('prepCopy');
-        if (prepCopyEl) prepCopyEl.textContent = pub.copy || '';
-
-        const prepCatEl = document.getElementById('prepCategory');
-        if (prepCatEl) prepCatEl.textContent = pub.category || 'Geral';
-
-        const affLink = document.getElementById('prepAffiliateLink');
-        const affLabel = document.getElementById('prepAffiliateLabel');
-        const affBadge = document.getElementById('prepAffiliateBadge');
-        const affBox = document.getElementById('prepAffiliateBox');
-        const btnApprove = document.getElementById('btnApprovePub');
-
-        if (affLink) {
-          affLink.href = pub.affiliateUrl || '#';
-          affLink.textContent = pub.affiliateUrl || 'Link comissionado não disponível';
-        }
-
-        if (pub.isAffiliateVerified) {
-          if (affLabel) affLabel.textContent = '🔗 Link Oficial de Afiliado Confirmado (meli.la)';
-          if (affBadge) {
-            affBadge.textContent = 'CONFIRMADO';
-            affBadge.style.background = 'rgba(16,185,129,0.2)';
-            affBadge.style.color = '#34d399';
-            affBadge.style.border = '1px solid rgba(16,185,129,0.4)';
-          }
-          if (affBox) affBox.style.borderColor = 'rgba(16,185,129,0.4)';
-          if (btnApprove) {
-            btnApprove.disabled = false;
-            btnApprove.style.opacity = '1';
-            btnApprove.title = '';
-          }
-        } else {
-          if (affLabel) affLabel.innerHTML = '⚠️ Link Não Comissionado (<span style="color: #f87171;">AFFILIATE_LINK_UNVERIFIED</span>)';
-          if (affBadge) {
-            affBadge.textContent = 'NÃO COMPROVADO';
-            affBadge.style.background = 'rgba(239,68,68,0.2)';
-            affBadge.style.color = '#f87171';
-            affBadge.style.border = '1px solid rgba(239,68,68,0.4)';
-          }
-          if (affBox) affBox.style.borderColor = 'rgba(239,68,68,0.4)';
-          if (btnApprove) {
-            btnApprove.disabled = true;
-            btnApprove.style.opacity = '0.5';
-            btnApprove.title = 'Publicação bloqueada: link oficial de afiliado não confirmado.';
-          }
-        }
-
-        const valDate = pub.validatedAt ? new Date(pub.validatedAt).toLocaleTimeString('pt-BR') : 'Recente';
-        const prepValEl = document.getElementById('prepValidatedTime');
-        if (prepValEl) prepValEl.textContent = `Última validação: ${valDate}`;
-      } else {
-        currentPreparedPublicationId = null;
-        if (prepCard) prepCard.style.display = 'none';
-      }
-
-      // 2.1 Publicado Agora (Feedback Loop)
-      const pubNowCard = document.getElementById('latestPublishedCard');
-      if (data.latestPublished && pubNowCard) {
-        const lp = data.latestPublished;
-        pubNowCard.style.display = 'flex';
-        document.getElementById('pubNowTime').textContent = `Publicado às ${lp.publishedAt || 'Recente'}`;
-        document.getElementById('pubNowTitle').textContent = lp.title || 'Oferta Selecionada';
-        document.getElementById('pubNowImage').src = lp.imageUrl || 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=400';
-        document.getElementById('pubNowPrice').textContent = lp.currentPrice != null ? `R$ ${Number(lp.currentPrice).toFixed(2)}` : 'R$ 0,00';
-        document.getElementById('pubNowDiscount').textContent = lp.discountPercent > 0 ? `-${lp.discountPercent}% OFF` : 'OFERTA';
-        document.getElementById('pubNowStrategy').textContent = lp.strategy || 'DESCONTO';
-        document.getElementById('pubNowDemand').textContent = lp.demandKeyword || 'Demanda Alta';
-        document.getElementById('pubNowResults').textContent = `${lp.clicks || 0} cliques no post (${lp.totalClicks || 0} total hoje)`;
-        document.getElementById('pubNowReason').textContent = lp.decisionReason || 'Oportunidade selecionada pelo Autonomous Engine com validação comprovada.';
-
-        const fbBtn = document.getElementById('pubNowFbLink');
-        if (fbBtn) {
-          fbBtn.href = lp.publicationUrl || '#';
-          fbBtn.style.display = lp.publicationUrl ? 'inline-flex' : 'none';
-        }
-        const affBtn = document.getElementById('pubNowAffLink');
-        if (affBtn) {
-          affBtn.href = lp.affiliateUrl || '#';
-        }
-      } else if (pubNowCard) {
-        pubNowCard.style.display = 'none';
-      }
-
-      // 3. Robô Agora
-      if (data.robotNow) {
-        const isOnline = data.robotNow.isWorkerOnline;
-        const cardStatus = document.getElementById('cardRobotStatus');
-        const cardStep = document.getElementById('cardRobotStep');
-        const isAwaiting = data.preparedPublication || data.robotNow.status === 'AGUARDANDO APROVAÇÃO';
-
-        if (cardStatus) {
-          if (isAwaiting) {
-            cardStatus.textContent = 'AGUARDANDO APROVAÇÃO';
-            cardStatus.className = 'status-tag AGUARDANDO_APROVACAO';
-          } else if (!isOnline) {
-            cardStatus.textContent = 'OFFLINE';
-            cardStatus.className = 'status-tag ABAIXO_DA_META';
-          } else {
-            cardStatus.textContent = data.robotNow.status || 'AGUARDANDO';
-            cardStatus.className = 'status-tag ' + (data.robotNow.status === 'TRABALHANDO' ? 'NO_RITMO' : 'SEM_DADOS');
-          }
-        }
-        if (cardStep) {
-          cardStep.textContent = isAwaiting ? 'Publicação preparada. Aguardando revisão e aprovação humana.' : (data.robotNow.stepText || 'Aguardando próximo ciclo de coleta...');
-        }
-        document.getElementById('cardRobotLastAction').textContent = data.robotNow.lastAction || '5 ofertas selecionadas';
-        document.getElementById('cardRobotStrategy').textContent = data.robotNow.currentStrategy || 'DESCONTO';
-        document.getElementById('cardRobotNextAction').textContent = data.robotNow.nextAction || 'Nova coleta em 25 min';
-      }
-
-      // 4. Estratégia Orgânica
-      if (data.strategyDetails) {
-        document.getElementById('stratName').textContent = data.strategyDetails.name || 'Desconto Real Comprovado';
-        document.getElementById('stratReason').textContent = data.strategyDetails.reason || 'Vantagem de preço comprovada com desconto expressivo vs histórico de preços.';
-        document.getElementById('stratCategory').textContent = data.strategyDetails.prioritizedCategory || 'Cozinha & Organização';
-        document.getElementById('stratTime').textContent = data.strategyDetails.prioritizedTime || '12:00 - 18:00 (Pico comercial)';
-        document.getElementById('stratNetwork').textContent = data.strategyDetails.prioritizedNetwork || 'NÃO CONFIGURADA';
-      }
-
-      // 8. Produção de Hoje
-      if (data.today) {
-        document.getElementById('cardTodayFound').textContent = data.today.productsFound ?? 14;
-        document.getElementById('cardTodaySelected').textContent = data.today.offersSelected ?? 5;
-        const todayPubsCount = data.today.publications ?? 0;
-        document.getElementById('cardTodayPublications').textContent = todayPubsCount;
-        const pubSubEl = document.getElementById('cardTodayPublicationsSub');
-        if (pubSubEl) {
-          pubSubEl.textContent = todayPubsCount > 0 ? `${todayPubsCount} publicações realizadas hoje.` : 'Nenhuma publicação realizada hoje.';
-        }
-        document.getElementById('cardTodayErrors').textContent = data.today.errors ?? 0;
-      }
-
-      // 8. Total Histórico
-      if (data.historical) {
-        document.getElementById('cardTotalProducts').textContent = data.historical.totalProductsCatalog ?? 57;
-        document.getElementById('cardTotalCandidates').textContent = data.historical.totalOffersSelected ?? 80;
-        document.getElementById('cardTotalPublications').textContent = data.historical.totalPublications ?? 0;
-      }
-
-      // 9. Métricas IA Real
-      if (data.ai) {
-        document.getElementById('cardCacheHits').textContent = data.ai.cacheHits ?? 14;
-        document.getElementById('cardJevCalls').textContent = data.ai.jevCalls ?? 5;
-        document.getElementById('cardGptCalls').textContent = data.ai.gptCalls ?? 0;
-        document.getElementById('cardTokens').textContent = Number(data.ai.tokens || 2413).toLocaleString('pt-BR');
-        document.getElementById('cardSavings').textContent = `${data.ai.savingsPercent || 63}%`;
-      }
-
-      // 6. Performance Tabs
-      renderPerfTab();
-
-      // 🔥 DEMANDA AGORA
-      if (data.demandNow) {
-        const dn = data.demandNow;
-
-        // Decision label
-        const decisionEl = document.getElementById('demandDecisionText');
-        const decisionIconEl = document.getElementById('demandDecisionIcon');
-        const actionTagEl = document.getElementById('demandActionTag');
-        const statusLabelEl = document.getElementById('demandStatusLabel');
-
-        if (dn.decision === 'PUBLISH' || dn.decision === 'OPPORTUNITY_FOUND') {
-          if (decisionEl) decisionEl.textContent = dn.reason || 'Oportunidade aprovada para publicação!';
-          if (decisionIconEl) decisionIconEl.textContent = '🎯';
-          if (actionTagEl) {
-            actionTagEl.textContent = 'PUBLICAR';
-            actionTagEl.style.background = 'rgba(16,185,129,0.2)';
-            actionTagEl.style.borderColor = 'rgba(16,185,129,0.4)';
-            actionTagEl.style.color = '#34d399';
-          }
-          if (statusLabelEl) statusLabelEl.textContent = 'OPORTUNIDADE DETECTADA';
-        } else if (dn.decision === 'WAIT' || dn.decision === 'DEMAND_MONITORED') {
-          if (decisionEl) decisionEl.textContent = dn.reason || 'Demanda detectada, mas nenhuma oferta atingiu o threshold de publicação.';
-          if (decisionIconEl) decisionIconEl.textContent = '⏸';
-          if (actionTagEl) {
-            actionTagEl.textContent = 'NÃO PUBLICAR';
-            actionTagEl.style.background = 'rgba(100,116,139,0.2)';
-            actionTagEl.style.borderColor = 'rgba(100,116,139,0.3)';
-            actionTagEl.style.color = '#94a3b8';
-          }
-          if (statusLabelEl) statusLabelEl.textContent = 'MONITORANDO';
-        } else {
-          if (decisionEl) decisionEl.textContent = 'Aguardando próximo ciclo de monitoramento...';
-          if (decisionIconEl) decisionIconEl.textContent = '🔍';
-          if (statusLabelEl) statusLabelEl.textContent = 'AGUARDANDO';
-        }
-
-        // Active demand signals
-        const signalsEl = document.getElementById('demandSignalsList');
-        if (signalsEl && Array.isArray(dn.activeDemands) && dn.activeDemands.length > 0) {
-          const trendColors = { ALTA: '#f97316', CRESCENDO: '#f59e0b', ESTÁVEL: '#60a5fa', BAIXA: '#94a3b8' };
-          const trendIcons = { ALTA: '🔥', CRESCENDO: '📈', ESTÁVEL: '➡️', BAIXA: '📉' };
-          signalsEl.innerHTML = dn.activeDemands.map(d => `
-            <span style="
-              display: inline-flex; align-items: center; gap: 5px;
-              font-size: 0.75rem; font-weight: 700;
-              padding: 4px 10px; border-radius: 999px;
-              background: rgba(249,115,22,0.10);
-              border: 1px solid rgba(249,115,22,0.25);
-              color: ${trendColors[d.trend_direction] || '#fb923c'};
-            ">
-              ${trendIcons[d.trend_direction] || '⚡'} ${d.keyword}
-              <span style="opacity: 0.6; font-weight: 400; font-size: 0.68rem;">${d.demand_score}/100</span>
-            </span>
-          `).join('');
-        } else if (signalsEl) {
-          signalsEl.innerHTML = '<span style="font-size: 0.78rem; color: var(--text-dim);">Aguardando primeiro ciclo de monitoramento...</span>';
-        }
-
-        // Best opportunity
-        const bestOpp = dn.bestOpportunity;
-        const bestOppBox = document.getElementById('demandBestOppBox');
-        if (bestOpp && bestOpp.title) {
-          if (bestOppBox) bestOppBox.style.display = 'block';
-          const el = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val; };
-          el('demandOppTitle', bestOpp.title || '—');
-          el('demandOppScore', bestOpp.score != null ? `${bestOpp.score}/100` : '—');
-          el('demandOppKeyword', bestOpp.keyword || '—');
-          el('demandOppPrice', bestOpp.price != null ? `R$ ${Number(bestOpp.price).toFixed(2)}` : '—');
-        } else {
-          if (bestOppBox) bestOppBox.style.display = 'none';
-        }
-
-        // Last scan time
-        const lastScanEl = document.getElementById('demandLastScan');
-        if (lastScanEl && dn.lastScanAt) {
-          lastScanEl.textContent = new Date(dn.lastScanAt).toLocaleTimeString('pt-BR');
-        }
-      }
-
-      // 5. Diário do Robô
-      if (Array.isArray(data.diary) && data.diary.length > 0) {
-        const container = document.getElementById('robotDiaryContainer');
-        container.innerHTML = data.diary.slice(0, 7).map((item, idx) => `
-          <div class="diary-item" onclick="openDiaryItemModal(${idx})">
-            <div class="diary-left">
-              <span class="diary-time">${item.time}</span>
-              <span class="diary-msg">${item.message}</span>
-            </div>
-            <span class="diary-strat-tag">${item.strategy || item.eventType || 'INFO'}</span>
-          </div>
-        `).join('');
-      }
-
-      // 7. Publicações e Resultados
-      const pubContainer = document.getElementById('publicationsContainer');
-      if (pubContainer) {
-        if (data.publications?.items && data.publications.items.length > 0) {
-          pubContainer.innerHTML = data.publications.items.map((pub) => `
-            <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: rgba(255,255,255,0.03); border: 1px solid var(--card-border); border-radius: var(--radius-sm); gap: 12px;">
-              <div style="display: flex; align-items: center; gap: 12px; min-width: 0;">
-                <img src="${pub.imageUrl || 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=60'}" style="width: 44px; height: 44px; border-radius: 8px; object-fit: cover; border: 1px solid rgba(255,255,255,0.1);" alt="">
-                <div style="min-width: 0;">
-                  <div style="font-size: 0.88rem; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 320px;">
-                    ${pub.title}
-                  </div>
-                  <div style="font-size: 0.73rem; color: var(--text-dim); display: flex; gap: 8px; align-items: center; margin-top: 3px;">
-                    <span>${pub.time}</span>
-                    <span>•</span>
-                    <span style="color: #60a5fa; font-weight: 600;">Facebook</span>
-                    <span>•</span>
-                    <span style="color: #d8b4fe;">${pub.strategy}</span>
-                    <span>•</span>
-                    <span style="color: var(--emerald); font-weight: 700;">Cliques: ${pub.clicks}</span>
-                  </div>
-                </div>
-              </div>
-              <div style="display: flex; gap: 8px; flex-shrink: 0; align-items: center;">
-                ${pub.publicationUrl ? `
-                  <a href="${pub.publicationUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-primary" style="padding: 6px 14px; font-size: 0.78rem; font-weight: 700; text-decoration: none; background: #1877f2; border-color: #1877f2; display: inline-flex; align-items: center; gap: 6px;">
-                    VER NO FACEBOOK ↗
-                  </a>
-                ` : ''}
-                <a href="${pub.affiliateUrl || pub.trackingUrl}" target="_blank" rel="noopener noreferrer" class="btn" style="padding: 6px 12px; font-size: 0.78rem; text-decoration: none;">
-                  Link ↗
-                </a>
-              </div>
-            </div>
-          `).join('');
-        } else {
-          pubContainer.innerHTML = `
-            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 220px; text-align: center; gap: 8px; color: var(--text-dim);">
-              <div style="font-size: 2rem;">📭</div>
-              <div style="font-size: 0.95rem; font-weight: 600; color: var(--text-muted);" id="pubStatusTitle">
-                Nenhuma publicação realizada ainda.
-              </div>
-              <div style="font-size: 0.78rem; max-width: 380px;">
-                As publicações reais e o rastreamento de cliques aparecerão aqui assim que o piloto for publicado.
-              </div>
-            </div>
-          `;
-        }
-      }
-
-      // 10. Top 5 Ofertas
-      if (Array.isArray(data.topOffers) && data.topOffers.length > 0) {
-        const container = document.getElementById('offersContainer');
-        container.innerHTML = data.topOffers.map((offer, idx) => `
-          <div class="offer-card">
-            <div class="offer-main-row">
-              <div class="offer-left">
-                <img src="${offer.imageUrl || 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=100'}" alt="" class="offer-img" onerror="this.src='https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=100'">
-                <div class="offer-details">
-                  <div class="offer-title">${offer.title}</div>
-                  <div class="offer-tags">
-                    <span class="offer-tag">${offer.marketplace}</span>
-                    <span class="offer-tag">${offer.category}</span>
-                    <span class="offer-tag" style="background: rgba(168, 85, 247, 0.2); color: #d8b4fe; font-weight: 700;">
-                      🎯 Estratégia: ${offer.strategy?.name || 'DESCONTO'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-              <div class="offer-right">
-                <div class="offer-price-wrap">
-                  <div class="offer-price">R$ ${Number(offer.currentPrice).toFixed(2)}</div>
-                  <div class="offer-discount">${offer.discountPercent > 0 ? offer.discountPercent + '% OFF' : 'Preço competitivo'}</div>
-                </div>
-                <div class="score-circle">
-                  ${offer.finalScore || 85}
-                  <span>Score</span>
-                </div>
-                <a href="${offer.productUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-primary" style="text-decoration:none;">
-                  Ver Oferta ↗
-                </a>
-              </div>
-            </div>
-
-            <!-- BOTÃO POR QUE ESTA OFERTA -->
-            <div>
-              <button class="offer-expand-btn" onclick="toggleOfferDrawer(${idx})">
-                <span>🔍 Por que esta oferta?</span>
-              </button>
-              <div class="offer-drawer" id="offerDrawer-${idx}">
-                <p><strong>Motivo da Seleção:</strong> ${offer.aiReason || 'Oferta com excelente índice de conversão e desconto real comprovado.'}</p>
-                <div class="drawer-grid">
-                  <div class="drawer-item">
-                    <span>Local Score</span>
-                    <strong>${offer.localScore || 88}/100</strong>
-                  </div>
-                  <div class="drawer-item">
-                    <span>JEV Score</span>
-                    <strong>${offer.jevScore || 85}/100</strong>
-                  </div>
-                  <div class="drawer-item">
-                    <span>GPT Score</span>
-                    <strong>${offer.gptScore || 'N/A'}</strong>
-                  </div>
-                  <div class="drawer-item">
-                    <span>Final Score</span>
-                    <strong>${offer.finalScore || 85}/100</strong>
-                  </div>
-                  <div class="drawer-item">
-                    <span>Confiança</span>
-                    <strong>${offer.confidence || 'ALTA'}</strong>
-                  </div>
-                  <div class="drawer-item">
-                    <span>Risco Operacional</span>
-                    <strong>${offer.aiRisk || 'Baixo'}</strong>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        `).join('');
-      }
-    }
-
-    function toggleOfferDrawer(idx) {
-      const drawer = document.getElementById(`offerDrawer-${idx}`);
-      if (drawer) {
-        drawer.classList.toggle('open');
-      }
-    }
-
-    function switchPerfTab(tabName) {
-      currentPerfTab = tabName;
-      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-      event.target.classList.add('active');
-      renderPerfTab();
-    }
-
-    function renderPerfTab() {
-      if (!dashboardState || !dashboardState.performance) return;
-      const perf = dashboardState.performance[currentPerfTab] || dashboardState.performance.today;
-      document.getElementById('perfPubs').textContent = perf.publications ?? 0;
-      document.getElementById('perfImpr').textContent = perf.impressions ?? 0;
-      document.getElementById('perfClicks').textContent = perf.clicks ?? 0;
-      document.getElementById('perfCtr').textContent = perf.ctr || 'N/D';
-      document.getElementById('perfConv').textContent = perf.conversions ?? 0;
-      document.getElementById('perfRet').textContent = perf.retention || 'N/D';
-      document.getElementById('perfShares').textContent = perf.shares ?? 0;
-    }
-
-    function openOptimizerDecisionModal() {
-      if (!dashboardState) return;
-      const dec = dashboardState.strategyDetails || {};
-      const opt = dashboardState.optimizerDecisions?.[0] || {};
-
-      document.getElementById('modalTitle').textContent = 'Justificativa do GoalOptimizer';
-      document.getElementById('modalBody').innerHTML = `
-        <p><strong>Estratégia Selecionada:</strong> <span class="tag-highlight">${dec.name || 'Desconto Real Comprovado'}</span></p>
-        <p><strong>Ação Recomendada:</strong> ${dec.actionRecommendation || opt.actionTaken || 'Priorizar produtos de compra por impulso (< R$ 40).'}</p>
-        <p><strong>Justificativa da Decisão:</strong> ${dec.reason || opt.reason || 'Alinhamento com a meta diária de 20 cliques sem saturação de categorias.'}</p>
-        <p><strong>Salvaguardas Ativas:</strong> Máximo de 8 posts/dia • Cooldown mínimo de 45 minutos • Diversidade máxima de 2 itens por categoria.</p>
-        ${opt.metricsContext ? `<p><strong>Métricas Analisadas:</strong></p><pre class="code-block">${JSON.stringify(opt.metricsContext, null, 2)}</pre>` : ''}
-      `;
-      document.getElementById('genericModal').classList.add('open');
-    }
-
-    function openDiaryItemModal(idx) {
-      if (!dashboardState || !dashboardState.diary) return;
-      const item = dashboardState.diary[idx];
-      if (!item) return;
-
-      document.getElementById('modalTitle').textContent = `Auditoria de Evento: ${item.eventType || 'LOG'}`;
-      document.getElementById('modalBody').innerHTML = `
-        <p><strong>Horário:</strong> ${item.date} às ${item.time}</p>
-        <p><strong>Mensagem:</strong> ${item.message}</p>
-        <p><strong>Estratégia:</strong> ${item.strategy || 'Padrão'}</p>
-        ${item.productTitle ? `<p><strong>Produto em Foco:</strong> ${item.productTitle} (${item.marketplace || 'ML'})</p>` : ''}
-        ${item.details && Object.keys(item.details).length > 0 ? `<p><strong>Contexto e Parâmetros:</strong></p><pre class="code-block">${JSON.stringify(item.details, null, 2)}</pre>` : ''}
-      `;
-      document.getElementById('genericModal').classList.add('open');
-    }
-
-    function openFullDiaryModal() {
-      if (!dashboardState || !dashboardState.diary) return;
-      document.getElementById('modalTitle').textContent = 'Diário do Robô — Histórico Completo';
-      document.getElementById('modalBody').innerHTML = `
-        <div style="display:flex; flex-direction:column; gap:8px; max-height:350px; overflow-y:auto;">
-          ${dashboardState.diary.map(d => `
-            <div style="padding:8px 12px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:6px; font-size:0.8rem;">
-              <span style="font-family:'JetBrains Mono'; color:var(--text-dim);">${d.time}</span> — 
-              <strong>${d.message}</strong>
-              <span style="font-size:0.7rem; color:#d8b4fe; margin-left:6px;">[${d.strategy}]</span>
-            </div>
-          `).join('')}
-        </div>
-      `;
-      document.getElementById('genericModal').classList.add('open');
-    }
-
-    function closeModal(e) {
-      document.getElementById('genericModal').classList.remove('open');
-    }
-
-    async function setAutopilotMode(mode) {
-      const modeDescriptions = {
-        OFF: 'Robô desativado. Nenhuma coleta ou curadoria é realizada.',
-        ASSISTIDO: 'O robô pesquisa, seleciona e prepara estratégias orgânicas, aguardando validação para canais externos.',
-        AUTONOMO: 'O robô opera continuamente cumprindo metas diárias e rotação de catálogo de forma independente.'
-      };
-      document.getElementById('modeOff').className = 'mode-switch-btn' + (mode === 'OFF' ? ' active' : '');
-      document.getElementById('modeAssist').className = 'mode-switch-btn' + (mode === 'ASSISTIDO' ? ' active' : '');
-      document.getElementById('modeAuto').className = 'mode-switch-btn' + (mode === 'AUTONOMO' ? ' active' : '');
-      const descEl = document.getElementById('modeDesc');
-      if (descEl) {
-        descEl.innerHTML = `<strong>${mode}:</strong> ${modeDescriptions[mode] || modeDescriptions.ASSISTIDO}`;
-      }
-
-      try {
-        const res = await fetch('/api/command-center', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'SET_AUTOPILOT_MODE', mode })
-        });
-        if (res.ok) {
-          setTimeout(loadDashboard, 600);
-        } else {
-          loadDashboard();
-        }
-      } catch (e) {
-        console.warn('Erro ao atualizar modo:', e.message);
-        loadDashboard();
-      }
-    }
-
-    async function triggerAction(action) {
-      const btn = document.getElementById(action === 'EXECUTAR_AGORA' ? 'btnExecute' : 'btnPause');
-      const origText = btn ? btn.innerHTML : '';
-      if (btn) {
-        btn.innerHTML = action === 'EXECUTAR_AGORA' ? '⚡ Enviando comando...' : 'Enviando...';
-        btn.disabled = true;
-      }
-
-      try {
-        const res = await fetch('/api/controls', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action })
-        });
-        const result = await res.json();
-
-        if (!res.ok) {
-          throw new Error(result.error || 'Falha ao processar comando.');
-        }
-
-        if (btn) {
-          btn.innerHTML = action === 'EXECUTAR_AGORA' ? '✓ Na fila do worker!' : '✓ Comando enviado!';
-        }
-
-        setTimeout(() => {
-          if (btn) {
-            btn.innerHTML = origText;
-            btn.disabled = false;
-          }
-          loadDashboard();
-        }, 1500);
-      } catch (e) {
-        alert('Erro ao enviar comando: ' + e.message);
-        if (btn) {
-          btn.innerHTML = origText;
-          btn.disabled = false;
-        }
-      }
-    }
-
-    async function resolveIntervention(interventionId) {
-      if (!confirm('Você concluiu o desafio/verificação na página do marketplace? O robô poderá retomar a operação.')) {
-        return;
-      }
-      try {
-        const res = await fetch('/api/controls', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'RESOLVE_INTERVENTION', interventionId })
-        });
-        if (res.ok) {
-          loadDashboard();
-        } else {
-          const err = await res.json();
-          alert('Erro ao marcar intervenção como resolvida: ' + (err.error || 'Erro desconhecido'));
-        }
-      } catch (e) {
-        alert('Erro de conexão ao resolver intervenção: ' + e.message);
-      }
-    }
-
-    // ─────────────────────────────────────────────────────────────
-    // 📣 AÇÕES DA PUBLICAÇÃO PREPARADA (MODO ASSISTIDO)
-    // ─────────────────────────────────────────────────────────────
-    let currentPreparedPublicationId = null;
-
-    async function approvePreparedPublication() {
-      if (!currentPreparedPublicationId) return;
-      const btn = document.getElementById('btnApprovePub');
-      const origText = btn ? btn.innerHTML : '';
-      if (btn) {
-        btn.disabled = true;
-        btn.innerHTML = '⏳ Processando aprovação...';
-      }
-      try {
-        const res = await fetch('/api/controls', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'APPROVE_PUBLICATION',
-            publicationId: currentPreparedPublicationId,
-          }),
-        });
-        const result = await res.json();
-        if (!res.ok) throw new Error(result.error || 'Falha ao aprovar');
-        if (btn) btn.innerHTML = '✓ Aprovado!';
-        setTimeout(() => loadDashboard(), 1200);
-      } catch (err) {
-        alert('Erro ao aprovar publicação: ' + err.message);
-        if (btn) {
-          btn.disabled = false;
-          btn.innerHTML = origText;
-        }
-      }
-    }
-
-    async function rejectPreparedPublication() {
-      if (!currentPreparedPublicationId) return;
-      if (!confirm('Deseja realmente rejeitar esta publicação preparada?')) return;
-      const btn = document.getElementById('btnRejectPub');
-      if (btn) btn.disabled = true;
-      try {
-        const res = await fetch('/api/controls', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'REJECT_PUBLICATION',
-            publicationId: currentPreparedPublicationId,
-          }),
-        });
-        const result = await res.json();
-        if (!res.ok) throw new Error(result.error || 'Falha ao rejeitar');
-        setTimeout(() => loadDashboard(), 1000);
-      } catch (err) {
-        alert('Erro ao rejeitar publicação: ' + err.message);
-        if (btn) btn.disabled = false;
-      }
-    }
-
-    async function chooseAnotherOffer() {
-      if (!currentPreparedPublicationId) return;
-      const btn = document.getElementById('btnChooseAnother');
-      if (btn) btn.disabled = true;
-      try {
-        const res = await fetch('/api/controls', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'CHOOSE_ANOTHER_OFFER',
-            publicationId: currentPreparedPublicationId,
-          }),
-        });
-        const result = await res.json();
-        if (!res.ok) throw new Error(result.error || 'Falha ao escolher outra oferta');
-        setTimeout(() => loadDashboard(), 1000);
-      } catch (err) {
-        alert('Erro ao escolher outra oferta: ' + err.message);
-        if (btn) btn.disabled = false;
-      }
-    }
-
-    function copyAffiliateLink() {
-      const link = document.getElementById('prepAffiliateLink')?.href;
-      if (link && navigator.clipboard) {
-        navigator.clipboard.writeText(link).then(() => {
-          alert('Link oficial copiado!');
-        });
-      }
-    }
-
-    // ══════════════════════════════════════════════════════════
-    // 🤖 LOG AO VIVO EM TEMPO REAL (SUPABASE REALTIME)
-    // ══════════════════════════════════════════════════════════
-
-    const SUPABASE_PROJECT_URL = 'https://fobehbttydmqupfpioux.supabase.co';
-    const SUPABASE_PUBLIC_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZvYmVoYnR0eWRtcXVwZnBpb3V4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAxNzk2NTYsImV4cCI6MjEwNTc1NTY1Nn0.QSRQxVol0FYDtbbSxJ8_-jCMUcRD9ygiHZZI4wy7EGQ';
-
-    let liveLogs = [];
-    let currentLogFilter = 'TODOS';
-    let isLiveLogsPaused = false;
-    let supabaseClient = null;
-    let realtimeChannel = null;
-    let heartbeatRealtimeChannel = null;
-    let publicationsRealtimeChannel = null;
-
-    const LOG_LEVEL_ICONS = {
-      SUCCESS: '✓',
-      INFO: 'ℹ',
-      WARNING: '⚠',
-      ERROR: '✖',
-      DEBUG: '⚙'
-    };
-
-    function initRealtimeLogs() {
-      if (!window.supabase) {
-        console.warn('SDK Supabase não carregado no navegador.');
-        updateRealtimeStatus('CLOSED');
-        return;
-      }
-
-      try {
-        supabaseClient = window.supabase.createClient(SUPABASE_PROJECT_URL, SUPABASE_PUBLIC_KEY, {
-          auth: { persistSession: false },
-        });
-
-        // 1. Carrega os últimos 50 eventos do banco
-        fetchInitialEvents();
-
-        // 2. Conecta aos canais Realtime (logs + worker heartbeats + publicações)
-        connectRealtimeChannel();
-      } catch (err) {
-        console.error('Falha ao inicializar Supabase Realtime:', err);
-        updateRealtimeStatus('CLOSED');
-      }
-    }
-
-    async function fetchInitialEvents() {
-      try {
-        const { data, error } = await supabaseClient
-          .from('system_events')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(50);
-
-        if (!error && Array.isArray(data)) {
-          liveLogs = data;
-          renderLiveLogs();
-        }
-      } catch (err) {
-        console.warn('Erro ao carregar eventos iniciais:', err.message);
-      }
-    }
-
-    function connectRealtimeChannel() {
-      updateRealtimeStatus('CONNECTING');
-
-      if (realtimeChannel) {
-        try { supabaseClient.removeChannel(realtimeChannel); } catch {}
-      }
-      if (heartbeatRealtimeChannel) {
-        try { supabaseClient.removeChannel(heartbeatRealtimeChannel); } catch {}
-      }
-      if (publicationsRealtimeChannel) {
-        try { supabaseClient.removeChannel(publicationsRealtimeChannel); } catch {}
-      }
-
-      // Canal de Logs de Telemetria
-      realtimeChannel = supabaseClient
-        .channel('public:system_events')
-        .on(
-          'postgres_changes',
-          { event: 'INSERT', schema: 'public', table: 'system_events' },
-          (payload) => {
-            if (payload && payload.new) {
-              handleIncomingLiveEvent(payload.new);
-            }
-          }
-        )
-        .subscribe((status) => {
-          updateRealtimeStatus(status);
-        });
-
-      // Canal de Heartbeat do Worker Local
-      heartbeatRealtimeChannel = supabaseClient
-        .channel('public:worker_heartbeats')
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'worker_heartbeats' },
-          (payload) => {
-            if (payload && payload.new) {
-              handleWorkerHeartbeatUpdate(payload.new);
-            }
-          }
-        )
-        .subscribe();
-
-      // Canal de Publicações (para atualizar card de aprovação humana instantaneamente)
-      publicationsRealtimeChannel = supabaseClient
-        .channel('public:publications')
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'publications' },
-          () => {
-            loadDashboard();
-          }
-        )
-        .subscribe();
-    }
-
-    function handleWorkerHeartbeatUpdate(hb) {
-      if (!hb) return;
-      const nowMs = Date.now();
-      const lastHbMs = new Date(hb.last_heartbeat_at).getTime();
-      const isOnline = (nowMs - lastHbMs < 40000) && hb.status !== 'OFFLINE';
-
-      const statusBadge = document.getElementById('robotStatusBadge');
-      const statusText = document.getElementById('robotStatusText');
+      // 5. Robô Agora
       const cardStatus = document.getElementById('cardRobotStatus');
-      const cardStep = document.getElementById('cardRobotStep');
-
-      const isAwaiting = dashboardState?.preparedPublication || hb.current_step === 'AGUARDANDO APROVAÇÃO';
-
-      if (statusBadge && statusText) {
-        if (!isOnline) {
-          statusText.textContent = 'WORKER OFFLINE';
-          statusBadge.className = 'status-badge OFFLINE';
-        } else if (isAwaiting) {
-          statusText.textContent = 'AGUARDANDO APROVAÇÃO';
-          statusBadge.className = 'status-badge AGUARDANDO';
-        } else {
-          statusText.textContent = hb.status === 'TRABALHANDO' ? 'TRABALHANDO' : 'ONLINE';
-          statusBadge.className = 'status-badge ' + (hb.status === 'TRABALHANDO' ? 'TRABALHANDO' : 'ONLINE');
-        }
-      }
+      const cardStep = document.getElementById('cardCurrentStep');
+      const hb = data.heartbeat || {};
+      const isOnline = data.robot?.isWorkerOnline;
+      const isAwaiting = data.robot?.isAwaitingApproval || data.preparedPublication;
 
       if (cardStatus && cardStep) {
         if (isAwaiting) {
           cardStatus.textContent = 'AGUARDANDO APROVAÇÃO';
           cardStatus.className = 'status-tag AGUARDANDO_APROVACAO';
-          cardStep.textContent = 'Publicação preparada. Aguardando revisão e aprovação humana.';
+          cardStep.textContent = 'Publicação preparada. Aguardando revisão humana.';
         } else if (!isOnline) {
           cardStatus.textContent = 'OFFLINE';
           cardStatus.className = 'status-tag ABAIXO_DA_META';
@@ -3118,188 +1783,499 @@
           cardStep.textContent = hb.current_step || 'Aguardando próximo comando ou ciclo...';
         }
       }
+
+      if (data.robotNow) {
+        el('cardLastAction', data.robotNow.lastAction || 'Nenhuma recente');
+        el('cardCurrentStrategy', data.robotNow.currentStrategy || 'ACHADINHO');
+        el('cardNextAction', data.robotNow.nextAction || 'Varredura programada');
+      }
+
+      // 6. Demanda Agora
+      if (data.demandNow) {
+        const dn = data.demandNow;
+        el('demandDecisionText', dn.reason || 'Monitorando intenção de compra...');
+        el('demandDecisionIcon', dn.decision === 'PUBLISH' ? '🎯' : '🔍');
+        el('demandStatusLabel', dn.decision || 'MONITORANDO');
+        const actTag = document.getElementById('demandActionTag');
+        if (actTag) {
+          actTag.textContent = dn.decision === 'PUBLISH' ? 'PUBLICAR' : 'MONITORANDO';
+          actTag.className = 'status-tag ' + (dn.decision === 'PUBLISH' ? 'NO_RITMO' : 'SEM_DADOS');
+        }
+
+        const signalsEl = document.getElementById('demandSignalsList');
+        if (signalsEl && Array.isArray(dn.activeDemands) && dn.activeDemands.length > 0) {
+          signalsEl.innerHTML = dn.activeDemands.map(d => `
+            <span style="font-size:0.72rem; font-weight:700; padding:2px 8px; border-radius:99px; background:rgba(249,115,22,0.12); border:1px solid rgba(249,115,22,0.3); color:#fb923c;">
+              ⚡ ${d.keyword} (${d.demand_score}/100)
+            </span>
+          `).join('');
+        }
+
+        const bestOppBox = document.getElementById('demandBestOppBox');
+        if (dn.bestOpportunity && dn.bestOpportunity.title) {
+          if (bestOppBox) bestOppBox.style.display = 'block';
+          el('demandOppTitle', dn.bestOpportunity.title);
+          el('demandOppPrice', 'R$ ' + Number(dn.bestOpportunity.price || 0).toFixed(2));
+          el('demandOppScore', dn.bestOpportunity.score || 80);
+        } else if (bestOppBox) {
+          bestOppBox.style.display = 'none';
+        }
+
+        if (dn.lastScanAt) {
+          el('demandLastScan', new Date(dn.lastScanAt).toLocaleTimeString('pt-BR'));
+        }
+      }
+
+      // 7. Estratégia Ativa
+      if (data.activeStrategy) {
+        el('activeStrategyTitle', data.activeStrategy.title || 'Achadinho Exclusivo');
+        el('activeStrategyReason', data.activeStrategy.reason || 'Otimizador buscando ofertas de alta conversão.');
+        el('activeCategory', data.activeStrategy.category || 'Moda/Vestuário');
+        el('activePeakHours', data.activeStrategy.peakHours || '12:00 - 18:00');
+        el('activeNetwork', data.activeStrategy.network || 'Facebook Page');
+      }
+
+      // 8. Produção Hoje & Total Histórico
+      if (data.today) {
+        el('cardTodayFound', data.today.productsFound ?? 0);
+        el('cardTodaySelected', data.today.offersSelected ?? 0);
+        el('cardTodayPublications', data.today.publications ?? 0);
+        el('cardTodayErrors', data.today.errors ?? 0);
+        const pubSub = document.getElementById('cardTodayPublicationsSub');
+        if (pubSub) {
+          const n = data.today.publications ?? 0;
+          pubSub.textContent = n > 0 ? `${n} publicações realizadas hoje.` : 'Nenhuma publicação realizada hoje.';
+        }
+      }
+
+      if (data.history) {
+        el('cardTotalProducts', data.history.totalProducts ?? 0);
+        el('cardTotalSelected', data.history.totalSelected ?? 0);
+        el('cardTotalPublications', data.history.totalPublications ?? 0);
+      }
+
+      // 9. Curadoria IA
+      if (data.ai) {
+        el('cardCacheDecisions', data.ai.cacheHits ?? 0);
+        el('cardJevCalls', data.ai.jevCalls ?? 0);
+        el('cardGptCalls', data.ai.gptCalls ?? 0);
+        el('cardTokensEconomy', data.ai.tokens ? data.ai.tokens.toLocaleString('pt-BR') : '0');
+        const econSub = document.getElementById('cardTokensEconomySub');
+        if (econSub && data.ai.savingsPercent != null) {
+          econSub.textContent = `Economia Estimada: ${data.ai.savingsPercent}%`;
+        }
+      }
+
+      // 10. Performance Orgânica
+      renderPerfTab();
+
+      // 11. Diário do Robô
+      if (Array.isArray(data.diary)) {
+        const diaryEl = document.getElementById('robotDiaryContainer');
+        if (diaryEl) {
+          if (data.diary.length === 0) {
+            diaryEl.innerHTML = '<div style="color:var(--text-dim); font-size:0.75rem;">Nenhum evento registrado hoje.</div>';
+          } else {
+            diaryEl.innerHTML = data.diary.slice(0, 10).map(d => `
+              <div style="padding:6px 10px; background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.05); border-radius:6px; font-size:0.75rem; display:flex; justify-content:space-between; gap:8px;">
+                <div>
+                  <span style="font-family:\'JetBrains Mono\'; color:var(--text-dim); font-size:0.68rem;">${d.time}</span>
+                  <span style="color:#cbd5e1; margin-left:6px;">${d.message}</span>
+                </div>
+                <span style="font-size:0.65rem; color:#d8b4fe; flex-shrink:0;">[${d.strategy}]</span>
+              </div>
+            `).join('');
+          }
+        }
+      }
+
+      // 12. Publicações Realizadas
+      const pubListEl = document.getElementById('publicationsList');
+      if (pubListEl) {
+        if (data.publications?.items && data.publications.items.length > 0) {
+          pubListEl.innerHTML = data.publications.items.map(p => `
+            <div style="padding:8px 10px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:6px; font-size:0.75rem; display:flex; justify-content:space-between; align-items:center;">
+              <div>
+                <strong style="color:#fff;">${p.title}</strong>
+                <div style="font-size:0.68rem; color:var(--text-dim);">${p.date} às ${p.time} • ${p.clicks} cliques</div>
+              </div>
+              <a href="${p.publicationUrl || '#'}" target="_blank" rel="noopener noreferrer" style="color:#60a5fa; font-size:0.72rem; text-decoration:none;">Ver Post ↗</a>
+            </div>
+          `).join('');
+        } else {
+          pubListEl.innerHTML = '<div style="color:var(--text-dim); font-size:0.75rem;">Nenhuma publicação realizada ainda.</div>';
+        }
+      }
+
+      // 13. Radar de Ofertas (Grid Moderno)
+      if (Array.isArray(data.topOffers) && data.topOffers.length > 0) {
+        const badgeCount = document.getElementById('navOffersCount');
+        if (badgeCount) badgeCount.textContent = data.topOffers.length;
+
+        const container = document.getElementById('offersContainer');
+        if (container) {
+          container.innerHTML = data.topOffers.map((offer, idx) => `
+            <div class="offer-card">
+              <div class="offer-top-row">
+                <img src="${offer.imageUrl || 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=120'}" class="offer-img" onerror="this.src='https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=120'">
+                <div class="offer-info">
+                  <div class="offer-title" title="${offer.title}">${offer.title}</div>
+                  <div class="offer-tags">
+                    <span class="offer-tag">${offer.marketplace}</span>
+                    <span class="offer-tag">${offer.category}</span>
+                    <span class="offer-tag" style="color:#d8b4fe;">${offer.strategy?.code || 'DESCONTO'}</span>
+                  </div>
+                </div>
+              </div>
+              <div class="offer-bottom-row">
+                <div>
+                  <div class="offer-price">R$ ${Number(offer.currentPrice).toFixed(2)}</div>
+                  <div class="offer-discount">${offer.discountPercent > 0 ? offer.discountPercent + '% OFF' : 'Preço validado'}</div>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span class="score-circle">${offer.finalScore || 85} Score</span>
+                  <a href="${offer.productUrl}" target="_blank" rel="noopener noreferrer" class="topbar-btn topbar-btn-primary" style="padding:4px 9px; font-size:0.72rem; text-decoration:none;">
+                    Ver ↗
+                  </a>
+                </div>
+              </div>
+              <div>
+                <button class="offer-expand-btn" onclick="toggleOfferDrawer(${idx})">
+                  <span>🔍 Detalhes JEV & Motivo</span>
+                </button>
+                <div class="offer-drawer" id="offerDrawer-${idx}">
+                  <p><strong>Motivo:</strong> ${offer.aiReason || 'Excelente taxa de conversão esperada.'}</p>
+                  <p style="margin-top:4px;">Local Score: ${offer.localScore || 85}/100 • JEV: ${offer.jevScore || 85}/100</p>
+                </div>
+              </div>
+            </div>
+          `).join('');
+        }
+      }
+
+      // 14. Publicação Preparada
+      renderPreparedCard(data.preparedPublication);
     }
 
-    function updateRealtimeStatus(status) {
-      const badge = document.getElementById('realtimeStatusBadge');
-      const label = document.getElementById('realtimeStatusLabel');
-      if (!badge || !label) return;
+    function renderPreparedCard(prep) {
+      const box = document.getElementById('preparedPublicationContainer');
+      if (!box) return;
+      if (!prep) {
+        box.style.display = 'none';
+        return;
+      }
 
-      if (status === 'SUBSCRIBED') {
-        badge.className = 'realtime-status-pill online';
-        label.textContent = 'TEMPO REAL';
-      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CONNECTING') {
-        badge.className = 'realtime-status-pill reconnecting';
-        label.textContent = 'RECONECTANDO';
+      box.style.display = 'block';
+      const el = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val; };
+      el('prepTitle', prep.title || 'Oferta Preparada');
+      el('prepPrice', 'R$ ' + Number(prep.price || 0).toFixed(2));
+      el('prepOriginalPrice', prep.originalPrice ? 'R$ ' + Number(prep.originalPrice).toFixed(2) : '');
+      el('prepDiscountTag', prep.discount ? '-' + prep.discount + '% OFF' : '');
+      el('prepFbCopy', prep.copy || 'Texto preparado para postagem.');
+      el('prepMarketplaceTag', (prep.marketplace || 'mercadolivre').toUpperCase());
+      el('prepStrategyTag', prep.strategy || 'DESCONTO');
+
+      const img = document.getElementById('prepImg');
+      if (img && prep.imageUrl) img.src = prep.imageUrl;
+
+      const link = document.getElementById('prepAffiliateLink');
+      if (link && prep.affiliateUrl) link.href = prep.affiliateUrl;
+    }
+
+    function toggleOfferDrawer(idx) {
+      const drawer = document.getElementById('offerDrawer-' + idx);
+      if (drawer) drawer.classList.toggle('open');
+    }
+
+    // Performance Tabs
+    function setPerfTab(tab) {
+      currentPerfTab = tab;
+      document.getElementById('perfTabToday').classList.toggle('active', tab === 'today');
+      document.getElementById('perfTab7Days').classList.toggle('active', tab === '7days');
+      document.getElementById('perfTab30Days').classList.toggle('active', tab === '30days');
+      renderPerfTab();
+    }
+
+    function renderPerfTab() {
+      if (!dashboardState || !dashboardState.performance) return;
+      const metrics = dashboardState.performance[currentPerfTab] || {};
+      const el = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val; };
+      el('perfPublications', metrics.publications ?? 0);
+      el('perfImpressions', metrics.impressions ?? 0);
+      el('perfClicks', metrics.clicks ?? 0);
+      el('perfCtr', metrics.ctr ?? 'N/D');
+      el('perfConversions', metrics.conversions ?? 0);
+      el('perfRetention', metrics.retention ?? 'N/D');
+      el('perfShares', metrics.shares ?? 0);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // CONTROLES DE MODO E AÇÕES
+    // ─────────────────────────────────────────────────────────────
+    async function setAutopilotMode(mode) {
+      document.getElementById('modeOff').className = 'mode-switch-btn' + (mode === 'OFF' ? ' active' : '');
+      document.getElementById('modeAssist').className = 'mode-switch-btn' + (mode === 'ASSISTIDO' ? ' active' : '');
+      document.getElementById('modeAuto').className = 'mode-switch-btn' + (mode === 'AUTONOMO' ? ' active' : '');
+
+      try {
+        await fetch('/api/command-center', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'SET_AUTOPILOT_MODE', mode })
+        });
+        setTimeout(loadDashboard, 600);
+      } catch (e) {
+        console.warn('Erro ao atualizar modo:', e.message);
+        loadDashboard();
+      }
+    }
+
+    async function triggerAction(action) {
+      const btn = document.getElementById(action === 'EXECUTAR_AGORA' ? 'btnExecute' : 'btnPause');
+      const origText = btn ? btn.innerHTML : '';
+      if (btn) {
+        btn.innerHTML = action === 'EXECUTAR_AGORA' ? '⚡ Enviando...' : 'Pausando...';
+        btn.disabled = true;
+      }
+
+      try {
+        const res = await fetch('/api/controls', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action })
+        });
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.error || 'Falha ao processar comando.');
+
+        if (btn) btn.innerHTML = '✓ Enviado!';
         setTimeout(() => {
-          if (realtimeChannel && realtimeChannel.state !== 'joined') {
-            connectRealtimeChannel();
-          }
-        }, 4000);
-      } else {
-        badge.className = 'realtime-status-pill offline';
-        label.textContent = 'OFFLINE';
+          if (btn) { btn.innerHTML = origText; btn.disabled = false; }
+          loadDashboard();
+        }, 1200);
+      } catch (e) {
+        alert('Erro ao enviar comando: ' + e.message);
+        if (btn) { btn.innerHTML = origText; btn.disabled = false; }
+      }
+    }
+
+    async function resolveIntervention(interventionId) {
+      if (!confirm('Você concluiu o desafio/verificação na página do marketplace?')) return;
+      try {
+        const res = await fetch('/api/controls', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'RESOLVE_INTERVENTION', interventionId })
+        });
+        if (res.ok) {
+          loadDashboard();
+        } else {
+          const err = await res.json();
+          alert('Erro ao resolver: ' + (err.error || 'Erro desconhecido'));
+        }
+      } catch (e) {
+        alert('Erro de conexão: ' + e.message);
+      }
+    }
+
+    async function approvePreparedPublication() {
+      const btn = document.getElementById('btnApprovePub');
+      if (btn) { btn.disabled = true; btn.innerHTML = 'Publicando...'; }
+      try {
+        const pubId = dashboardState?.preparedPublication?.id;
+        const res = await fetch('/api/controls', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'APPROVE_PUBLICATION', publicationId: pubId })
+        });
+        if (res.ok) {
+          alert('Publicação aprovada com sucesso!');
+          loadDashboard();
+        } else {
+          const err = await res.json();
+          alert('Falha na aprovação: ' + (err.error || 'Erro desconhecido'));
+        }
+      } catch (e) {
+        alert('Erro: ' + e.message);
+      } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = '✓ Aprovar e Publicar Agora'; }
+      }
+    }
+
+    async function rejectPreparedPublication() {
+      if (!confirm('Rejeitar esta oferta?')) return;
+      try {
+        const pubId = dashboardState?.preparedPublication?.id;
+        await fetch('/api/controls', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'REJECT_PUBLICATION', publicationId: pubId })
+        });
+        loadDashboard();
+      } catch (e) {
+        alert('Erro ao rejeitar: ' + e.message);
+      }
+    }
+
+    async function chooseAnotherOffer() {
+      try {
+        await fetch('/api/controls', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'CHOOSE_ANOTHER_OFFER' })
+        });
+        loadDashboard();
+      } catch (e) {
+        alert('Erro: ' + e.message);
+      }
+    }
+
+    function openDecisionModal() {
+      if (!dashboardState || !dashboardState.activeStrategy) return;
+      document.getElementById('modalTitle').textContent = 'Justificativa do Otimizador JEV';
+      document.getElementById('modalBody').innerHTML = `
+        <p><strong>Estratégia:</strong> ${dashboardState.activeStrategy.title || 'Achadinho Exclusivo'}</p>
+        <p style="margin-top:6px;"><strong>Motivo:</strong> ${dashboardState.activeStrategy.reason || 'Alta probabilidade orgânica.'}</p>
+        <p style="margin-top:6px;"><strong>Categoria:</strong> ${dashboardState.activeStrategy.category || 'Moda'}</p>
+      `;
+      document.getElementById('genericModal').classList.add('open');
+    }
+
+    function openFullDiaryModal() {
+      if (!dashboardState || !dashboardState.diary) return;
+      document.getElementById('modalTitle').textContent = 'Diário do Robô — Histórico';
+      document.getElementById('modalBody').innerHTML = `
+        <div style="display:flex; flex-direction:column; gap:6px; max-height:350px; overflow-y:auto;">
+          ${dashboardState.diary.map(d => `
+            <div style="padding:6px 10px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:6px; font-size:0.75rem;">
+              <span style="font-family:'JetBrains Mono'; color:var(--text-dim);">${d.time}</span> — 
+              <strong>${d.message}</strong>
+              <span style="color:#d8b4fe; margin-left:6px;">[${d.strategy}]</span>
+            </div>
+          `).join('')}
+        </div>
+      `;
+      document.getElementById('genericModal').classList.add('open');
+    }
+
+    function closeModal() {
+      document.getElementById('genericModal').classList.remove('open');
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // LOG AO VIVO EM TEMPO REAL (SUPABASE REALTIME)
+    // ─────────────────────────────────────────────────────────────
+    const SUPABASE_PROJECT_URL = 'https://fobehbttydmqupfpioux.supabase.co';
+    const SUPABASE_PUBLIC_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZvYmVoYnR0eWRtcXVwZnBpb3V4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAxNzk2NTYsImV4cCI6MjEwNTc1NTY1Nn0.QSRQxVol0FYDtbbSxJ8_-jCMUcRD9ygiHZZI4wy7EGQ';
+
+    let liveLogs = [];
+    let currentLogFilter = 'TODOS';
+    let isLiveLogsPaused = false;
+    let supabaseClient = null;
+
+    function initRealtimeLogs() {
+      if (!window.supabase) return;
+      try {
+        supabaseClient = window.supabase.createClient(SUPABASE_PROJECT_URL, SUPABASE_PUBLIC_KEY, {
+          auth: { persistSession: false },
+        });
+
+        fetchInitialEvents();
+
+        supabaseClient
+          .channel('public:system_events')
+          .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'system_events' }, payload => {
+            if (payload && payload.new) handleIncomingLiveEvent(payload.new);
+          })
+          .subscribe();
+      } catch (err) {
+        console.warn('Realtime log error:', err.message);
+      }
+    }
+
+    async function fetchInitialEvents() {
+      try {
+        const { data } = await supabaseClient
+          .from('system_events')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(40);
+
+        if (Array.isArray(data)) {
+          liveLogs = data;
+          renderLiveLogs();
+        }
+      } catch (err) {
+        console.warn('Erro ao carregar logs:', err.message);
       }
     }
 
     function handleIncomingLiveEvent(event) {
+      if (isLiveLogsPaused) return;
       liveLogs.unshift(event);
-      if (liveLogs.length > 100) {
-        liveLogs.pop();
-      }
-
-      if (isLiveLogsPaused) {
-        updateLogCount();
-        return;
-      }
-
+      if (liveLogs.length > 80) liveLogs.pop();
       renderLiveLogs();
-    }
-
-    function filterMatches(event, filter) {
-      if (filter === 'TODOS') return true;
-
-      const cat = (event.category || '').toUpperCase();
-      const lvl = (event.level || '').toUpperCase();
-
-      if (filter === 'ROBO') {
-        return cat === 'ROBOT' || cat === 'SYSTEM';
-      }
-      if (filter === 'MARKETPLACE') {
-        return ['MARKETPLACE', 'COLLECTOR', 'MERCADOLIVRE', 'PRICE', 'AFFILIATE'].includes(cat);
-      }
-      if (filter === 'IA') {
-        return ['AI', 'JEV', 'OPENROUTER'].includes(cat);
-      }
-      if (filter === 'FACEBOOK') {
-        return cat === 'FACEBOOK';
-      }
-      if (filter === 'ERROS') {
-        return lvl === 'ERROR' || cat === 'ERROR';
-      }
-      return true;
-    }
-
-    function setLogFilter(filter) {
-      currentLogFilter = filter;
-      const filters = ['TODOS', 'ROBO', 'MARKETPLACE', 'IA', 'FACEBOOK', 'ERROS'];
-      filters.forEach((f) => {
-        const btn = document.getElementById('filterBtn_' + f);
-        if (btn) {
-          btn.className = 'log-filter-pill' + (f === filter ? ' active' : '');
-        }
-      });
-      renderLiveLogs();
-    }
-
-    function togglePauseLiveLogs() {
-      isLiveLogsPaused = !isLiveLogsPaused;
-      const btn = document.getElementById('btnPauseLiveLogs');
-      if (btn) {
-        if (isLiveLogsPaused) {
-          btn.innerHTML = '▶ Retomar Visualização';
-          btn.classList.add('active-pause');
-        } else {
-          btn.innerHTML = '⏸ Pausar Visualização';
-          btn.classList.remove('active-pause');
-          renderLiveLogs();
-        }
-      }
-    }
-
-    function clearLiveLogsUI() {
-      liveLogs = [];
-      const feed = document.getElementById('liveLogsFeed');
-      if (feed) {
-        feed.innerHTML = '<div class="log-empty-msg">Tela limpa. Aguardando novos eventos...</div>';
-      }
-      updateLogCount();
-    }
-
-    function updateLogCount() {
-      const countEl = document.getElementById('liveLogCount');
-      if (countEl) {
-        const filteredCount = liveLogs.filter((e) => filterMatches(e, currentLogFilter)).length;
-        countEl.textContent = `${filteredCount} evento${filteredCount === 1 ? '' : 's'}`;
-      }
     }
 
     function renderLiveLogs() {
-      const feed = document.getElementById('liveLogsFeed');
-      if (!feed) return;
+      const container = document.getElementById('liveLogsContainer');
+      if (!container) return;
 
-      const filtered = liveLogs.filter((e) => filterMatches(e, currentLogFilter));
-      updateLogCount();
+      const filtered = liveLogs.filter(e => {
+        if (currentLogFilter === 'TODOS') return true;
+        if (currentLogFilter === 'ERROR') return e.level === 'ERROR';
+        return (e.category || '').toUpperCase() === currentLogFilter;
+      });
+
+      const countEl = document.getElementById('logEventCount');
+      if (countEl) countEl.textContent = `${filtered.length} eventos`;
 
       if (filtered.length === 0) {
-        feed.innerHTML = '<div class="log-empty-msg">Nenhum evento registrado para o filtro selecionado.</div>';
+        container.innerHTML = '<div style="color:var(--text-dim); padding:10px;">Nenhum evento neste filtro.</div>';
         return;
       }
 
-      feed.innerHTML = filtered.map((event) => {
-        const time = new Date(event.created_at).toLocaleTimeString('pt-BR', { hour12: false });
-        const lvl = (event.level || 'INFO').toUpperCase();
-        const icon = LOG_LEVEL_ICONS[lvl] || '●';
-        const cat = event.category || 'SYSTEM';
-        const msg = escapeHtml(event.message || '');
-        const dur = event.duration_ms ? `<span class="log-dur">${event.duration_ms}ms</span>` : '';
-
+      container.innerHTML = filtered.map(e => {
+        const time = new Date(e.created_at).toLocaleTimeString('pt-BR');
+        const cat = (e.category || 'ROBOT').toUpperCase();
         return `
-          <div class="log-row log-level-${lvl}" onclick="openEventDetailsModal('${event.id}')">
+          <div class="log-item">
             <span class="log-time">${time}</span>
-            <span class="log-cat">${cat}</span>
-            <span class="log-badge-icon">${icon}</span>
-            <span class="log-msg" title="${msg}">${msg}</span>
-            ${dur}
+            <span class="log-category ${cat}">${cat}</span>
+            <span class="log-msg">${escapeHtml(e.message || '')}</span>
           </div>
         `;
       }).join('');
     }
 
-    function openEventDetailsModal(eventId) {
-      const event = liveLogs.find((e) => e.id === eventId);
-      if (!event) return;
-
-      document.getElementById('modalTitle').textContent = `Evento: [${event.category}] ${event.action || event.level}`;
-      
-      const timeStr = new Date(event.created_at).toLocaleString('pt-BR');
-      const safeMeta = JSON.stringify(event.metadata || {}, null, 2);
-
-      document.getElementById('modalBody').innerHTML = `
-        <div style="display:flex; flex-direction:column; gap:8px;">
-          <div><strong>Horário:</strong> ${timeStr}</div>
-          <div><strong>Nível / Status:</strong> <span class="tag-highlight">${event.level}</span> / ${event.status || 'OK'}</div>
-          <div><strong>Categoria:</strong> ${event.category}</div>
-          <div><strong>Origem (Source):</strong> ${event.source || 'ACHAki-Autopilot'}</div>
-          ${event.action ? `<div><strong>Ação:</strong> ${event.action}</div>` : ''}
-          ${event.run_id ? `<div><strong>Run ID:</strong> <code style="color:#93c5fd;">${event.run_id}</code></div>` : ''}
-          ${event.duration_ms ? `<div><strong>Duração:</strong> ${event.duration_ms} ms</div>` : ''}
-          <div><strong>Mensagem:</strong></div>
-          <div style="background:#090d16; padding:10px; border-radius:6px; color:#f8fafc; border:1px solid rgba(255,255,255,0.06); font-family:monospace;">
-            ${escapeHtml(event.message)}
-          </div>
-          <div><strong>Metadados (Sanitizados):</strong></div>
-          <pre class="code-block">${escapeHtml(safeMeta)}</pre>
-        </div>
-      `;
-
-      document.getElementById('genericModal').classList.add('open');
+    function filterLogs(filter) {
+      currentLogFilter = filter;
+      document.querySelectorAll('.live-logs-filters .filter-chip').forEach(btn => {
+        btn.classList.toggle('active', btn.textContent.trim().toUpperCase() === filter);
+      });
+      renderLiveLogs();
     }
 
-    function escapeHtml(text) {
-      if (!text) return '';
-      return String(text)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
+    function togglePauseLogs() {
+      isLiveLogsPaused = !isLiveLogsPaused;
+      const btn = document.getElementById('btnPauseLogs');
+      if (btn) btn.textContent = isLiveLogsPaused ? '▶ Retomar' : '⏸ Pausar';
     }
 
-    // Inicialização do Dashboard e dos Logs em Tempo Real
-    loadDashboard();
-    initRealtimeLogs();
-    setInterval(loadDashboard, 8000);
+    function clearLogs() {
+      liveLogs = [];
+      renderLiveLogs();
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    // Inicialização
+    window.addEventListener('DOMContentLoaded', () => {
+      loadDashboard();
+      initRealtimeLogs();
+      setInterval(loadDashboard, 15000);
+    });
   </script>
 </body>
 </html>
