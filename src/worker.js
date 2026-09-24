@@ -834,7 +834,7 @@ class RobotWorker {
       }
 
       let candidateIdx = 0;
-      let candidatesPool = [...priorityCandidates, ...topOffers, ...catalogCandidates];
+      let candidatesPool = [...priorityCandidates, ...catalogCandidates, ...topOffers];
       this.priceValidationEngine.browserManager = browserManager;
       const affiliateService = new AffiliateLinkService({ browserManager });
       const trackingService = new TrackingService();
