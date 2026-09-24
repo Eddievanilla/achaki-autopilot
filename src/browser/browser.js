@@ -69,6 +69,10 @@ class BrowserManager {
       ],
     });
 
+    await this.context.addInitScript(() => {
+      Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+    });
+
     logger.info('[ACHAki] Browser iniciado');
   }
 

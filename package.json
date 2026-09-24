@@ -24,7 +24,9 @@
     "test:facebook": "node scripts/test-facebook.js",
     "test:live-logs": "node scripts/test-live-logs.js",
     "worker": "node src/worker.js",
-    "test:command": "node scripts/test-command.js"
+    "test:command": "node scripts/test-command.js",
+    "test:demand-intelligence": "node scripts/test-demand-intelligence.js",
+    "test:price-validation": "node scripts/test-price-validation.js"
   },
   "keywords": [
     "achaki",

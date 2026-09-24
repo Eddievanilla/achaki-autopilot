@@ -274,6 +274,7 @@ export class ProductSearchService {
         const items = await this.providerManager.searchMarketplace('mercadolivre', {
           category: cat.name,
           query: cat.query,
+          searchQuery: cat.searchQuery,
           limit: itemsPerMarketplace,
         });
         rawML.push(...items);
@@ -316,6 +317,7 @@ export class ProductSearchService {
           const extraItems = await this.providerManager.searchMarketplace('mercadolivre', {
             category: extraCat.name,
             query: extraCat.query,
+            searchQuery: extraCat.searchQuery,
             limit: itemsPerMarketplace,
           });
           rawML.push(...extraItems);

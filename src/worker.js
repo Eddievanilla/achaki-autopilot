@@ -25,12 +25,26 @@ import ProductSearchService from './services/product-search.js';
 import AffiliateLinkService from './services/affiliate-link-service.js';
 import TrackingService from './services/tracking-service.js';
 import CreativeEngine from './services/creative-engine.js';
+import PriceValidationEngine from './services/price-validation-engine.js';
 import logger from './utils/logger.js';
+import DemandIntelligenceEngine from './services/demand/demand-intelligence-engine.js';
+import OpportunityEngine from './services/demand/opportunity-engine.js';
 
 const WORKER_ID = process.env.WORKER_ID || `worker-${os.hostname().toLowerCase().replace(/[^a-z0-9]/g, '')}`;
 const HEARTBEAT_INTERVAL_MS = 10000; // 10 segundos
 const POLL_INTERVAL_MS = 3000; // 3 segundos fallback
-const DRY_RUN_PUBLICATION = process.env.DRY_RUN_PUBLICATION !== 'false'; // Padrão: true (não publica de verdade)
+// Configuração Explícita para Publicação Externa (LIVE_PUBLICATION)
+// SEGURANÇA: Por padrão, LIVE_PUBLICATION é false e DRY_RUN é true.
+// Para ativar a postagem real externa no Facebook, configure no .env: LIVE_PUBLICATION=true e DRY_RUN_PUBLICATION=false.
+const LIVE_PUBLICATION = process.env.LIVE_PUBLICATION === 'true' && process.env.DRY_RUN_PUBLICATION === 'false';
+const DRY_RUN_PUBLICATION = !LIVE_PUBLICATION;
+// Ciclo de monitoramento de demanda: 20 minutos (NÃO é frequência obrigatória de publicação)
+const DEMAND_SCAN_INTERVAL_MS = (parseInt(process.env.DEMAND_SCAN_INTERVAL_MINUTES, 10) || 20) * 60 * 1000;
+
+// Limites de Segurança Iniciais para Fase Live (Invioláveis)
+const MAX_PUBLICATIONS_PER_DAY = 6;
+const MAX_PUBLICATIONS_PER_CYCLE = 1;
+const MIN_COOLDOWN_MINUTES = 45;
 
 class RobotWorker {
   constructor() {
@@ -41,8 +55,38 @@ class RobotWorker {
     this.currentRunId = null;
     this.heartbeatTimer = null;
     this.pollTimer = null;
+    this.demandScanTimer = null;
     this.realtimeChannel = null;
     this.isShuttingDown = false;
+    this.priceValidationEngine = new PriceValidationEngine();
+    this.demandEngine = new DemandIntelligenceEngine();
+    this.opportunityEngine = new OpportunityEngine({ priceValidationEngine: this.priceValidationEngine });
+    this.stateChannel = null;
+  }
+
+  /**
+   * Aciona parada automática (Auto-Stop) em caso de falha de segurança ou autenticação.
+   */
+  async _handleAutoStop(reason, details = {}) {
+    logger.error(`[Worker] 🛑 AUTO-STOP ACIONADO: ${reason}`);
+    await eventLogger.error('ERROR', `🛑 AUTO-STOP ACIONADO: ${reason}`, {
+      action: 'AUTO_STOP_TRIGGERED',
+      metadata: { reason, ...details },
+    });
+
+    try {
+      await supabase
+        .from('system_state')
+        .update({
+          status: 'PAUSADO_ERRO_CRITICO',
+          current_step: `AUTO-STOP: ${reason}. Publicações suspensas automaticamente por segurança.`,
+          autopilot_mode: 'ASSISTIDO',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', 'autopilot');
+    } catch (e) {
+      logger.error(`[Worker] Falha ao persistir AUTO-STOP no banco: ${e.message}`);
+    }
   }
 
   /**
@@ -112,6 +156,7 @@ class RobotWorker {
     console.log(`  Worker ID : ${this.workerId}`);
     console.log(`  Hostname  : ${this.hostname} (PID: ${process.pid})`);
     console.log(`  Modo      : ${DRY_RUN_PUBLICATION ? 'DRY_RUN_PUBLICATION (Seguro)' : 'REAL_PUBLICATION'}`);
+    console.log(`  Scan Demanda: ${DEMAND_SCAN_INTERVAL_MS / 60000} min (monitoramento, NÃO frequência de publicação)`);
     console.log('===============================================================\n');
 
     // 1. Heartbeat inicial
@@ -133,7 +178,12 @@ class RobotWorker {
     // 5. Verificação imediata se há comandos pendentes
     await this._pollPendingCommands();
 
+    // 6. Ciclo de monitoramento de demanda (modo AUTÔNOMO apenas)
+    //    20 minutos = ciclo de observação, NÃO obrigação de publicar
+    this.demandScanTimer = setInterval(() => this._runDemandScanCycle(), DEMAND_SCAN_INTERVAL_MS);
+
     console.log('✓ Worker escutando comandos do Centro de Comando...\n');
+    console.log(`✓ Ciclo de inteligência de demanda agendado (${DEMAND_SCAN_INTERVAL_MS / 60000} min).\n`);
   }
 
   /**
@@ -150,6 +200,25 @@ class RobotWorker {
             if (payload?.new && payload.new.status === 'PENDING') {
               logger.info(`[Worker] Novo comando recebido via Realtime: ${payload.new.command} (ID: ${payload.new.id})`);
               await this._tryClaimAndExecute(payload.new);
+            }
+          }
+        )
+        .subscribe();
+
+      // Assinatura em tempo real para mudanças de modo no Centro de Comando
+      this.stateChannel = supabase
+        .channel(`worker-state:${this.workerId}`)
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'system_state' },
+          async (payload) => {
+            if (payload?.new?.autopilot_mode) {
+              const newMode = payload.new.autopilot_mode;
+              logger.info(`[Worker] 🕹️ Modo operacional recebido do Centro de Comando: ${newMode}`);
+              await eventLogger.info('ROBOT', `Modo operacional atualizado para: ${newMode}`, {
+                action: 'AUTOPILOT_MODE_CHANGED',
+                metadata: { mode: newMode },
+              });
             }
           }
         )
@@ -292,6 +361,14 @@ class RobotWorker {
 
       if (pendingAssisted && pendingAssisted.length > 0) {
         await this.setStep('AGUARDANDO APROVAÇÃO');
+        await supabase
+          .from('system_state')
+          .update({
+            status: 'AGUARDANDO APROVAÇÃO',
+            current_step: 'Publicação preparada. Aguardando revisão e aprovação humana.',
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', 'autopilot');
       } else {
         await this.setStep('AGUARDANDO');
       }
@@ -330,6 +407,14 @@ class RobotWorker {
         if (pendingAssisted && pendingAssisted.length > 0) {
           this.currentStep = 'AGUARDANDO APROVAÇÃO';
           await this.emitHeartbeat('AGUARDANDO APROVAÇÃO', 'IDLE');
+          await supabase
+            .from('system_state')
+            .update({
+              status: 'AGUARDANDO APROVAÇÃO',
+              current_step: 'Publicação preparada. Aguardando revisão e aprovação humana.',
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', 'autopilot');
         } else {
           await this.emitHeartbeat(this.currentStep || 'AGUARDANDO', 'IDLE');
         }
@@ -380,94 +465,97 @@ class RobotWorker {
       return;
     }
 
-    // 2. Revalidação final
+    // 2. Revalidação final em tempo real na PDP (Validação 2)
     await this.setStep('VALIDANDO PREÇO');
-    await eventLogger.info('PRICE', 'Revalidação final iniciada', {
+    await eventLogger.info('PRICE', 'Revalidação final iniciada na página real do marketplace...', {
       action: 'PRICE_FINAL_REVALIDATION',
       publicationId: pub.id,
     });
 
-    // Consulta preço mais recente registrado para o produto
+    const browserManager = new BrowserManager();
+    await browserManager.launch();
+    this.priceValidationEngine.browserManager = browserManager;
+
     let latestPrice = Number(pub.price_published);
     let originalPrice = pub.original_price_published ? Number(pub.original_price_published) : null;
     let discountPercent = pub.discount_published ? Number(pub.discount_published) : 0;
-    let isAvailable = true;
 
-    if (pub.product_id) {
-      const { data: priceRow } = await supabase
-        .from('product_prices')
-        .select('current_price, original_price, discount_percent, in_stock')
-        .eq('product_id', pub.product_id)
-        .order('collected_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+    try {
+      const page = await browserManager.openPage();
+      const targetUrl = pub.metadata?.canonicalUrl || pub.metadata?.productUrl || pub.affiliate_url;
 
-      if (priceRow) {
-        if (priceRow.in_stock === false) {
-          isAvailable = false;
-        }
-        if (priceRow.current_price && Number(priceRow.current_price) > 0) {
-          latestPrice = Number(priceRow.current_price);
-          originalPrice = priceRow.original_price ? Number(priceRow.original_price) : originalPrice;
-          discountPercent = priceRow.discount_percent || discountPercent;
-        }
-      }
-    }
-
-    // Se produto ficou indisponível:
-    if (!isAvailable) {
-      await supabase
-        .from('publications')
-        .update({ status: 'CANCELLED_UNAVAILABLE', updated_at: new Date().toISOString() })
-        .eq('id', pub.id);
-
-      await eventLogger.error('PRICE', 'Produto indisponível no marketplace. Publicação cancelada.', {
-        action: 'PRODUCT_UNAVAILABLE',
-        publicationId: pub.id,
+      const valRes = await this.priceValidationEngine.validateProductPage({
+        url: targetUrl,
+        expectedPrice: latestPrice,
+        page,
       });
-      await this.setStep('AGUARDANDO');
-      return;
-    }
 
-    // Se preço mudou em relação ao aprovado:
-    const registeredPrice = Number(pub.price_published);
-    if (registeredPrice && Math.abs(latestPrice - registeredPrice) > 0.05) {
-      await supabase
-        .from('publications')
-        .update({
-          price_published: latestPrice,
-          original_price_published: originalPrice,
-          discount_published: discountPercent,
-          metadata: {
-            ...pub.metadata,
-            price_changed: true,
-            previous_price: registeredPrice,
-            new_price: latestPrice,
-            revalidated_at: new Date().toISOString(),
-          },
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', pub.id);
+      // Se produto ficou indisponível ou página falhou:
+      if (!valRes.isValid) {
+        await supabase
+          .from('publications')
+          .update({ status: 'CANCELLED_UNAVAILABLE', updated_at: new Date().toISOString() })
+          .eq('id', pub.id);
 
-      await eventLogger.warning(
-        'PRICE',
-        `Preço alterado no marketplace de R$ ${registeredPrice.toFixed(2)} para R$ ${latestPrice.toFixed(2)}. Card atualizado — publicação retida para nova aprovação.`,
-        {
-          action: 'PRICE_CHANGED_REAPPROVAL_REQUIRED',
+        await eventLogger.error('PRICE', `Produto indisponível ou preço não confirmado: ${valRes.reason}`, {
+          action: valRes.validationCode,
           publicationId: pub.id,
-          metadata: { previousPrice: registeredPrice, newPrice: latestPrice },
-        }
-      );
+        });
+        await this.setStep('AGUARDANDO');
+        return;
+      }
 
-      await this.setStep('AGUARDANDO APROVAÇÃO');
-      return;
+      // Se preço mudou em relação ao aprovado:
+      if (valRes.validationCode === 'PRICE_CHANGED') {
+        const newPrice = valRes.data.currentPrice;
+        originalPrice = valRes.data.originalPrice;
+        discountPercent = valRes.data.discountPercent || 0;
+
+        await supabase
+          .from('publications')
+          .update({
+            price_published: newPrice,
+            original_price_published: originalPrice,
+            discount_published: discountPercent,
+            metadata: {
+              ...pub.metadata,
+              price_changed: true,
+              previous_price: latestPrice,
+              new_price: newPrice,
+              revalidated_at: new Date().toISOString(),
+            },
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', pub.id);
+
+        await eventLogger.warning(
+          'PRICE',
+          `Preço alterado no marketplace de R$ ${latestPrice.toFixed(2)} para R$ ${newPrice.toFixed(2)}. Card atualizado — publicação retida para nova aprovação.`,
+          {
+            action: 'PRICE_CHANGED_REAPPROVAL_REQUIRED',
+            publicationId: pub.id,
+            metadata: { previousPrice: latestPrice, newPrice },
+          }
+        );
+
+        await this.setStep('AGUARDANDO APROVAÇÃO');
+        return;
+      }
+
+      latestPrice = valRes.data.currentPrice;
+      originalPrice = valRes.data.originalPrice || originalPrice;
+      discountPercent = valRes.data.discountPercent || discountPercent;
+
+      // Preço confirmado
+      await eventLogger.success('PRICE', 'Preço confirmado', {
+        action: 'PRICE_CONFIRMED',
+        metadata: { currentPrice: latestPrice, discountPercent },
+      });
+    } finally {
+      try {
+        await browserManager.close();
+      } catch {}
     }
-
-    // Preço confirmado
-    await eventLogger.success('PRICE', 'Preço confirmado', {
-      action: 'PRICE_CONFIRMED',
-      metadata: { currentPrice: latestPrice, discountPercent },
-    });
 
     // 3. Link oficial confirmado (deve ser meli.la direto ou link de afiliado oficial)
     const affiliateUrl = pub.affiliate_url || pub.tracking_url;
@@ -525,7 +613,7 @@ class RobotWorker {
         .maybeSingle();
 
       const sn = stateData?.social_networks || {};
-      const pageAccessToken = sn.facebook_page_token;
+      const pageAccessToken = sn.facebook_page_token || sn.facebook_user_token || sn.page_access_token || process.env.FB_PAGE_ACCESS_TOKEN || process.env.FB_ACCESS_TOKEN;
       const pageId = sn.facebook_page_id || '61587794361596';
 
       if (!pageAccessToken) {
@@ -651,80 +739,250 @@ class RobotWorker {
         action: 'AI_ANALYSIS_START',
       });
 
-      const bestOffer = topOffers[0];
-      if (!bestOffer) {
+      // Consulta modo de operação ativo (ASSISTIDO ou AUTONOMO)
+      const { data: stateData } = await supabase
+        .from('system_state')
+        .select('autopilot_mode')
+        .eq('id', 'autopilot')
+        .maybeSingle();
+      const autopilotMode = stateData?.autopilot_mode || 'ASSISTIDO';
+
+      logger.info(`[Worker] Modo de operação ativo: ${autopilotMode}`);
+
+      // ─────────────────────────────────────────────────────────────
+      // PASSO 2: ANALISANDO (JEV & Cache)
+      // ─────────────────────────────────────────────────────────────
+      await this.setStep('ANALISANDO');
+      await eventLogger.info('AI', 'Análise orgânica e curadoria com JEV / Cache...', {
+        action: 'AI_ANALYSIS_START',
+      });
+
+      if (!topOffers || topOffers.length === 0) {
         throw new Error('Nenhuma oferta qualificada foi obtida no ciclo de coleta.');
+      }
+
+      // ─────────────────────────────────────────────────────────────
+      // PASSO 3: VALIDANDO PREÇO (Validação 1 — Pré-conteúdo com substituição automática)
+      // ─────────────────────────────────────────────────────────────
+      await this.setStep('VALIDANDO PREÇO');
+
+      let chosenOffer = null;
+      // ─────────────────────────────────────────────────────────────
+      // PASSO 3 & 4: VALIDAÇÃO MULTI-SOURCE & CONFIRMAÇÃO DO LINK DE AFILIADO
+      // ─────────────────────────────────────────────────────────────
+      await this.setStep('VALIDANDO PREÇOS');
+      let candidateIdx = 0;
+      let candidatesPool = [...topOffers];
+      this.priceValidationEngine.browserManager = browserManager;
+      const affiliateService = new AffiliateLinkService({ browserManager });
+      const trackingService = new TrackingService();
+      let directAffiliateUrl = null;
+      let trackingId = null;
+      let trackingUrl = null;
+
+      while (candidateIdx < candidatesPool.length) {
+        const candidate = candidatesPool[candidateIdx];
+        await eventLogger.info(
+          'PRICE',
+          `[Validação 1] Validando preço multi-source da oferta #${candidate.productId || candidate.dbId || 'MLB'} no marketplace...`,
+          {
+            action: 'PRICE_VALIDATION_START',
+            metadata: { title: candidate.title, expectedPrice: candidate.currentPrice },
+          }
+        );
+
+        const pageForValidation = await browserManager.openPage();
+        const valRes = await this.priceValidationEngine.validateCandidatePrice(candidate, {
+          page: pageForValidation,
+          supabase,
+          expectedPrice: candidate.currentPrice,
+        });
+
+        if (valRes.data?.pdpNote) {
+          await eventLogger.info('PRICE', valRes.data.pdpNote, {
+            action: 'PRICE_MULTI_SOURCE_FALLBACK',
+            metadata: { confidence: valRes.confidence, source: valRes.data.source },
+          });
+        }
+
+        if (!valRes.isValid || (valRes.confidence !== 'HIGH' && valRes.confidence !== 'MEDIUM')) {
+          await eventLogger.warning(
+            'PRICE',
+            `Oferta descartada: ${valRes.reason || 'preço divergente ou confiança insuficiente.'}`,
+            {
+              action: 'OFFER_DISCARDED',
+              metadata: { code: valRes.validationCode, title: candidate.title, reason: valRes.reason, confidence: valRes.confidence },
+            }
+          );
+          candidateIdx++;
+          if (candidateIdx < candidatesPool.length) {
+            await eventLogger.info(
+              'SELECTION',
+              'Produto substituído por candidato de maior potencial.',
+              {
+                action: 'CANDIDATE_SUBSTITUTED',
+                metadata: { nextCandidate: candidatesPool[candidateIdx].title },
+              }
+            );
+          }
+          continue;
+        }
+
+        let evaluatedOffer = { ...candidate };
+        if (valRes.validationCode === 'PRICE_CHANGED') {
+          if (autopilotMode === 'AUTONOMO') {
+            const evalRes = this.priceValidationEngine.evaluateOfferRelevanceAfterPriceChange({
+              originalOffer: candidate,
+              validatedData: valRes.data,
+            });
+
+            if (!evalRes.isAttractive) {
+              await eventLogger.warning(
+                'PRICE',
+                'Oferta descartada: preço divergente.',
+                {
+                  action: 'OFFER_DISCARDED_PRICE_DIVERGENCE',
+                  metadata: { reason: evalRes.reason, title: candidate.title },
+                }
+              );
+              candidateIdx++;
+              if (candidateIdx < candidatesPool.length) {
+                await eventLogger.info(
+                  'SELECTION',
+                  'Produto substituído por candidato de maior potencial.',
+                  {
+                    action: 'CANDIDATE_SUBSTITUTED',
+                    metadata: { nextCandidate: candidatesPool[candidateIdx].title },
+                  }
+                );
+              }
+              continue;
+            }
+
+            evaluatedOffer = evalRes.updatedOffer;
+          } else {
+            evaluatedOffer = {
+              ...candidate,
+              currentPrice: valRes.data.currentPrice,
+              originalPrice: valRes.data.originalPrice,
+              discountPercent: valRes.data.discountPercent,
+            };
+          }
+        } else {
+          evaluatedOffer = {
+            ...candidate,
+            currentPrice: valRes.data.currentPrice,
+            originalPrice: valRes.data.originalPrice,
+            discountPercent: valRes.data.discountPercent,
+            imageUrl: valRes.data.imageUrl || candidate.imageUrl,
+          };
+        }
+
+        const discStr = evaluatedOffer.discountPercent > 0 ? ` (-${evaluatedOffer.discountPercent}% OFF)` : '';
+        await eventLogger.success(
+          'PRICE',
+          `Preço validado: R$ ${evaluatedOffer.currentPrice.toFixed(2)}${discStr}`,
+          {
+            action: 'PRICE_CONFIRMED',
+            metadata: { ...valRes.data },
+          }
+        );
+
+        // ─────────────────────────────────────────────────────────────
+        // RESOLUÇÃO DE LINK DE AFILIADO (meli.la) PARA ESTE CANDIDATO
+        // ─────────────────────────────────────────────────────────────
+        await this.setStep('GERANDO LINK');
+        await eventLogger.info('AFFILIATE', `Resolução de link de afiliado oficial para "${evaluatedOffer.title.slice(0, 35)}..."`, {
+          action: 'AFFILIATE_START',
+        });
+
+        const affiliateRes = await affiliateService.resolveAffiliateLink({
+          marketplace: evaluatedOffer.marketplace || 'mercadolivre',
+          productUrl: evaluatedOffer.productUrl,
+          productId: evaluatedOffer.productId,
+          dbProductId: evaluatedOffer.dbId,
+        });
+
+        const confirmedMeliUrl = (affiliateRes.shortUrl && affiliateRes.shortUrl.includes('meli.la'))
+          ? affiliateRes.shortUrl
+          : (affiliateRes.affiliateUrl && affiliateRes.affiliateUrl.includes('meli.la') ? affiliateRes.affiliateUrl : null);
+
+        if (!affiliateRes.affiliateVerified || !confirmedMeliUrl) {
+          await eventLogger.warning(
+            'AFFILIATE',
+            'Link de afiliado comissionado não confirmado (AFFILIATE_LINK_UNVERIFIED). Fallback para URL comum BLOQUEADO. Candidato descartado. Tentando próximo candidato...',
+            {
+              action: 'AFFILIATE_LINK_UNVERIFIED',
+              metadata: {
+                productUrl: evaluatedOffer.productUrl,
+                productId: evaluatedOffer.productId,
+                status: affiliateRes.status,
+                reason: affiliateRes.reason || 'URL meli.la não confirmada pelo programa',
+              },
+            }
+          );
+          candidateIdx++;
+          if (candidateIdx < candidatesPool.length) {
+            await eventLogger.info(
+              'SELECTION',
+              'Produto substituído por candidato de maior potencial.',
+              {
+                action: 'CANDIDATE_SUBSTITUTED',
+                metadata: { nextCandidate: candidatesPool[candidateIdx].title },
+              }
+            );
+          }
+          continue;
+        }
+
+        // SUCESSO: Preço validado e Link meli.la confirmado!
+        chosenOffer = evaluatedOffer;
+        directAffiliateUrl = confirmedMeliUrl;
+        trackingId = trackingService.generateTrackingId();
+        trackingUrl = trackingService.buildTrackingUrl(trackingId);
+
+        if (chosenOffer.dbId) {
+          try {
+            await supabase.from('product_prices').insert({
+              product_id: chosenOffer.dbId,
+              current_price: chosenOffer.currentPrice,
+              original_price: chosenOffer.originalPrice || null,
+              discount_percent: chosenOffer.discountPercent || null,
+              collected_at: new Date().toISOString(),
+            });
+          } catch {}
+        }
+
+        await eventLogger.success(
+          'AFFILIATE',
+          `Link comissionado oficial verificado (${confirmedMeliUrl}) e URL de tracking criada: ${trackingUrl}`,
+          {
+            action: 'AFFILIATE_READY',
+            metadata: {
+              directAffiliateUrl,
+              trackingId,
+              trackingUrl,
+              affiliateVerified: true,
+            },
+          }
+        );
+
+        break;
+      }
+
+      if (!chosenOffer || !directAffiliateUrl) {
+        throw new Error('Nenhuma oferta permaneceu válida após a validação profunda de preços e confirmação de link meli.la.');
       }
 
       await eventLogger.success(
         'AI',
-        `Curadoria JEV aprovou oferta "${bestOffer.title.slice(0, 40)}..." (Score: ${bestOffer.finalScore || bestOffer.score || 85}/100)`,
+        `Curadoria JEV aprovou oferta "${chosenOffer.title.slice(0, 40)}..." (Score: ${chosenOffer.finalScore || chosenOffer.score || 85}/100)`,
         {
           action: 'AI_APPROVAL',
           metadata: {
-            title: bestOffer.title,
-            score: bestOffer.finalScore || bestOffer.score,
-            strategy: bestOffer.strategy?.code || 'DESCONTO',
-          },
-        }
-      );
-
-      // ─────────────────────────────────────────────────────────────
-      // PASSO 3: VALIDANDO PREÇO
-      // ─────────────────────────────────────────────────────────────
-      await this.setStep('VALIDANDO PREÇO');
-      await eventLogger.info('PRICE', `Revalidando preço da oferta #${bestOffer.productId || bestOffer.dbId || 'MLB'}...`, {
-        action: 'PRICE_VALIDATION_START',
-      });
-
-      const currentPrice = Number(bestOffer.currentPrice);
-      if (!currentPrice || currentPrice <= 0) {
-        throw new Error(`Preço inconsistente detectado: R$ ${bestOffer.currentPrice}`);
-      }
-
-      const discStr = bestOffer.discountPercent > 0 ? ` (-${bestOffer.discountPercent}% OFF)` : '';
-      await eventLogger.success(
-        'PRICE',
-        `Preço confirmado: R$ ${currentPrice.toFixed(2)}${discStr}`,
-        {
-          action: 'PRICE_CONFIRMED',
-          metadata: {
-            currentPrice,
-            originalPrice: bestOffer.originalPrice || null,
-            discountPercent: bestOffer.discountPercent || 0,
-          },
-        }
-      );
-
-      // ─────────────────────────────────────────────────────────────
-      // PASSO 4: GERANDO LINK
-      // ─────────────────────────────────────────────────────────────
-      await this.setStep('GERANDO LINK');
-      await eventLogger.info('AFFILIATE', 'Resolução de link de afiliado oficial no marketplace...', {
-        action: 'AFFILIATE_START',
-      });
-
-      const affiliateService = new AffiliateLinkService({ browserManager });
-      const affiliateRes = await affiliateService.resolveAffiliateLink({
-        marketplace: bestOffer.marketplace || 'mercadolivre',
-        productUrl: bestOffer.productUrl,
-        productId: bestOffer.productId,
-        dbProductId: bestOffer.dbId,
-      });
-
-      const trackingService = new TrackingService();
-      const trackingId = trackingService.generateTrackingId();
-      const trackingUrl = trackingService.buildTrackingUrl(trackingId);
-
-      await eventLogger.success(
-        'AFFILIATE',
-        `Link comissionado verificado e URL de tracking criada: ${trackingUrl}`,
-        {
-          action: 'AFFILIATE_READY',
-          metadata: {
-            trackingId,
-            trackingUrl,
-            affiliateVerified: affiliateRes.affiliateVerified,
+            title: chosenOffer.title,
+            score: chosenOffer.finalScore || chosenOffer.score,
+            strategy: chosenOffer.strategy?.code || 'DESCONTO',
           },
         }
       );
@@ -737,100 +995,423 @@ class RobotWorker {
         action: 'CONTENT_PREP_START',
       });
 
-      const directAffiliateUrl = affiliateRes.affiliateUrl || bestOffer.productUrl;
-
       const creativeEngine = new CreativeEngine();
-      const creative = creativeEngine.generatePost({
-        title: bestOffer.title,
-        currentPrice,
-        originalPrice: bestOffer.originalPrice,
-        discountPercent: bestOffer.discountPercent || 0,
-        imageUrl: bestOffer.imageUrl,
+      let creative = creativeEngine.generatePost({
+        title: chosenOffer.title,
+        currentPrice: chosenOffer.currentPrice,
+        originalPrice: chosenOffer.originalPrice,
+        discountPercent: chosenOffer.discountPercent || 0,
+        imageUrl: chosenOffer.imageUrl,
         affiliateUrl: directAffiliateUrl,
         trackingUrl,
-        strategy: bestOffer.strategy || { code: 'DESCONTO', name: 'Desconto Real Comprovado' },
-        category: bestOffer.category || 'utilidades',
+        strategy: chosenOffer.strategy || { code: 'DESCONTO', name: 'Desconto Real Comprovado' },
+        category: chosenOffer.category || 'utilidades',
       });
 
-      // Salva publicação no Supabase como ASSISTED_READY / PREPARED
-      let pubId = null;
-      try {
+      // ─────────────────────────────────────────────────────────────
+      // PASSO 6: VALIDAÇÃO 2 & PUBLICAÇÃO (DECISÃO POR MODO)
+      // ─────────────────────────────────────────────────────────────
+      if (autopilotMode === 'AUTONOMO') {
+        // SEGURANÇA 1: Limite Diário de Publicações (Máximo 6 por dia)
+        const todayStartIso = new Date();
+        todayStartIso.setHours(0, 0, 0, 0);
+        const { count: todayPubsCount } = await supabase
+          .from('publications')
+          .select('id', { count: 'exact', head: true })
+          .eq('status', 'PUBLISHED')
+          .gte('published_at', todayStartIso.toISOString());
+
+        if ((todayPubsCount || 0) >= MAX_PUBLICATIONS_PER_DAY) {
+          logger.info(`[Worker] Limite diário de segurança atingido (${todayPubsCount}/${MAX_PUBLICATIONS_PER_DAY}). Nenhuma publicação será realizada.`);
+          await eventLogger.info('ROBOT', `Limite diário máximo de ${MAX_PUBLICATIONS_PER_DAY} publicações atingido hoje. Oportunidade não publicada por segurança.`, {
+            action: 'DAILY_LIMIT_REACHED',
+            metadata: { count: todayPubsCount, maxAllowed: MAX_PUBLICATIONS_PER_DAY }
+          });
+          return;
+        }
+
+        // SEGURANÇA 2: Cooldown Mínimo entre Publicações (45 min)
+        const { data: lastPub } = await supabase
+          .from('publications')
+          .select('published_at')
+          .eq('status', 'PUBLISHED')
+          .order('published_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (lastPub?.published_at) {
+          const diffMinutes = (Date.now() - new Date(lastPub.published_at).getTime()) / 60000;
+          if (diffMinutes < MIN_COOLDOWN_MINUTES) {
+            logger.info(`[Worker] Cooldown de segurança ativo (${Math.round(diffMinutes)}/${MIN_COOLDOWN_MINUTES} min). Aguardando próximo ciclo.`);
+            await eventLogger.info('ROBOT', `Cooldown de segurança ativo (${Math.round(diffMinutes)}/${MIN_COOLDOWN_MINUTES} min). Publicação suspensa até o fim do intervalo.`, {
+              action: 'COOLDOWN_ACTIVE',
+              metadata: { elapsedMinutes: Math.round(diffMinutes), minCooldown: MIN_COOLDOWN_MINUTES }
+            });
+            return;
+          }
+        }
+
+        // MODO AUTÔNOMO: Validação 2 imediata e publicação sem aprovação humana
+        await this.setStep('VALIDAÇÃO FINAL');
+        await eventLogger.info('PRICE', '[Validação 2] Validação final de preço antes da publicação automática...', {
+          action: 'PRICE_FINAL_VALIDATION',
+          metadata: { productUrl: chosenOffer.productUrl, price: chosenOffer.currentPrice },
+        });
+
+        const finalPage = await browserManager.openPage();
+        const finalVal = await this.priceValidationEngine.validateCandidatePrice(chosenOffer, {
+          page: finalPage,
+          supabase,
+          expectedPrice: chosenOffer.currentPrice,
+        });
+
+        // Se validação falhar ou consenso for LOW: descartar e não publicar
+        if (!finalVal.isValid || finalVal.consensus === 'LOW') {
+          await eventLogger.error(
+            'PRICE',
+            `Oferta descartada: ${finalVal.reason || 'Consenso de preço insuficiente (LOW).'}. Procurando outro candidato.`,
+            { action: 'PRICE_FINAL_REJECT', metadata: { consensus: finalVal.consensus, validationCode: finalVal.validationCode } }
+          );
+          throw new Error(`Validação final falhou ou consenso LOW: ${finalVal.reason || 'Consenso LOW'}`);
+        }
+
+        if (finalVal.validationCode === 'PRICE_CHANGED') {
+          const eval2 = this.priceValidationEngine.evaluateOfferRelevanceAfterPriceChange({
+            originalOffer: chosenOffer,
+            validatedData: finalVal.data,
+          });
+
+          if (!eval2.isAttractive) {
+            await eventLogger.warning(
+              'PRICE',
+              'Oferta descartada: preço divergente.',
+              { action: 'OFFER_DISCARDED_PRICE_DIVERGENCE', metadata: { reason: eval2.reason } }
+            );
+            throw new Error(`Oferta perdeu atratividade na validação final: ${eval2.reason}`);
+          }
+
+          await eventLogger.info(
+            'PRICE',
+            'Oferta reavaliada após alteração de preço.',
+            { action: 'OFFER_REEVALUATED', metadata: { newPrice: finalVal.data.currentPrice } }
+          );
+
+          chosenOffer = eval2.updatedOffer;
+          creative = creativeEngine.generatePost({
+            title: chosenOffer.title,
+            currentPrice: chosenOffer.currentPrice,
+            originalPrice: chosenOffer.originalPrice,
+            discountPercent: chosenOffer.discountPercent || 0,
+            imageUrl: chosenOffer.imageUrl,
+            affiliateUrl: directAffiliateUrl,
+            trackingUrl,
+            strategy: chosenOffer.strategy || { code: 'DESCONTO', name: 'Desconto Real Comprovado' },
+            category: chosenOffer.category || 'utilidades',
+          });
+        }
+
+        // Confirmar link oficial de afiliado antes da publicação
+        if (!directAffiliateUrl || directAffiliateUrl.length < 8) {
+          await eventLogger.error('AFFILIATE', 'Link oficial de afiliado ausente ou corrompido antes da publicação.', {
+            action: 'AFFILIATE_REJECT',
+            metadata: { directAffiliateUrl }
+          });
+          throw new Error('Link oficial de afiliado ausente ou corrompido antes da publicação.');
+        }
+
+        // Publicação Orgânica
+        await this.setStep('PUBLICANDO NO FACEBOOK');
+        let fbPostId = null;
+        let fbPubUrl = null;
+
+        if (DRY_RUN_PUBLICATION) {
+          logger.info('[Worker] Modo DRY_RUN_PUBLICATION ativo: publicação no Facebook simulada.');
+          fbPostId = `dryrun_${Date.now()}`;
+          fbPubUrl = `https://www.facebook.com/achakiofertas/posts/${fbPostId}`;
+        } else {
+          // Busca token de página atualizado em system_state
+          const { data: stateData } = await supabase
+            .from('system_state')
+            .select('social_networks')
+            .eq('id', 'autopilot')
+            .maybeSingle();
+
+          const sn = stateData?.social_networks || {};
+          const pageAccessToken = sn.facebook_page_token || sn.facebook_user_token || sn.page_access_token || process.env.FB_PAGE_ACCESS_TOKEN || process.env.FB_ACCESS_TOKEN;
+          const pageId = sn.facebook_page_id || process.env.FB_PAGE_ID || '61587794361596';
+
+          if (!pageAccessToken) {
+            await this._handleAutoStop('Facebook OAuth inválido ou token de página ausente no banco');
+            throw new Error('Facebook Page Access Token não encontrado em system_state. Autorize via OAuth primeiro.');
+          }
+
+          try {
+            const FacebookPublisher = (await import('./publishers/facebook-publisher.js')).default;
+            const publisher = new FacebookPublisher();
+            const pubRes = await publisher.publishPost({
+              pageId,
+              pageAccessToken,
+              message: creative.text,
+              imageUrl: chosenOffer.imageUrl,
+              link: directAffiliateUrl,
+            });
+            fbPostId = pubRes.postId;
+            fbPubUrl = pubRes.publicationUrl;
+          } catch (pubErr) {
+            await this._handleAutoStop(`Erro repetido Graph API: ${pubErr.message}`, { error: pubErr.message });
+            throw pubErr;
+          }
+        }
+
+        const publishedAt = new Date().toISOString();
         const { data: pubData } = await supabase
           .from('publications')
           .insert({
-            product_id: bestOffer.dbId || null,
-            marketplace: bestOffer.marketplace || 'mercadolivre',
+            product_id: chosenOffer.dbId || null,
+            marketplace: chosenOffer.marketplace || 'mercadolivre',
             social_network: 'facebook',
-            strategy: bestOffer.strategy?.code || 'DESCONTO',
+            strategy: chosenOffer.strategy?.code || 'DESCONTO',
             tracking_id: trackingId,
             tracking_url: trackingUrl,
             affiliate_url: directAffiliateUrl,
-            status: 'ASSISTED_READY',
+            status: 'PUBLISHED',
+            facebook_post_id: fbPostId,
+            publication_url: fbPubUrl,
+            published_at: publishedAt,
             content: creative.text,
-            media_url: bestOffer.imageUrl,
-            price_published: currentPrice,
-            original_price_published: bestOffer.originalPrice || null,
-            discount_published: bestOffer.discountPercent || 0,
+            media_url: chosenOffer.imageUrl,
+            price_published: chosenOffer.currentPrice,
+            original_price_published: chosenOffer.originalPrice || null,
+            discount_published: chosenOffer.discountPercent || 0,
             run_id: runId,
             metadata: {
               dryRun: DRY_RUN_PUBLICATION,
               headline: creative.headline,
               messageText: creative.text,
-              imageUrl: bestOffer.imageUrl,
+              imageUrl: chosenOffer.imageUrl,
               targetPageName: 'ACHAki Achadinhos e Ofertas',
               targetPageId: '61587794361596',
-              marketplaceProductId: bestOffer.productId || bestOffer.dbId,
-              score: bestOffer.finalScore || bestOffer.score || 85,
-              strategy: bestOffer.strategy?.code || 'DESCONTO',
-              validated_at: new Date().toISOString(),
+              marketplaceProductId: chosenOffer.productId || chosenOffer.dbId,
+              score: chosenOffer.finalScore || chosenOffer.score || 85,
+              strategy: chosenOffer.strategy?.code || 'DESCONTO',
+              validated_at: publishedAt,
+              mode: 'AUTONOMO',
             },
           })
           .select('id')
           .maybeSingle();
 
-        pubId = pubData?.id;
-      } catch (pubErr) {
-        logger.warn(`[Worker] Falha não impeditiva ao registrar publicação: ${pubErr.message}`);
+        await eventLogger.success(
+          'FACEBOOK',
+          'Publicação realizada automaticamente.',
+          {
+            action: 'AUTONOMOUS_PUBLISHED',
+            publicationId: pubData?.id,
+            metadata: { postId: fbPostId, price: chosenOffer.currentPrice, dryRun: DRY_RUN_PUBLICATION },
+          }
+        );
+
+        // Feedback loop inicial
+        try {
+          await supabase.from('publication_metrics').insert({
+            publication_id: pubData?.id,
+            clicks: 0,
+            impressions: 0,
+            tracked_at: publishedAt,
+          });
+        } catch {}
+
+        await this.setStep('CONCLUÍDO');
+        await eventLogger.success(
+          'ROBOT',
+          'Ciclo autônomo concluído com sucesso! Publicação realizada sem necessidade de intervenção humana.',
+          {
+            action: 'CYCLE_COMPLETE',
+            publicationId: pubData?.id,
+            metadata: { runId, topOfferTitle: chosenOffer.title, price: chosenOffer.currentPrice },
+          }
+        );
+      } else {
+        // MODO ASSISTIDO: Salva como ASSISTED_READY e aguarda aprovação humana
+        let pubId = null;
+        try {
+          const { data: pubData } = await supabase
+            .from('publications')
+            .insert({
+              product_id: chosenOffer.dbId || null,
+              marketplace: chosenOffer.marketplace || 'mercadolivre',
+              social_network: 'facebook',
+              strategy: chosenOffer.strategy?.code || 'DESCONTO',
+              tracking_id: trackingId,
+              tracking_url: trackingUrl,
+              affiliate_url: directAffiliateUrl,
+              status: 'ASSISTED_READY',
+              content: creative.text,
+              media_url: chosenOffer.imageUrl,
+              price_published: chosenOffer.currentPrice,
+              original_price_published: chosenOffer.originalPrice || null,
+              discount_published: chosenOffer.discountPercent || 0,
+              run_id: runId,
+              metadata: {
+                dryRun: DRY_RUN_PUBLICATION,
+                headline: creative.headline,
+                messageText: creative.text,
+                imageUrl: chosenOffer.imageUrl,
+                targetPageName: 'ACHAki Achadinhos e Ofertas',
+                targetPageId: '61587794361596',
+                marketplaceProductId: chosenOffer.productId || chosenOffer.dbId,
+                score: chosenOffer.finalScore || chosenOffer.score || 85,
+                strategy: chosenOffer.strategy?.code || 'DESCONTO',
+                validated_at: new Date().toISOString(),
+                mode: 'ASSISTIDO',
+              },
+            })
+            .select('id')
+            .maybeSingle();
+
+          pubId = pubData?.id;
+        } catch (pubErr) {
+          logger.warn(`[Worker] Falha não impeditiva ao registrar publicação: ${pubErr.message}`);
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // PASSO 6: AGUARDANDO APROVAÇÃO (Fim do ciclo no Modo Assistido)
+        // ─────────────────────────────────────────────────────────────
+        await this.setStep('AGUARDANDO APROVAÇÃO');
+
+        await eventLogger.info(
+          'FACEBOOK',
+          'Publicação preparada — aguardando autorização (Modo Assistido ativo)',
+          {
+            action: 'POST_PREPARED',
+            publicationId: pubId,
+            metadata: {
+              trackingId,
+              headline: creative.headline,
+              dryRun: DRY_RUN_PUBLICATION,
+            },
+          }
+        );
+
+        await eventLogger.success(
+          'ROBOT',
+          'Ciclo concluído com sucesso! (Modo Assistido: publicação retida para aprovação)',
+          {
+            action: 'CYCLE_COMPLETE',
+            publicationId: pubId,
+            metadata: {
+              runId,
+              topOfferTitle: chosenOffer.title,
+              price: chosenOffer.currentPrice,
+              trackingUrl,
+              status: 'COMPLETED_ASSISTED',
+            },
+          }
+        );
       }
-
-      // ─────────────────────────────────────────────────────────────
-      // PASSO 6: AGUARDANDO APROVAÇÃO (Fim do ciclo no Modo Assistido / Dry-Run)
-      // ─────────────────────────────────────────────────────────────
-      await this.setStep('AGUARDANDO APROVAÇÃO');
-
-      await eventLogger.info(
-        'FACEBOOK',
-        'Publicação preparada — aguardando autorização (Modo Assistido ativo)',
-        {
-          action: 'POST_PREPARED',
-          publicationId: pubId,
-          metadata: {
-            trackingId,
-            headline: creative.headline,
-            dryRun: DRY_RUN_PUBLICATION,
-          },
-        }
-      );
-
-      await eventLogger.success(
-        'ROBOT',
-        'Ciclo real concluído com sucesso! (Modo Assistido: publicação retida para aprovação)',
-        {
-          action: 'CYCLE_COMPLETE',
-          publicationId: pubId,
-          metadata: {
-            runId,
-            topOfferTitle: bestOffer.title,
-            price: currentPrice,
-            trackingUrl,
-            status: 'COMPLETED_ASSISTED',
-          },
-        }
-      );
     } finally {
       try {
         await browserManager.close();
       } catch {}
+    }
+  }
+
+  /**
+   * Ciclo de Monitoramento de Demanda (apenas modo AUTÔNOMO).
+   *
+   * REGRA CENTRAL: 20 minutos = intervalo de observação.
+   * O robô NUNCA publica apenas por ter decorrido 20 minutos.
+   * Publica SOMENTE se uma oportunidade real atingir Score >= 75/100.
+   * Se nenhuma oportunidade atingir o threshold: registra e aguarda.
+   */
+  async _runDemandScanCycle() {
+    if (this.isWorking || this.isShuttingDown) return;
+
+    try {
+      // Lê modo de operação ativo
+      const { data: stateRow } = await supabase
+        .from('system_state')
+        .select('autopilot_mode')
+        .eq('id', 'autopilot')
+        .maybeSingle();
+
+      const autopilotMode = stateRow?.autopilot_mode || 'ASSISTIDO';
+
+      // Scan de demanda só é relevante no modo AUTÔNOMO
+      if (autopilotMode !== 'AUTONOMO') {
+        logger.info('[DemandScan] Modo ASSISTIDO — scan de demanda ignorado.');
+        return;
+      }
+
+      logger.info('[DemandScan] 🔍 Iniciando ciclo de monitoramento de demanda...');
+
+      await eventLogger.info('ROBOT', 'Ciclo de monitoramento de demanda iniciado', {
+        action: 'DEMAND_SCAN_START',
+        metadata: { scanIntervalMinutes: DEMAND_SCAN_INTERVAL_MS / 60000, autopilotMode }
+      });
+
+      // Avalia demanda e oportunidades reais
+      const result = await this.opportunityEngine.evaluateDemandAndOpportunities();
+
+      const activeDemands = (result.opportunities || []).slice(0, 5).map(o => ({
+        keyword: o.keyword,
+        demand_score: o.demand_score,
+        trend_direction: o.trend_direction,
+        intent: o.intent
+      }));
+
+      // Grava evento de DEMANDA no banco para o dashboard
+      await supabase.from('system_events').insert({
+        level: result.decision === 'PUBLISH' ? 'SUCCESS' : 'INFO',
+        category: 'DEMAND',
+        source: 'DemandIntelligenceEngine',
+        action: result.decision === 'PUBLISH' ? 'OPPORTUNITY_FOUND' : 'DEMAND_MONITORED',
+        status: result.decision,
+        message: result.reason || 'Ciclo de monitoramento concluído.',
+        metadata: {
+          decision: result.decision,
+          actionTaken: result.action,
+          activeDemands,
+          bestOpportunity: result.demandResult?.candidate ? {
+            title: result.demandResult.candidate.title,
+            price: result.demandResult.candidate.currentPrice,
+            score: result.demandResult.commercialScore,
+            keyword: result.demandResult.opportunity?.keyword
+          } : null,
+          scannedAt: new Date().toISOString()
+        }
+      });
+
+      if (result.decision === 'PUBLISH') {
+        logger.info(`[DemandScan] 🎯 Oportunidade aprovada: "${result.demandResult?.candidate?.title?.slice(0, 50)}" (Score: ${result.demandResult?.commercialScore}/100)`);
+        await eventLogger.success('ROBOT', `Oportunidade de demanda aprovada para publicação autônoma (Score: ${result.demandResult?.commercialScore}/100)`, {
+          action: 'AUTONOMOUS_PUBLISH_QUEUED',
+          metadata: { candidate: result.demandResult?.candidate?.title, score: result.demandResult?.commercialScore }
+        });
+
+        // Enfileira execução autônoma do pipeline com o candidato aprovado (mesmo em DRY_RUN)
+        await supabase.from('robot_commands').insert({
+          command: 'RUN_NOW',
+          status: 'PENDING',
+          metadata: {
+            reason: 'autonomous_demand_opportunity',
+            demandKeyword: result.demandResult?.opportunity?.keyword,
+            dryRun: DRY_RUN_PUBLICATION,
+            requestedAt: new Date().toISOString()
+          }
+        });
+        if (DRY_RUN_PUBLICATION) {
+          logger.info('[DemandScan] Modo DRY_RUN_PUBLICATION ativo: ciclo autônomo disparado em modo seguro de teste.');
+        }
+      } else {
+        logger.info(`[DemandScan] ⏸ ${result.reason}`);
+        await eventLogger.info('ROBOT', result.reason, {
+          action: 'DEMAND_NO_PUBLISH',
+          metadata: { opportunitiesScanned: activeDemands.length }
+        });
+      }
+    } catch (err) {
+      logger.warn(`[DemandScan] Erro no ciclo de monitoramento: ${err.message}`);
     }
   }
 
@@ -844,6 +1425,7 @@ class RobotWorker {
 
     clearInterval(this.heartbeatTimer);
     clearInterval(this.pollTimer);
+    clearInterval(this.demandScanTimer);
 
     if (this.realtimeChannel) {
       try {

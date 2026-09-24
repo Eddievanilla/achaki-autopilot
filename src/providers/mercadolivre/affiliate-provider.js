@@ -11,6 +11,7 @@
 
 import BrowserManager from '../../browser/browser.js';
 import logger from '../../utils/logger.js';
+import interventionManager from '../../services/intervention-manager.js';
 
 export class MercadoLivreAffiliateProvider {
   /**
@@ -54,10 +55,10 @@ export class MercadoLivreAffiliateProvider {
     }
 
     const browser = this.browserManager || new BrowserManager();
-    let ownBrowser = !this.externalBrowser;
+    const needLaunch = !browser.context;
 
     try {
-      if (ownBrowser) {
+      if (needLaunch) {
         await browser.launch();
       }
 
@@ -68,6 +69,20 @@ export class MercadoLivreAffiliateProvider {
         waitUntil: 'domcontentloaded',
         timeout: 30000,
       });
+
+      const currentUrl = page.url();
+      if (currentUrl.includes('login') || currentUrl.includes('checkpoint') || currentUrl.includes('challenge')) {
+        logger.warn(`[MLAffiliateProvider] Desafio/Login detectado ao acessar gerador: ${currentUrl}`);
+        await interventionManager.requestIntervention({
+          type: currentUrl.includes('login') ? 'LOGIN' : 'SECURITY_CHALLENGE',
+          marketplace: 'mercadolivre',
+          title: currentUrl.includes('login') ? 'Login Necessário no Mercado Livre Afiliados' : 'Desafio de Segurança no Mercado Livre Afiliados',
+          message: 'O gerador de links de afiliados requer que você acesse e confirme sua sessão para gerar links comissionados (meli.la).',
+          targetUrl: currentUrl || 'https://www.mercadolivre.com.br/afiliados/linkbuilder#hub',
+          actionLabel: 'Abrir Página do Desafio ↗',
+          metadata: { currentUrl, productUrl },
+        }).catch(() => {});
+      }
 
       // Aguarda 1.5s para hidratação do cliente
       await page.waitForTimeout(1500);
@@ -120,32 +135,47 @@ export class MercadoLivreAffiliateProvider {
       logger.info('[MLAffiliateProvider] Tentando fallback via formulário web do gerador...');
       const textarea = await page.$('#url-0, textarea');
       if (textarea) {
-        await textarea.fill(productUrl);
-        await page.waitForTimeout(600);
+        try {
+          await textarea.fill(productUrl, { timeout: 4000 });
+          await page.waitForTimeout(600);
 
-        const generateBtn = await page.$('button:has-text("Gerar"), .andes-button:has-text("Gerar")');
-        if (generateBtn) {
-          await generateBtn.click();
-          await page.waitForTimeout(3500);
+          const generateBtn = await page.$('button:has-text("Gerar"), .andes-button:has-text("Gerar")');
+          if (generateBtn) {
+            await generateBtn.click();
+            await page.waitForTimeout(3000);
 
-          const domLink = await page.evaluate(() => {
-            const inputs = Array.from(document.querySelectorAll('input, textarea, a, p')).map(el => el.value || el.innerText || el.href || '');
-            const found = inputs.find(t => t.includes('meli.la/') || (t.includes('mercadolivre.com.br/') && t.includes('matt_tool')));
-            return found ? found.trim() : null;
-          });
+            const domLink = await page.evaluate(() => {
+              const inputs = Array.from(document.querySelectorAll('input, textarea, a, p')).map(el => el.value || el.innerText || el.href || '');
+              const found = inputs.find(t => t.includes('meli.la/') || (t.includes('mercadolivre.com.br/') && t.includes('matt_tool')));
+              return found ? found.trim() : null;
+            });
 
-          if (domLink) {
-            logger.info(`[MLAffiliateProvider] Link capturado via DOM: ${domLink}`);
-            return {
-              marketplace: 'mercadolivre',
-              productUrl,
-              affiliateUrl: domLink,
-              affiliateVerified: true,
-              generatedAt: new Date().toISOString(),
-            };
+            if (domLink) {
+              logger.info(`[MLAffiliateProvider] Link capturado via DOM: ${domLink}`);
+              return {
+                marketplace: 'mercadolivre',
+                productUrl,
+                affiliateUrl: domLink,
+                affiliateVerified: true,
+                generatedAt: new Date().toISOString(),
+              };
+            }
           }
+        } catch (fillErr) {
+          logger.warn(`[MLAffiliateProvider] Fallback formulário falhou: ${fillErr.message}`);
         }
       }
+
+      // Se não conseguiu gerar link oficial por nenhum método, registra intervenção humana
+      await interventionManager.requestIntervention({
+        type: 'SECURITY_CHALLENGE',
+        marketplace: 'mercadolivre',
+        title: 'Verificação / Sessão no Mercado Livre Afiliados',
+        message: 'O gerador de links de afiliados requer verificação ou sessão no navegador para gerar links comissionados (meli.la).',
+        targetUrl: 'https://www.mercadolivre.com.br/afiliados/linkbuilder#hub',
+        actionLabel: 'Abrir Gerador Mercado Livre ↗',
+        metadata: { productUrl, currentUrl: page.url() },
+      }).catch(() => {});
 
       return {
         marketplace: 'mercadolivre',
@@ -158,6 +188,16 @@ export class MercadoLivreAffiliateProvider {
 
     } catch (err) {
       logger.error(`[MLAffiliateProvider] Erro ao gerar link oficial: ${err.message}`);
+      await interventionManager.requestIntervention({
+        type: 'SECURITY_CHALLENGE',
+        marketplace: 'mercadolivre',
+        title: 'Verificação / Sessão no Mercado Livre Afiliados',
+        message: 'O gerador oficial de links de afiliados requer verificação no navegador para gerar links comissionados (meli.la).',
+        targetUrl: 'https://www.mercadolivre.com.br/afiliados/linkbuilder#hub',
+        actionLabel: 'Abrir Gerador Mercado Livre ↗',
+        metadata: { productUrl, error: err.message },
+      }).catch(() => {});
+
       return {
         marketplace: 'mercadolivre',
         productUrl,
@@ -167,7 +207,7 @@ export class MercadoLivreAffiliateProvider {
         error: err.message,
       };
     } finally {
-      if (ownBrowser) {
+      if (needLaunch) {
         await browser.close().catch(() => {});
       }
     }

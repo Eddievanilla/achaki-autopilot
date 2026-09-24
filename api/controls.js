@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.SUPABASE_URL || 'https://fobehbttydmqupfpioux.supabase.co';
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZvYmVoYnR0eWRtcXVwZnBpb3V4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAxNzk2NTYsImV4cCI6MjEwNTc1NTY1Nn0.QSRQxVol0FYDtbbSxJ8_-jCMUcRD9ygiHZZI4wy7EGQ';
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZvYmVoYnR0eWRtcXVwZnBpb3V4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc5MDE3OTY1NiwiZXhwIjoyMTA1NzU1NjU2fQ.zNuSE747_XrdbGPp6I-K4XY3P1xO9ZWkEn7dhBZREmo';
 
 const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: { persistSession: false },
@@ -21,7 +21,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { action, publicationId } = req.body || {};
+    const { action, publicationId, interventionId } = req.body || {};
 
     const validActions = [
       'INICIAR',
@@ -30,10 +30,24 @@ export default async function handler(req, res) {
       'APPROVE_PUBLICATION',
       'REJECT_PUBLICATION',
       'CHOOSE_ANOTHER_OFFER',
+      'RESOLVE_INTERVENTION',
     ];
 
     if (!validActions.includes(action)) {
       return res.status(400).json({ error: `Ação inválida. Use uma das seguintes: ${validActions.join(', ')}` });
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // 0. RESOLVER INTERVENÇÃO DO OPERADOR
+    // ─────────────────────────────────────────────────────────────
+    if (action === 'RESOLVE_INTERVENTION') {
+      if (interventionId) {
+        await supabase
+          .from('operator_interventions')
+          .update({ status: 'RESOLVED', resolved_at: new Date().toISOString() })
+          .eq('id', interventionId);
+      }
+      return res.status(200).json({ ok: true, message: 'Intervenção marcada como resolvida.' });
     }
 
     // ─────────────────────────────────────────────────────────────

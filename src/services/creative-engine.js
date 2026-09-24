@@ -54,10 +54,11 @@ export class CreativeEngine {
       hook = `Garimpo de hoje com excelente custo-benefício:`;
     }
 
-    // Prioriza link oficial direto (ex: https://meli.la/...) no primeiro piloto
-    const directLink = (affiliateUrl && (affiliateUrl.includes('meli.la') || affiliateUrl.includes('mercadolivre.com')))
+    // Prioriza link oficial direto https://meli.la/... como URL pública no texto publicado
+    // O /go/... permanece para tracking interno mas NÃO substitui o meli.la no copy público
+    const directLink = (affiliateUrl && affiliateUrl.includes('meli.la'))
       ? affiliateUrl
-      : (trackingUrl || affiliateUrl);
+      : ((affiliateUrl && affiliateUrl.includes('mercadolivre.com')) ? affiliateUrl : (trackingUrl || affiliateUrl));
 
     // Texto curto, natural e sem spam
     const textLines = [

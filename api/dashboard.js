@@ -1,8 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
+import CategoryClassifier from '../src/services/category-classifier.js';
+
+const categoryClassifier = new CategoryClassifier();
 
 // Cliente Supabase serverless seguro (apenas backend)
 const supabaseUrl = process.env.SUPABASE_URL || 'https://fobehbttydmqupfpioux.supabase.co';
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZvYmVoYnR0eWRtcXVwZnBpb3V4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAxNzk2NTYsImV4cCI6MjEwNTc1NTY1Nn0.QSRQxVol0FYDtbbSxJ8_-jCMUcRD9ygiHZZI4wy7EGQ';
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZvYmVoYnR0eWRtcXVwZnBpb3V4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc5MDE3OTY1NiwiZXhwIjoyMTA1NzU1NjU2fQ.zNuSE747_XrdbGPp6I-K4XY3P1xO9ZWkEn7dhBZREmo';
 
 const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: { persistSession: false },
@@ -112,6 +115,8 @@ export default async function handler(req, res) {
         const originalPrice = priceRow?.original_price ? Number(priceRow.original_price) : null;
         const discountPercent = priceRow?.discount_percent || 0;
 
+        const classifiedCategory = categoryClassifier.classify(prod.title, prod.product_url, prod.category).category;
+
         // Estratégia e justificativa rica
         let offerStrategy = 'DESCONTO';
         let offerStrategyName = 'Desconto Real Comprovado';
@@ -121,7 +126,7 @@ export default async function handler(req, res) {
         } else if (discountPercent >= 25) {
           offerStrategy = 'DESCONTO';
           offerStrategyName = 'Desconto Real Comprovado';
-        } else if ((prod.category || '').toLowerCase().includes('cozinha') || (prod.category || '').toLowerCase().includes('organiza')) {
+        } else if (classifiedCategory.includes('Cozinha') || classifiedCategory.includes('Organização')) {
           offerStrategy = 'PROBLEMA_SOLUCAO';
           offerStrategyName = 'Problema e Solução';
         }
@@ -129,7 +134,7 @@ export default async function handler(req, res) {
         topOffers.push({
           id: prod.id,
           title: prod.title,
-          category: prod.category || 'utilidades',
+          category: classifiedCategory,
           marketplace: prod.marketplace,
           productUrl: prod.product_url,
           imageUrl: prod.image_url || 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=400&q=80',
@@ -141,7 +146,7 @@ export default async function handler(req, res) {
           localScore: Math.min(95, (item.ai_score || 85) + 3),
           jevScore: item.ai_score || 85,
           gptScore: item.ai_score ? item.ai_score : 'N/A',
-          aiReason: item.ai_reason || `Produto altamente competitivo na categoria ${prod.category || 'utilidades'} com preço vantajoso.`,
+          aiReason: item.ai_reason || `Produto altamente competitivo na categoria ${classifiedCategory} com preço vantajoso.`,
           aiRisk: item.ai_risk || 'Baixo risco operacional verificado.',
           confidence: discountPercent > 20 ? 'ALTA' : 'MÉDIA',
           strategy: {
@@ -152,6 +157,14 @@ export default async function handler(req, res) {
         });
       }
     }
+
+    // Intervenções operacionais pendentes (Desafios, CAPTCHAs, Sessões)
+    const { data: interventionsData } = await supabase
+      .from('operator_interventions')
+      .select('*')
+      .eq('status', 'PENDING')
+      .order('created_at', { ascending: false })
+      .limit(5);
 
     // 5. Totais Históricos do Banco (para separar de "Hoje")
     const { count: totalProductsCount } = await supabase
@@ -243,6 +256,17 @@ export default async function handler(req, res) {
       robotStep = 'Publicação preparada. Aguardando revisão e aprovação humana.';
     }
 
+    // 7.2 Demanda Agora (Demand Intelligence & Opportunity Engine)
+    const { data: demandEvents } = await supabase
+      .from('system_events')
+      .select('*')
+      .eq('category', 'DEMAND')
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    const latestDemand = demandEvents && demandEvents.length > 0 ? demandEvents[0] : null;
+    const demandMetadata = latestDemand?.metadata || {};
+
     // Cliques de hoje
     const { count: todayClicksCount } = await supabase
       .from('click_events')
@@ -261,8 +285,46 @@ export default async function handler(req, res) {
     const remainingClicks = Math.max(0, targetClicks - currentClicks);
     const progressPercent = Math.min(100, Math.round((currentClicks / targetClicks) * 100));
 
-    // Status do Objetivo: SEM DADOS se não houver publicações hoje
-    const goalStatus = todayPubs.length === 0 ? 'SEM DADOS' : (progressPercent >= 100 ? 'META ATINGIDA' : 'NO RITMO');
+    // Cálculo de Projeção e Status da Meta (Fase 6)
+    const nowHour = new Date().getHours();
+    const hoursRemaining = Math.max(1, 24 - nowHour);
+    const ratePerHour = nowHour > 0 ? currentClicks / nowHour : 0;
+    const projectedClicks = todayPubs.length === 0 ? 0 : Math.round(currentClicks + ratePerHour * hoursRemaining);
+
+    let goalStatus = 'SEM DADOS';
+    if (todayPubs.length > 0) {
+      if (progressPercent >= 100) {
+        goalStatus = 'META ATINGIDA';
+      } else if (
+        (currentClicks < targetClicks * 0.4 && nowHour >= 13) ||
+        (projectedClicks < targetClicks * 0.7 && nowHour >= 12)
+      ) {
+        goalStatus = 'ABAIXO DO RITMO';
+      } else {
+        goalStatus = 'NO RITMO';
+      }
+    }
+
+    // Ação dinâmica para a Meta baseada no estado operacional e eventos
+    const latestEvent = (logsData || [])[0];
+    let actionForGoal = 'Pesquisando categoria com maior intenção de compra.';
+    if (latestEvent) {
+      if (latestEvent.action === 'PRICE_MULTI_SOURCE_FALLBACK' || (latestEvent.message && latestEvent.message.includes('PDP indisponível'))) {
+        actionForGoal = 'PDP bloqueada por checkpoint; validação realizada por fonte alternativa.';
+      } else if (latestEvent.action === 'OFFER_DISCARDED' && (latestEvent.message && latestEvent.message.includes('preço'))) {
+        actionForGoal = 'Oferta descartada: preço não pôde ser confirmado.';
+      } else if (latestEvent.action === 'AUTONOMOUS_PUBLISHED' || latestEvent.action === 'FACEBOOK_POST_CREATED') {
+        actionForGoal = 'Oferta aprovada para publicação.';
+      } else if (latestEvent.action === 'DEMAND_NO_PUBLISH') {
+        actionForGoal = 'Nenhuma oportunidade suficientemente forte neste ciclo.';
+      } else if (robotStatus === 'TRABALHANDO') {
+        actionForGoal = 'Pesquisando categoria com maior intenção de compra.';
+      } else if (goalStatus === 'ABAIXO DO RITMO') {
+        actionForGoal = 'Priorizando produtos de ticket baixo e alto apelo para acelerar cliques.';
+      } else if (todayPubs.length > 0) {
+        actionForGoal = 'Mantendo curadoria ativa para meta de 20 cliques.';
+      }
+    }
 
     // 9. Cálculo estrito de Hoje (00:00 até agora America/Sao_Paulo)
     let todayProductsFound = 0;
@@ -323,7 +385,7 @@ export default async function handler(req, res) {
       code: currentStratCode,
       name: currentStratCode === 'PRECO' ? 'Foco em Preço Baixo' : currentStratCode === 'DESCONTO' ? 'Desconto Real Comprovado' : 'Achadinho Exclusivo',
       reason: latestDecision.reason || 'Vantagem de preço comprovada com desconto expressivo vs histórico de preços.',
-      prioritizedCategory: 'Cozinha & Organização',
+      prioritizedCategory: topOffers[0]?.category || 'Tecnologia / Utilidades',
       prioritizedTime: '12:00 - 18:00 (Pico comercial)',
       prioritizedNetwork: 'NÃO CONFIGURADA',
       actionRecommendation: latestDecision.actionTaken || 'Priorizar produtos de compra por impulso e diversificar categoria.',
@@ -358,34 +420,60 @@ export default async function handler(req, res) {
         isAwaitingApproval: Boolean(preparedPub),
       },
       robotNow,
-      preparedPublication: preparedPub ? {
-        id: preparedPub.id,
-        productId: preparedPub.product_id,
-        marketplaceProductId: preparedPub.products?.marketplace_product_id || preparedPub.metadata?.marketplaceProductId || 'MLB-AUTOPILOT',
-        title: preparedPub.products?.title || preparedPub.metadata?.headline || 'Oferta Selecionada',
-        marketplace: preparedPub.products?.marketplace || preparedPub.marketplace || 'mercadolivre',
-        imageUrl: preparedPub.media_url || preparedPub.products?.image_url || preparedPub.metadata?.imageUrl || 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=400&q=80',
-        currentPrice: preparedPub.price_published != null ? Number(preparedPub.price_published) : null,
-        originalPrice: preparedPub.original_price_published != null ? Number(preparedPub.original_price_published) : null,
-        discountPercent: preparedPub.discount_published != null ? Number(preparedPub.discount_published) : 0,
-        copy: preparedPub.content || preparedPub.metadata?.messageText || '',
-        affiliateUrl: preparedPub.affiliate_url || '',
-        validatedAt: preparedPub.metadata?.validated_at || preparedPub.created_at,
-        strategy: preparedPub.strategy || preparedPub.metadata?.strategy || 'DESCONTO',
-        score: preparedPub.metadata?.score || 85,
-        status: preparedPub.status,
-        metadata: preparedPub.metadata || {},
-      } : null,
+      preparedPublication: preparedPub ? (() => {
+        const prepTitle = preparedPub.products?.title || preparedPub.metadata?.headline || 'Oferta Selecionada';
+        const prepClassified = categoryClassifier.classify(prepTitle, preparedPub.products?.product_url, preparedPub.products?.category).category;
+        const isConfirmedMeli = Boolean(preparedPub.affiliate_url && preparedPub.affiliate_url.includes('meli.la'));
+        return {
+          id: preparedPub.id,
+          productId: preparedPub.product_id,
+          marketplaceProductId: preparedPub.products?.marketplace_product_id || preparedPub.metadata?.marketplaceProductId || 'MLB-AUTOPILOT',
+          title: prepTitle,
+          category: prepClassified,
+          marketplace: preparedPub.products?.marketplace || preparedPub.marketplace || 'mercadolivre',
+          imageUrl: preparedPub.media_url || preparedPub.products?.image_url || preparedPub.metadata?.imageUrl || 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=400&q=80',
+          currentPrice: preparedPub.price_published != null ? Number(preparedPub.price_published) : null,
+          originalPrice: preparedPub.original_price_published != null ? Number(preparedPub.original_price_published) : null,
+          discountPercent: preparedPub.discount_published != null ? Number(preparedPub.discount_published) : 0,
+          copy: preparedPub.content || preparedPub.metadata?.messageText || '',
+          affiliateUrl: preparedPub.affiliate_url || '',
+          isAffiliateVerified: isConfirmedMeli,
+          affiliateUrlStatus: isConfirmedMeli ? 'CONFIRMADO' : 'AFFILIATE_LINK_UNVERIFIED',
+          validatedAt: preparedPub.metadata?.validated_at || preparedPub.created_at,
+          strategy: preparedPub.strategy || preparedPub.metadata?.strategy || 'DESCONTO',
+          score: preparedPub.metadata?.score || 85,
+          status: preparedPub.status,
+          metadata: preparedPub.metadata || {},
+        };
+      })() : null,
       strategyDetails,
       autopilotMode: state.autopilot_mode || 'ASSISTIDO',
+      // 0. Publicado Agora (Fase 6 Live Feedback Loop)
+      latestPublished: publishedPubs.length > 0 ? {
+        id: publishedPubs[0].id,
+        title: publishedPubs[0].products?.title || publishedPubs[0].metadata?.headline || 'Oferta Selecionada',
+        currentPrice: publishedPubs[0].price_published != null ? Number(publishedPubs[0].price_published) : null,
+        originalPrice: publishedPubs[0].original_price_published != null ? Number(publishedPubs[0].original_price_published) : null,
+        discountPercent: publishedPubs[0].discount_published != null ? Number(publishedPubs[0].discount_published) : null,
+        imageUrl: publishedPubs[0].media_url || publishedPubs[0].products?.image_url,
+        strategy: publishedPubs[0].strategy || 'DESCONTO',
+        demandKeyword: publishedPubs[0].metadata?.demandKeyword || publishedPubs[0].metadata?.keyword || 'Cozinha & Organização',
+        decisionReason: publishedPubs[0].metadata?.decisionReason || publishedPubs[0].metadata?.aiReason || 'Oportunidade com alto desconto real e intenção de compra comprovada.',
+        publishedAt: new Date(publishedPubs[0].published_at || publishedPubs[0].created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+        publicationUrl: publishedPubs[0].publication_url,
+        affiliateUrl: publishedPubs[0].affiliate_url,
+        clicks: publishedPubs[0].publication_metrics?.[0]?.clicks || 0,
+        totalClicks: currentClicks,
+      } : null,
       // 1. Bloco de Metas & Objetivo (Fase 5.4)
       goals: {
         targetClicks,
         currentClicks,
         remainingClicks,
         progressPercent,
-        projectionToday: todayPubs.length === 0 ? 'N/D' : `${currentClicks} cliques`,
-        status: goalStatus, // 'SEM DADOS', 'NO RITMO', 'ABAIXO DA META', 'META ATINGIDA'
+        projectionToday: todayPubs.length === 0 ? '0' : `${projectedClicks}`,
+        status: goalStatus, // 'SEM DADOS', 'ABAIXO DO RITMO', 'NO RITMO', 'META ATINGIDA'
+        actionForGoal,
         ctr: 'N/D',
         retention: 'N/D',
         conversions: 0,
@@ -501,6 +589,27 @@ export default async function handler(req, res) {
         })),
         message: publishedPubs.length === 0 ? 'Nenhuma publicação realizada ainda.' : `${publishedPubs.length} publicação(ões) realizada(s).`,
       },
+      // 12. Demanda Agora (Detector de Demanda + Oportunidade)
+      demandNow: {
+        lastScanAt: latestDemand ? latestDemand.created_at : null,
+        decision: latestDemand?.status || 'IDLE',
+        actionTaken: demandMetadata.actionTaken || 'MONITORANDO',
+        reason: latestDemand?.message || 'Aguardando próximo ciclo de monitoramento.',
+        activeDemands: demandMetadata.activeDemands || [],
+        bestOpportunity: demandMetadata.bestOpportunity || null,
+      },
+      // 13. Intervenções Operacionais Pendentes (Desafios, CAPTCHAs, Sessões)
+      interventions: (interventionsData || []).map((i) => ({
+        id: i.id,
+        type: i.type,
+        marketplace: i.marketplace,
+        title: i.title,
+        message: i.message,
+        targetUrl: i.target_url,
+        actionLabel: i.action_label || 'Intervir Agora ↗',
+        createdAt: i.created_at,
+        time: new Date(i.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+      })),
       timestamp: new Date().toISOString(),
     };
 

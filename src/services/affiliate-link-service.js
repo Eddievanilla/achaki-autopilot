@@ -74,13 +74,14 @@ export class AffiliateLinkService {
           else query = query.eq('marketplace_product_id', productId);
 
           const { data: existingProd } = await query.maybeSingle();
-          if (existingProd && existingProd.affiliate_url) {
-            logger.info(`[AffiliateLinkService] Link de afiliado recuperado do Supabase para ${productId || dbProductId}: ${existingProd.affiliate_url}`);
+          if (existingProd && existingProd.affiliate_url && existingProd.affiliate_url.includes('meli.la')) {
+            logger.info(`[AffiliateLinkService] Link oficial meli.la recuperado do Supabase para ${productId || dbProductId}: ${existingProd.affiliate_url}`);
             return {
               configured: true,
               marketplace: 'mercadolivre',
               productUrl,
               affiliateUrl: existingProd.affiliate_url,
+              shortUrl: existingProd.affiliate_url,
               affiliateVerified: true,
               status: 'CONFIGURADO',
               generatedAt: new Date().toISOString(),
@@ -92,18 +93,22 @@ export class AffiliateLinkService {
         logger.info(`[AffiliateLinkService] Gerando link de afiliado oficial para ${productId || productUrl}...`);
         const result = await this.mlProvider.generateAffiliateLink({ productUrl, productId });
 
-        if (result.affiliateVerified && result.affiliateUrl) {
+        const isVerifiedMeli = result.affiliateVerified &&
+          ((result.shortUrl && result.shortUrl.includes('meli.la')) || (result.affiliateUrl && result.affiliateUrl.includes('meli.la')));
+
+        if (isVerifiedMeli) {
+          const finalMeliUrl = (result.shortUrl && result.shortUrl.includes('meli.la')) ? result.shortUrl : result.affiliateUrl;
           // C) Salva o link de afiliado gerado no Supabase para persistência
           try {
             if (dbProductId) {
               await supabase
                 .from('products')
-                .update({ affiliate_url: result.affiliateUrl, updated_at: new Date().toISOString() })
+                .update({ affiliate_url: finalMeliUrl, updated_at: new Date().toISOString() })
                 .eq('id', dbProductId);
             } else if (productId) {
               await supabase
                 .from('products')
-                .update({ affiliate_url: result.affiliateUrl, updated_at: new Date().toISOString() })
+                .update({ affiliate_url: finalMeliUrl, updated_at: new Date().toISOString() })
                 .eq('marketplace_product_id', productId);
             }
           } catch (dbErr) {
@@ -114,8 +119,8 @@ export class AffiliateLinkService {
             configured: true,
             marketplace: 'mercadolivre',
             productUrl,
-            affiliateUrl: result.affiliateUrl,
-            shortUrl: result.shortUrl,
+            affiliateUrl: finalMeliUrl,
+            shortUrl: finalMeliUrl,
             longUrl: result.longUrl,
             tag: result.tag,
             affiliateVerified: true,
@@ -130,8 +135,8 @@ export class AffiliateLinkService {
           productUrl,
           affiliateUrl: null,
           affiliateVerified: false,
-          status: 'AUTOMAÇÃO DO LINK DE AFILIADO AINDA NÃO CONFIGURADA',
-          reason: result.error || 'Mecanismo oficial do Mercado Livre não retornou URL comissionada.',
+          status: 'AFFILIATE_LINK_UNVERIFIED',
+          reason: result.error || 'Link oficial comissionado (meli.la) não pôde ser confirmado pelo programa.',
           generatedAt: new Date().toISOString(),
         };
 
