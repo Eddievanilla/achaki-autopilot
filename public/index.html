@@ -1039,6 +1039,231 @@
       padding: 22px;
       box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
     }
+
+    .modal-window.modal-wide {
+      max-width: 940px;
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      padding: 20px;
+    }
+
+    /* DIÁRIO DE DECISÕES & AUDITORIA COMERCIAL INTELIGENTE */
+    .diary-card {
+      background: rgba(255, 255, 255, 0.025);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 8px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      overflow: hidden;
+    }
+    .diary-card:hover {
+      background: rgba(255, 255, 255, 0.045);
+      border-color: rgba(255, 255, 255, 0.14);
+      transform: translateY(-1px);
+    }
+    .diary-card.open {
+      border-color: rgba(96, 165, 250, 0.45);
+      background: rgba(15, 23, 42, 0.65);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    }
+    .diary-card-main {
+      padding: 9px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .diary-top-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+    .diary-time {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-dim);
+      font-size: 0.68rem;
+      flex-shrink: 0;
+    }
+    .diary-tag {
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 4px;
+      letter-spacing: 0.02em;
+      flex-shrink: 0;
+      text-transform: uppercase;
+    }
+    .diary-prod-title {
+      color: #fff;
+      font-size: 0.78rem;
+      max-width: 320px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .diary-price {
+      color: #38bdf8;
+      font-weight: 700;
+      font-size: 0.75rem;
+      flex-shrink: 0;
+    }
+    .diary-decision-badge {
+      font-size: 0.66rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 4px;
+      flex-shrink: 0;
+      letter-spacing: 0.02em;
+    }
+    .diary-decision-badge.badge-publish, .diary-decision-badge.badge-approved {
+      background: rgba(34, 197, 94, 0.15);
+      color: #34d399;
+      border: 1px solid rgba(34, 197, 94, 0.35);
+    }
+    .diary-decision-badge.badge-rejected {
+      background: rgba(239, 68, 68, 0.15);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.35);
+    }
+    .diary-decision-badge.badge-wait {
+      background: rgba(148, 163, 184, 0.15);
+      color: #cbd5e1;
+      border: 1px solid rgba(148, 163, 184, 0.35);
+    }
+    .diary-decision-badge.badge-meta {
+      background: rgba(236, 72, 153, 0.15);
+      color: #f472b6;
+      border: 1px solid rgba(236, 72, 153, 0.35);
+    }
+    .diary-decision-badge.badge-operation {
+      background: rgba(96, 165, 250, 0.15);
+      color: #60a5fa;
+      border: 1px solid rgba(96, 165, 250, 0.35);
+    }
+    .diary-scores-preview {
+      font-size: 0.68rem;
+      color: #94a3b8;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .diary-reason-line {
+      font-size: 0.72rem;
+      color: #cbd5e1;
+      font-style: italic;
+      line-height: 1.35;
+    }
+    .diary-drawer {
+      padding: 12px 14px;
+      background: rgba(0, 0, 0, 0.32);
+      border-top: 1px solid rgba(255, 255, 255, 0.07);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .score-matrix-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+      gap: 6px;
+    }
+    .score-item {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 6px;
+      padding: 6px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .score-item-label {
+      font-size: 0.60rem;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    .score-item-value {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #38bdf8;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .score-item-value.score-nd {
+      color: #64748b;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+    .kpi-bar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    @media (max-width: 768px) {
+      .kpi-bar-grid {
+        grid-template-columns: repeat(4, 1fr);
+      }
+    }
+    .kpi-card-mini {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      border-radius: 6px;
+      padding: 8px 6px;
+      text-align: center;
+    }
+    .kpi-card-mini-num {
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: #fff;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .kpi-card-mini-label {
+      font-size: 0.58rem;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      font-weight: 600;
+      margin-top: 2px;
+    }
+    .diary-filter-chip {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: #cbd5e1;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.68rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .diary-filter-chip:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+    }
+    .diary-filter-chip.active {
+      background: #2563eb;
+      border-color: #3b82f6;
+      color: #fff;
+      box-shadow: 0 0 10px rgba(37, 99, 235, 0.4);
+    }
+    .diary-period-btn {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: #94a3b8;
+      padding: 5px 14px;
+      border-radius: 6px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .diary-period-btn:hover {
+      color: #fff;
+    }
+    .diary-period-btn.active {
+      background: rgba(56, 189, 248, 0.15);
+      border-color: rgba(56, 189, 248, 0.4);
+      color: #38bdf8;
+    }
   </style>
 </head>
 <body>
@@ -1508,7 +1733,7 @@
                   Histórico Completo ↗
                 </button>
               </div>
-              <div id="robotDiaryContainer" style="display:flex; flex-direction:column; gap:6px; max-height:260px; overflow-y:auto;">
+              <div id="robotDiaryContainer" style="display:flex; flex-direction:column; gap:6px; max-height:360px; overflow-y:auto; padding-right:2px;">
                 <div style="color:var(--text-dim); font-size:0.75rem;">Carregando diário operacional...</div>
               </div>
             </div>
@@ -1870,24 +2095,9 @@
       // 10. Performance Orgânica
       renderPerfTab();
 
-      // 11. Diário do Robô
+      // 11. Diário de Decisões & Auditoria Comercial Inteligente
       if (Array.isArray(data.diary)) {
-        const diaryEl = document.getElementById('robotDiaryContainer');
-        if (diaryEl) {
-          if (data.diary.length === 0) {
-            diaryEl.innerHTML = '<div style="color:var(--text-dim); font-size:0.75rem;">Nenhum evento registrado hoje.</div>';
-          } else {
-            diaryEl.innerHTML = data.diary.slice(0, 10).map(d => `
-              <div style="padding:6px 10px; background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.05); border-radius:6px; font-size:0.75rem; display:flex; justify-content:space-between; gap:8px;">
-                <div>
-                  <span style="font-family:\'JetBrains Mono\'; color:var(--text-dim); font-size:0.68rem;">${d.time}</span>
-                  <span style="color:#cbd5e1; margin-left:6px;">${d.message}</span>
-                </div>
-                <span style="font-size:0.65rem; color:#d8b4fe; flex-shrink:0;">[${d.strategy}]</span>
-              </div>
-            `).join('');
-          }
-        }
+        renderCommercialDiary(data.diary);
       }
 
       // 12. Publicações Realizadas
@@ -2141,24 +2351,336 @@
       document.getElementById('genericModal').classList.add('open');
     }
 
-    function openFullDiaryModal() {
-      if (!dashboardState || !dashboardState.diary) return;
-      document.getElementById('modalTitle').textContent = 'Diário do Robô — Histórico';
-      document.getElementById('modalBody').innerHTML = `
-        <div style="display:flex; flex-direction:column; gap:6px; max-height:350px; overflow-y:auto;">
-          ${dashboardState.diary.map(d => `
-            <div style="padding:6px 10px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:6px; font-size:0.75rem;">
-              <span style="font-family:'JetBrains Mono'; color:var(--text-dim);">${d.time}</span> — 
-              <strong>${d.message}</strong>
-              <span style="color:#d8b4fe; margin-left:6px;">[${d.strategy}]</span>
-            </div>
-          `).join('')}
+    // ─────────────────────────────────────────────────────────────
+    // DIÁRIO DE DECISÕES & AUDITORIA COMERCIAL INTELIGENTE
+    // ─────────────────────────────────────────────────────────────
+    let diaryFilterPeriod = 'HOJE';
+    let diaryFilterType = 'TODOS';
+
+    function getDecisionBadgeClass(status) {
+      if (status === 'PUBLICADO' || status === 'PUBLICAR') return 'badge-publish';
+      if (status === 'APROVADO') return 'badge-approved';
+      if (status === 'REJEITADO') return 'badge-rejected';
+      if (status === 'META') return 'badge-meta';
+      if (status === 'OPERACAO') return 'badge-operation';
+      return 'badge-wait';
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function renderScoreBox(label, val) {
+      const isND = val == null || val === 'N/D' || val === 'UNKNOWN' || val === '';
+      return `
+        <div class="score-item">
+          <span class="score-item-label">${label}</span>
+          <span class="score-item-value ${isND ? 'score-nd' : ''}">${isND ? 'N/D' : val}</span>
         </div>
       `;
+    }
+
+    function toggleDiaryDrawer(id) {
+      const drawer = document.getElementById('diary-drawer-' + id);
+      const card = document.getElementById('diary-card-' + id);
+      const icon = document.getElementById('diary-toggle-icon-' + id);
+      if (!drawer) return;
+      const isHidden = drawer.style.display === 'none' || !drawer.style.display;
+      drawer.style.display = isHidden ? 'flex' : 'none';
+      if (card) {
+        if (isHidden) card.classList.add('open');
+        else card.classList.remove('open');
+      }
+      if (icon) {
+        icon.textContent = isHidden ? '▲' : '▼';
+      }
+    }
+
+    function renderDecisionCardHtml(d, idx, prefix) {
+      const elemId = prefix + '-' + idx;
+      const badgeClass = getDecisionBadgeClass(d.decisionStatus);
+      const isGoal = d.tag === 'META' && d.goalDetails;
+
+      return `
+        <div class="diary-card" id="diary-card-${elemId}" onclick="toggleDiaryDrawer('${elemId}')">
+          <div class="diary-card-main">
+            <!-- Linha 1: Horário, Tag, Título + Preço, Decisão -->
+            <div class="diary-top-row">
+              <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; flex:1; min-width:0;">
+                <span class="diary-time">${d.time}</span>
+                <span class="diary-tag" style="background:${d.tagBg || 'rgba(255,255,255,0.06)'}; color:${d.tagColor || '#cbd5e1'}; border:1px solid ${d.tagBorder || 'rgba(255,255,255,0.1)'};">
+                  ${d.tagIcon || '📌'} [${d.tag || 'GERAL'}]
+                </span>
+
+                ${d.productTitle ? `
+                  <strong class="diary-prod-title" title="${escapeHtml(d.productTitle)}">
+                    ${escapeHtml(d.productTitle)}
+                  </strong>
+                  ${d.formattedPrice ? `<span class="diary-price">— ${d.formattedPrice}</span>` : ''}
+                ` : (isGoal ? `
+                  <strong style="color:#f472b6; font-size:0.76rem;">
+                    Meta: ${d.goalDetails.current}/${d.goalDetails.target} • Status: <span style="color:${d.goalDetails.status === 'META ATINGIDA' ? '#34d399' : (d.goalDetails.status === 'ABAIXO DO RITMO' ? '#fbbf24' : '#60a5fa')}">${d.goalDetails.status}</span>
+                  </strong>
+                ` : `
+                  <strong style="color:#cbd5e1; font-size:0.75rem;">${escapeHtml(d.rationale || d.message)}</strong>
+                `)}
+              </div>
+
+              <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
+                <span class="diary-decision-badge ${badgeClass}">
+                  ${d.decision || '✓ OK'}
+                </span>
+                <span class="diary-toggle-icon" id="diary-toggle-icon-${elemId}" style="color:var(--text-dim); font-size:0.65rem;">▼</span>
+              </div>
+            </div>
+
+            <!-- Linha 2: Principais Scores (quando aplicável) -->
+            ${d.keyScoresText ? `
+              <div class="diary-scores-preview">
+                ${escapeHtml(d.keyScoresText)}
+              </div>
+            ` : ''}
+
+            <!-- Linha 3: Motivo Comercial ou Ação da Meta -->
+            <div class="diary-reason-line">
+              ${isGoal ? `
+                <span style="color:#f472b6; font-style:normal; font-weight:700;">Ação:</span> ${escapeHtml(d.goalDetails.action)}
+              ` : `
+                "${escapeHtml(d.rationale || d.message)}"`}
+            </div>
+          </div>
+
+          <!-- EXPANSÃO DE DETALHES -->
+          <div class="diary-drawer" id="diary-drawer-${elemId}" style="display:none;" onclick="event.stopPropagation()">
+            <!-- Produto, Imagem, Marketplace, Categoria, Keyword -->
+            <div style="display:flex; gap:12px; align-items:flex-start;">
+              ${d.imageUrl ? `
+                <img src="${d.imageUrl}" class="diary-thumb" style="width:64px; height:64px; object-fit:cover; border-radius:6px; border:1px solid rgba(255,255,255,0.1); flex-shrink:0;" onerror="this.style.display='none'">
+              ` : ''}
+              <div style="display:flex; flex-direction:column; gap:3px; flex:1; min-width:0;">
+                <div style="font-weight:700; color:#fff; font-size:0.8rem; line-height:1.3;">
+                  ${escapeHtml(d.productTitle || d.rationale || 'Auditoria Comercial')}
+                </div>
+                <div style="font-size:0.7rem; color:var(--text-dim); display:flex; flex-wrap:wrap; gap:8px;">
+                  <span><strong>Marketplace:</strong> ${escapeHtml(d.marketplace || 'Mercado Livre')}</span>
+                  <span>•</span>
+                  <span><strong>Categoria:</strong> ${escapeHtml(d.category || 'N/D')}</span>
+                  <span>•</span>
+                  <span><strong>Cluster/Keyword:</strong> <span style="color:#38bdf8;">${escapeHtml(d.discoveryKeyword || 'N/D')}</span></span>
+                </div>
+                ${d.formattedPrice ? `
+                  <div style="font-size:0.74rem; color:#38bdf8; margin-top:2px;">
+                    <strong>Preço Atual:</strong> ${d.formattedPrice}
+                    ${d.originalPrice ? `<span style="color:var(--text-dim); text-decoration:line-through; margin-left:6px;">R$ ${Number(d.originalPrice).toFixed(2).replace('.', ',')}</span>` : ''}
+                    ${d.discountPercent > 0 ? `<span style="color:#34d399; margin-left:6px; font-weight:700;">(-${d.discountPercent}% OFF)</span>` : ''}
+                  </div>
+                ` : ''}
+              </div>
+            </div>
+
+            <!-- FULL SCORE MATRIX (13 SCORES) -->
+            <div>
+              <div style="font-size:0.68rem; font-weight:700; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:6px;">
+                📊 Matriz Completa de Scores
+              </div>
+              <div class="score-matrix-grid">
+                ${renderScoreBox('Demand Score', d.scores?.demandScore)}
+                ${renderScoreBox('Target Score', d.scores?.targetScore)}
+                ${renderScoreBox('Purchase Intent', d.scores?.purchaseIntent)}
+                ${renderScoreBox('Impulse Score', d.scores?.impulseScore)}
+                ${renderScoreBox('Need Score', d.scores?.needScore)}
+                ${renderScoreBox('Rating Score', d.scores?.ratingScore)}
+                ${renderScoreBox('Seller Score', d.scores?.sellerScore)}
+                ${renderScoreBox('Price Score', d.scores?.priceScore)}
+                ${renderScoreBox('Discount Score', d.scores?.discountScore != null && d.scores?.discountScore !== 'N/D' ? d.scores.discountScore + '%' : 'N/D')}
+                ${renderScoreBox('Delivery Score', d.scores?.deliveryScore)}
+                ${renderScoreBox('Value Score', d.scores?.valueScore)}
+                ${renderScoreBox('Social Proof', d.scores?.socialProof)}
+                ${renderScoreBox('Commercial Score', d.scores?.commercialScore)}
+              </div>
+            </div>
+
+            <!-- DECISÃO FINAL, MOTIVOS FAVORÁVEIS & CONTRÁRIOS -->
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:10px; background:rgba(255,255,255,0.02); padding:10px; border-radius:6px; border:1px solid rgba(255,255,255,0.04);">
+              <div>
+                <span style="font-size:0.65rem; color:#34d399; font-weight:700; text-transform:uppercase;">✓ Motivos Favoráveis</span>
+                <div style="font-size:0.72rem; color:#cbd5e1; margin-top:4px;">
+                  ${Array.isArray(d.favorableReasons) && d.favorableReasons.length > 0 ? d.favorableReasons.map(r => `<div>• ${escapeHtml(r)}</div>`).join('') : (d.favorableReasons ? escapeHtml(d.favorableReasons) : 'Critérios de relevância e conversão atendidos.')}
+                </div>
+              </div>
+              <div>
+                <span style="font-size:0.65rem; color:#f87171; font-weight:700; text-transform:uppercase;">✕ Motivos Contrários / Riscos</span>
+                <div style="font-size:0.72rem; color:#cbd5e1; margin-top:4px;">
+                  ${Array.isArray(d.contraryReasons) && d.contraryReasons.length > 0 ? d.contraryReasons.map(r => `<div>• ${escapeHtml(r)}</div>`).join('') : (d.contraryReasons ? escapeHtml(d.contraryReasons) : '<span style="color:#64748b;">Nenhum risco impeditivo identificado.</span>')}
+                </div>
+              </div>
+            </div>
+
+            <!-- FONTE DOS DADOS -->
+            <div style="font-size:0.68rem; color:var(--text-dim); display:flex; justify-content:space-between; align-items:center; border-top:1px solid rgba(255,255,255,0.04); padding-top:6px;">
+              <span><strong>Fonte dos Dados:</strong> ${escapeHtml(d.dataSource || 'Mercado Livre Storefront + JEV IA Curadoria')}</span>
+              <span style="font-family:'JetBrains Mono';">${d.date} ${d.time}</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderCommercialDiary(items) {
+      const diaryEl = document.getElementById('robotDiaryContainer');
+      if (!diaryEl) return;
+      if (!Array.isArray(items) || items.length === 0) {
+        diaryEl.innerHTML = '<div style="color:var(--text-dim); font-size:0.75rem; padding:12px;">Nenhuma decisão registrada hoje.</div>';
+        return;
+      }
+
+      // Renderiza as 15 decisões mais recentes no card do cockpit
+      diaryEl.innerHTML = items.slice(0, 15).map((d, idx) => renderDecisionCardHtml(d, idx, 'cockpit')).join('');
+    }
+
+    function openFullDiaryModal() {
+      if (!dashboardState || !dashboardState.diary) return;
+      const modalWin = document.querySelector('#genericModal .modal-window');
+      if (modalWin) modalWin.classList.add('modal-wide');
+
+      document.getElementById('modalTitle').textContent = '📖 Diário de Decisões — Auditoria Comercial';
+      renderFullDiaryModalUi();
       document.getElementById('genericModal').classList.add('open');
     }
 
-    function closeModal() {
+    function setDiaryFilterPeriod(period) {
+      diaryFilterPeriod = period;
+      renderFullDiaryModalUi();
+    }
+
+    function setDiaryFilterType(type) {
+      diaryFilterType = type;
+      renderFullDiaryModalUi();
+    }
+
+    function renderFullDiaryModalUi() {
+      const container = document.getElementById('modalBody');
+      if (!container || !dashboardState || !dashboardState.diary) return;
+
+      const allItems = dashboardState.diary;
+
+      // Determinar período
+      const now = Date.now();
+      let filteredByPeriod = allItems;
+      const todayStr = new Date().toLocaleDateString('pt-BR');
+
+      if (diaryFilterPeriod === 'HOJE') {
+        filteredByPeriod = allItems.filter(d => d.date === todayStr || (d.timestamp && d.timestamp >= new Date().toISOString().slice(0, 10)));
+      } else if (diaryFilterPeriod === '7 DIAS') {
+        const limit = now - 7 * 86400000;
+        filteredByPeriod = allItems.filter(d => new Date(d.timestamp).getTime() >= limit);
+      } else if (diaryFilterPeriod === '30 DIAS') {
+        const limit = now - 30 * 86400000;
+        filteredByPeriod = allItems.filter(d => new Date(d.timestamp).getTime() >= limit);
+      }
+
+      // Resumo KPIs para o período ativo
+      const periodAnalyzed = filteredByPeriod.filter(d => d.isProductDecision).length;
+      const periodApproved = filteredByPeriod.filter(d => d.decisionStatus === 'APROVADO' || d.decisionStatus === 'PUBLICADO').length;
+      const periodPublished = filteredByPeriod.filter(d => d.tag === 'PUBLICADO' || d.decisionStatus === 'PUBLICADO').length;
+      const periodRejected = filteredByPeriod.filter(d => d.tag === 'REJEITADO' || d.decisionStatus === 'REJEITADO').length;
+      
+      let periodClicks = 0;
+      let periodImpressions = 0;
+      filteredByPeriod.forEach(d => {
+        if (d.clicks) periodClicks += d.clicks;
+        if (d.impressions) periodImpressions += d.impressions;
+      });
+      const periodCtr = periodImpressions > 0 ? ((periodClicks / periodImpressions) * 100).toFixed(1) + '%' : 'N/D';
+      const periodConversions = 0;
+
+      // Filtrar por tipo
+      let finalFiltered = filteredByPeriod;
+      if (diaryFilterType !== 'TODOS') {
+        if (diaryFilterType === 'PUBLICADOS') {
+          finalFiltered = filteredByPeriod.filter(d => d.tag === 'PUBLICADO' || d.decisionStatus === 'PUBLICADO');
+        } else if (diaryFilterType === 'REJEITADOS') {
+          finalFiltered = filteredByPeriod.filter(d => d.tag === 'REJEITADO' || d.decisionStatus === 'REJEITADO');
+        } else {
+          finalFiltered = filteredByPeriod.filter(d => d.tag === diaryFilterType);
+        }
+      }
+
+      container.innerHTML = `
+        <!-- TOP BAR: PERÍODO -->
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+          <div style="display:flex; gap:6px;">
+            <button class="diary-period-btn ${diaryFilterPeriod === 'HOJE' ? 'active' : ''}" onclick="setDiaryFilterPeriod('HOJE')">HOJE</button>
+            <button class="diary-period-btn ${diaryFilterPeriod === '7 DIAS' ? 'active' : ''}" onclick="setDiaryFilterPeriod('7 DIAS')">7 DIAS</button>
+            <button class="diary-period-btn ${diaryFilterPeriod === '30 DIAS' ? 'active' : ''}" onclick="setDiaryFilterPeriod('30 DIAS')">30 DIAS</button>
+          </div>
+          <div style="font-size:0.72rem; color:var(--text-dim);">
+            Mostrando <strong>${finalFiltered.length}</strong> decisões (${diaryFilterPeriod})
+          </div>
+        </div>
+
+        <!-- RESUMO DOS RESULTADOS (KPIS) -->
+        <div class="kpi-bar-grid">
+          <div class="kpi-card-mini">
+            <div class="kpi-card-mini-num">${periodAnalyzed}</div>
+            <div class="kpi-card-mini-label">Analisados</div>
+          </div>
+          <div class="kpi-card-mini">
+            <div class="kpi-card-mini-num" style="color:#34d399;">${periodApproved}</div>
+            <div class="kpi-card-mini-label">Aprovados</div>
+          </div>
+          <div class="kpi-card-mini">
+            <div class="kpi-card-mini-num" style="color:#38bdf8;">${periodPublished}</div>
+            <div class="kpi-card-mini-label">Publicados</div>
+          </div>
+          <div class="kpi-card-mini">
+            <div class="kpi-card-mini-num" style="color:#f87171;">${periodRejected}</div>
+            <div class="kpi-card-mini-label">Rejeitados</div>
+          </div>
+          <div class="kpi-card-mini">
+            <div class="kpi-card-mini-num" style="color:#fbbf24;">${periodCtr}</div>
+            <div class="kpi-card-mini-label">CTR Publ.</div>
+          </div>
+          <div class="kpi-card-mini">
+            <div class="kpi-card-mini-num" style="color:#a78bfa;">${periodClicks}</div>
+            <div class="kpi-card-mini-label">Cliques</div>
+          </div>
+          <div class="kpi-card-mini">
+            <div class="kpi-card-mini-num" style="color:#64748b;">${periodConversions}</div>
+            <div class="kpi-card-mini-label">Conversões</div>
+          </div>
+        </div>
+
+        <!-- FILTRO POR TIPO -->
+        <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; padding-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.06);">
+          ${['TODOS', 'DEMANDA', 'ALVO', 'IMPULSO', 'NECESSIDADE', 'INTENÇÃO', 'PUBLICADOS', 'REJEITADOS', 'META'].map(t => `
+            <button class="diary-filter-chip ${diaryFilterType === t ? 'active' : ''}" onclick="setDiaryFilterType('${t}')">${t}</button>
+          `).join('')}
+        </div>
+
+        <!-- LISTA DE DECISÕES COM DETALHES EXPANSÍVEIS -->
+        <div style="display:flex; flex-direction:column; gap:8px; max-height:440px; overflow-y:auto; padding-right:4px;">
+          ${finalFiltered.length === 0 ? `
+            <div style="text-align:center; padding:30px; color:var(--text-dim); font-size:0.8rem;">
+              Nenhuma decisão encontrada para os filtros selecionados (${diaryFilterType} em ${diaryFilterPeriod}).
+            </div>
+          ` : finalFiltered.map((d, idx) => renderDecisionCardHtml(d, idx, 'modal')).join('')}
+        </div>
+      `;
+    }
+
+    function closeModal(event) {
+      if (event && event.target && event.target !== document.getElementById('genericModal') && !event.target.classList.contains('modal-close-btn')) {
+        return;
+      }
+      const modalWin = document.querySelector('#genericModal .modal-window');
+      if (modalWin) modalWin.classList.remove('modal-wide');
       document.getElementById('genericModal').classList.remove('open');
     }
 
