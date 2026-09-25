@@ -773,6 +773,15 @@
     .network-badge.tt { background: rgba(254, 44, 85, 0.15); color: #fda4af; border: 1px solid rgba(254, 44, 85, 0.3); }
     .network-badge.yt { background: rgba(255, 0, 0, 0.15); color: #f87171; border: 1px solid rgba(255, 0, 0, 0.3); }
 
+    .channel-card {
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .channel-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+      border-color: rgba(255, 255, 255, 0.22) !important;
+    }
+
     /* PREPARED PUBLICATION CARD */
     .prepared-card {
       background: linear-gradient(135deg, rgba(37, 99, 235, 0.1), rgba(15, 23, 42, 0.95));
@@ -2552,21 +2561,83 @@
             <div class="card-header">
               <span class="card-title">🌐 Conexões de Canais e Marketplaces</span>
             </div>
-            <div class="grid-3">
-              <div style="padding:14px; background:rgba(0,0,0,0.25); border-radius:8px; border:1px solid var(--card-border);">
-                <div style="font-weight:700; color:#fff; margin-bottom:4px;">📘 Facebook Page</div>
-                <div style="font-size:0.75rem; color:#34d399;">● Conectada (ACHAki Ofertas)</div>
-                <div style="font-size:0.7rem; color:var(--text-dim); margin-top:4px;">Token permanente ativo</div>
+            <div class="grid-3" style="gap:12px;">
+              <!-- FACEBOOK PAGE -->
+              <div class="channel-card" onclick="openChannelAnalytics('FACEBOOK')" style="padding:16px; background:rgba(24,119,242,0.06); border-radius:10px; border:1px solid rgba(24,119,242,0.25); cursor:pointer;" title="Clique para abrir o Analytics do Facebook">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                  <div style="font-weight:700; color:#fff; font-size:0.9rem;">📘 Facebook Page</div>
+                  <span class="status-tag NO_RITMO" style="font-size:0.65rem;">● ATIVA</span>
+                </div>
+                <div style="font-size:0.75rem; color:#34d399; margin-top:4px;">Conectada (ACHAki Ofertas)</div>
+                <div style="font-size:0.7rem; color:var(--text-dim); margin-top:2px;">Token permanente ativo</div>
+                <div style="margin-top:10px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.06); display:flex; justify-content:space-between; align-items:center;">
+                  <span style="font-size:0.72rem; color:#60a5fa; font-weight:700;">📊 Abrir Analytics da Página ↗</span>
+                </div>
               </div>
-              <div style="padding:14px; background:rgba(0,0,0,0.25); border-radius:8px; border:1px solid var(--card-border);">
-                <div style="font-weight:700; color:#fff; margin-bottom:4px;">🛒 Mercado Livre</div>
-                <div style="font-size:0.75rem; color:#fbbf24;">● Coleta ativa / Sessão Gerador</div>
-                <div style="font-size:0.7rem; color:var(--text-dim); margin-top:4px;">Links meli.la comissionados</div>
+
+              <!-- INSTAGRAM -->
+              <div class="channel-card" onclick="openChannelAnalytics('INSTAGRAM')" style="padding:16px; background:rgba(225,48,108,0.04); border-radius:10px; border:1px solid rgba(225,48,108,0.2); cursor:pointer;" title="Clique para abrir o Analytics do Instagram">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                  <div style="font-weight:700; color:#fff; font-size:0.9rem;">📸 Instagram</div>
+                  <span class="status-tag SEM_DADOS" style="font-size:0.65rem;">○ PENDENTE</span>
+                </div>
+                <div style="font-size:0.75rem; color:#f472b6; margin-top:4px;">Conta Profissional</div>
+                <div style="font-size:0.7rem; color:var(--text-dim); margin-top:2px;">Aguardando vinculação Meta</div>
+                <div style="margin-top:10px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.06); display:flex; justify-content:space-between; align-items:center;">
+                  <span style="font-size:0.72rem; color:#f472b6; font-weight:700;">📊 Abrir Analytics do Canal ↗</span>
+                </div>
               </div>
-              <div style="padding:14px; background:rgba(0,0,0,0.25); border-radius:8px; border:1px solid var(--card-border);">
-                <div style="font-weight:700; color:#fff; margin-bottom:4px;">🛍️ Shopee</div>
-                <div style="font-size:0.75rem; color:#94a3b8;">● Em integração</div>
-                <div style="font-size:0.7rem; color:var(--text-dim); margin-top:4px;">Programa de afiliados parceiro</div>
+
+              <!-- TIKTOK -->
+              <div class="channel-card" onclick="openChannelAnalytics('TIKTOK')" style="padding:16px; background:rgba(254,44,85,0.04); border-radius:10px; border:1px solid rgba(254,44,85,0.2); cursor:pointer;" title="Clique para abrir o Analytics do TikTok">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                  <div style="font-weight:700; color:#fff; font-size:0.9rem;">🎵 TikTok</div>
+                  <span class="status-tag SEM_DADOS" style="font-size:0.65rem;">○ PENDENTE</span>
+                </div>
+                <div style="font-size:0.75rem; color:#fda4af; margin-top:4px;">Vídeos & Achadinhos</div>
+                <div style="font-size:0.7rem; color:var(--text-dim); margin-top:2px;">Aguardando credenciais oficiais</div>
+                <div style="margin-top:10px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.06); display:flex; justify-content:space-between; align-items:center;">
+                  <span style="font-size:0.72rem; color:#fda4af; font-weight:700;">📊 Abrir Analytics do Canal ↗</span>
+                </div>
+              </div>
+
+              <!-- MERCADO LIVRE -->
+              <div class="channel-card" onclick="switchTab('tab-offers', 'Radar & Ofertas')" style="padding:16px; background:rgba(255,230,0,0.04); border-radius:10px; border:1px solid rgba(255,230,0,0.2); cursor:pointer;" title="Clique para ver o catálogo coletado do Mercado Livre">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                  <div style="font-weight:700; color:#fff; font-size:0.9rem;">🛒 Mercado Livre</div>
+                  <span class="status-tag NO_RITMO" style="font-size:0.65rem;">● ATIVO</span>
+                </div>
+                <div style="font-size:0.75rem; color:#fbbf24; margin-top:4px;">Afiliados & Coleta</div>
+                <div style="font-size:0.7rem; color:var(--text-dim); margin-top:2px;">Links meli.la comissionados</div>
+                <div style="margin-top:10px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.06); display:flex; justify-content:space-between; align-items:center;">
+                  <span style="font-size:0.72rem; color:#fbbf24; font-weight:700;">📦 Ver Radar de Ofertas ↗</span>
+                </div>
+              </div>
+
+              <!-- SHOPEE -->
+              <div class="channel-card" onclick="switchTab('tab-offers', 'Radar & Ofertas')" style="padding:16px; background:rgba(238,77,45,0.04); border-radius:10px; border:1px solid rgba(238,77,45,0.2); cursor:pointer;" title="Clique para ver status da Shopee">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                  <div style="font-weight:700; color:#fff; font-size:0.9rem;">🛍️ Shopee</div>
+                  <span class="status-tag SEM_DADOS" style="font-size:0.65rem;">○ EM INTEGRAÇÃO</span>
+                </div>
+                <div style="font-size:0.75rem; color:#94a3b8; margin-top:4px;">Programa de Afiliados</div>
+                <div style="font-size:0.7rem; color:var(--text-dim); margin-top:2px;">Parceria em homologação</div>
+                <div style="margin-top:10px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.06); display:flex; justify-content:space-between; align-items:center;">
+                  <span style="font-size:0.72rem; color:#94a3b8; font-weight:700;">📦 Ver Produtos Shopee ↗</span>
+                </div>
+              </div>
+
+              <!-- YOUTUBE -->
+              <div class="channel-card" onclick="openChannelAnalytics('YOUTUBE')" style="padding:16px; background:rgba(255,0,0,0.04); border-radius:10px; border:1px solid rgba(255,0,0,0.2); cursor:pointer;" title="Clique para abrir o Analytics do YouTube">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                  <div style="font-weight:700; color:#fff; font-size:0.9rem;">▶️ YouTube</div>
+                  <span class="status-tag SEM_DADOS" style="font-size:0.65rem;">○ PENDENTE</span>
+                </div>
+                <div style="font-size:0.75rem; color:#f87171; margin-top:4px;">Shorts & Vídeos</div>
+                <div style="font-size:0.7rem; color:var(--text-dim); margin-top:2px;">Aguardando credenciais oficiais</div>
+                <div style="margin-top:10px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.06); display:flex; justify-content:space-between; align-items:center;">
+                  <span style="font-size:0.72rem; color:#f87171; font-weight:700;">📊 Abrir Analytics do Canal ↗</span>
+                </div>
               </div>
             </div>
             <div style="margin-top:16px; padding-top:14px; border-top:1px solid rgba(255,255,255,0.05); font-size:0.78rem; color:var(--text-dim);">
@@ -3428,6 +3499,17 @@
     // ANALYTICS MULTIRREDE OFICIAL (ZERO MOCK DATA)
     // ─────────────────────────────────────────────────────────────
     let currentNetworkTab = 'GERAL';
+
+    function openChannelAnalytics(networkName) {
+      switchTab('tab-metrics', 'Métricas & Metas');
+      selectNetworkTab(networkName);
+      setTimeout(() => {
+        const target = document.getElementById('multinetworkContainer') || document.getElementById('networkTabsStrip');
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
+    }
 
     function selectNetworkTab(networkName) {
       currentNetworkTab = networkName;
