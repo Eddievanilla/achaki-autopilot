@@ -3441,11 +3441,12 @@
 
     function renderNetworkSummaryCard(name, badgeCls, netData) {
       const isConn = netData && (netData.connected || netData.status === 'CONNECTED');
-      const followers = isConn ? (netData.followers ?? 'N/D') : 'N/D';
-      const reach = isConn ? (netData.reach ?? 'N/D') : 'N/D';
-      const views = isConn ? (netData.views ?? 'N/D') : 'N/D';
-      const clicks = isConn ? (netData.clicks ?? 0) : 'N/D';
-      const posts = isConn ? (netData.postsToday ?? 0) : 0;
+      const m = netData?.metrics || netData || {};
+      const followers = isConn ? (m.followers ?? 'N/D') : 'N/D';
+      const reach = isConn ? (m.reach ?? 'N/D') : 'N/D';
+      const views = isConn ? (m.views ?? 'N/D') : 'N/D';
+      const clicks = isConn ? (m.clicks ?? 0) : 'N/D';
+      const posts = isConn ? (m.postsToday ?? netData?.postsToday ?? 0) : 0;
       const statusBadge = isConn 
         ? '<span class="status-tag NO_RITMO">● CONECTADO</span>' 
         : '<span class="status-tag SEM_DADOS">○ AGUARDANDO CONEXÃO</span>';
@@ -3483,6 +3484,7 @@
 
     function renderNetworkDetailCard(name, netData) {
       const isConn = netData && (netData.connected || netData.status === 'CONNECTED');
+      const m = netData?.metrics || netData || {};
       const badgeCls = name === 'FACEBOOK' ? 'fb' : name === 'INSTAGRAM' ? 'ig' : name === 'TIKTOK' ? 'tt' : 'yt';
       
       if (!isConn) {
@@ -3515,24 +3517,24 @@
           <div class="grid-4">
             <div>
               <span class="stat-kpi-sub">Seguidores / Fãs</span>
-              <div class="stat-kpi-num" style="color:#fff;">${netData.followers ?? 0}</div>
+              <div class="stat-kpi-num" style="color:#fff;">${m.followers ?? 0}</div>
             </div>
             <div>
               <span class="stat-kpi-sub">Alcance Orgânico</span>
-              <div class="stat-kpi-num" style="color:#60a5fa;">${netData.reach ?? 0}</div>
+              <div class="stat-kpi-num" style="color:#60a5fa;">${m.reach ?? 0}</div>
             </div>
             <div>
               <span class="stat-kpi-sub">Visualizações</span>
-              <div class="stat-kpi-num" style="color:#c084fc;">${netData.views ?? 0}</div>
+              <div class="stat-kpi-num" style="color:#c084fc;">${m.views ?? 0}</div>
             </div>
             <div>
               <span class="stat-kpi-sub">Cliques Gerados</span>
-              <div class="stat-kpi-num" style="color:#34d399;">${netData.clicks ?? 0}</div>
+              <div class="stat-kpi-num" style="color:#34d399;">${m.clicks ?? 0}</div>
             </div>
           </div>
           <div class="grid-3" style="margin-top:12px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.06); font-size:0.75rem;">
-            <div><span style="color:var(--text-dim);">Engajamento:</span> <strong style="color:#fff;">${netData.engagement ?? 0}</strong></div>
-            <div><span style="color:var(--text-dim);">Publicações Hoje:</span> <strong style="color:#fff;">${netData.postsToday ?? 0}</strong></div>
+            <div><span style="color:var(--text-dim);">Engajamento:</span> <strong style="color:#fff;">${m.engagement ?? 0}</strong></div>
+            <div><span style="color:var(--text-dim);">Publicações Hoje:</span> <strong style="color:#fff;">${m.postsToday ?? netData?.postsToday ?? 0}</strong></div>
             <div><span style="color:var(--text-dim);">Status da Conexão:</span> <strong style="color:#34d399;">Ativo</strong></div>
           </div>
         </div>
@@ -3544,7 +3546,7 @@
       if (!container || !dashboardState) return;
 
       const mn = dashboardState.multinetwork || {};
-      const nets = mn.networks || {};
+      const nets = mn.networks || mn || {};
 
       if (currentNetworkTab === 'GERAL') {
         container.innerHTML = `
