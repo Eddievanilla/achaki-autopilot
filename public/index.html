@@ -2488,7 +2488,10 @@
                 🗑️ Limpar Todas Anteriores
               </button>
             </div>
-            ${data.interventions.map(item => `
+            ${data.interventions.map(item => {
+              const isML = item.marketplace === 'mercadolivre' || (item.targetUrl && item.targetUrl.includes('mercadolivre.com'));
+              const safeTargetUrl = isML ? 'https://www.mercadolivre.com.br/afiliados/linkbuilder#hub' : item.targetUrl;
+              return `
               <div class="intervention-banner" id="interventionCard-${item.id}" style="margin-bottom:12px;">
                 <div class="intervention-header">
                   <span class="intervention-tag">
@@ -2514,7 +2517,7 @@
                       <button class="topbar-btn topbar-btn-primary" onclick="copyProductLink('${escapeHtml(item.productUrl)}')">
                         📋 Copiar Link do Produto
                       </button>
-                      <a href="${item.targetUrl}" target="_blank" rel="noopener noreferrer" class="btn-intervention-direct">
+                      <a href="${safeTargetUrl}" target="_blank" rel="noopener noreferrer" class="btn-intervention-direct">
                         ${item.actionLabel || 'Abrir Gerador Mercado Livre ↗'}
                       </a>
                     </div>
@@ -2527,7 +2530,7 @@
                     <div style="display:flex; gap:8px; flex-wrap:wrap;">
                       <input type="url" id="manualAffInput-${item.id}" placeholder="Cole o link encurtado (ex: https://meli.la/...)" 
                         style="flex:1; min-width:240px; background:#0b1120; border:1px solid rgba(255,255,255,0.2); border-radius:6px; padding:8px 12px; font-size:0.82rem; color:#fff;" />
-                      <button class="topbar-btn" style="background:#10b981; color:#fff; border-color:#059669; font-weight:700;" onclick="submitManualAffiliateLink('${item.id}', '${item.productId || ''}')">
+                    <button class="topbar-btn" style="background:#10b981; color:#fff; border-color:#059669; font-weight:700;" onclick="submitManualAffiliateLink('${item.id}', '${item.productId || ''}')">
                         🚀 Salvar e Continuar Postagem
                       </button>
                     </div>
@@ -2540,7 +2543,7 @@
                   </div>
                 ` : `
                   <div class="intervention-actions">
-                    <a href="${item.targetUrl}" target="_blank" rel="noopener noreferrer" class="btn-intervention-direct">
+                    <a href="${safeTargetUrl}" target="_blank" rel="noopener noreferrer" class="btn-intervention-direct">
                       ${item.actionLabel || 'Intervir Agora ↗'}
                     </a>
                     <button class="btn-intervention-resolve" onclick="resolveIntervention('${item.id}')">
@@ -2549,7 +2552,7 @@
                   </div>
                 `}
               </div>
-            `).join('')}
+            `;}).join('')}
           `;
         } else {
           intContainer.style.display = 'none';

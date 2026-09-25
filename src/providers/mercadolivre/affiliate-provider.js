@@ -79,8 +79,8 @@ export class MercadoLivreAffiliateProvider {
           marketplace: 'mercadolivre',
           title: currentUrl.includes('login') ? 'Login Necessário no Mercado Livre Afiliados' : 'Desafio de Segurança no Mercado Livre Afiliados',
           message: 'O gerador de links de afiliados requer que você acesse e confirme sua sessão para gerar links comissionados (meli.la).',
-          targetUrl: currentUrl || 'https://www.mercadolivre.com.br/afiliados/linkbuilder#hub',
-          actionLabel: 'Abrir Página do Desafio ↗',
+          targetUrl: 'https://www.mercadolivre.com.br/afiliados/linkbuilder#hub',
+          actionLabel: 'Abrir Gerador Mercado Livre ↗',
           metadata: { currentUrl, productUrl },
         }).catch(() => null);
 
