@@ -165,6 +165,54 @@ class InterventionManager {
       return [];
     }
   }
+
+  /**
+   * Aguarda ativamente até que o operador resolva a intervenção.
+   *
+   * @param {string} id - ID da intervenção
+   * @param {number} [timeoutMs=300000] - Tempo limite em ms (padrão 5 min)
+   * @param {Function} [checkBrowserResolved] - Função opcional para checar se o browser já desatravancou
+   * @returns {Promise<boolean>}
+   */
+  async waitForResolution(id, timeoutMs = 300000, checkBrowserResolved = null) {
+    const startTime = Date.now();
+    const intervalMs = 4000;
+
+    logger.info(`[InterventionManager] ⏸ Aguardando intervenção humana (ID: ${id || 'geral'})...`);
+
+    while (Date.now() - startTime < timeoutMs) {
+      if (checkBrowserResolved) {
+        try {
+          const browserOk = await checkBrowserResolved();
+          if (browserOk) {
+            logger.info('[InterventionManager] ✓ Resolução detectada diretamente pelo navegador!');
+            if (id) await this.resolveIntervention(id);
+            return true;
+          }
+        } catch (e) {}
+      }
+
+      if (id) {
+        try {
+          const { data } = await supabase
+            .from('operator_interventions')
+            .select('status')
+            .eq('id', id)
+            .maybeSingle();
+
+          if (data && data.status === 'RESOLVED') {
+            logger.info(`[InterventionManager] ✓ Intervenção ${id} confirmada como resolvida pelo operador!`);
+            return true;
+          }
+        } catch (e) {}
+      }
+
+      await new Promise(r => setTimeout(r, intervalMs));
+    }
+
+    logger.warn(`[InterventionManager] ⏱ Tempo limite de espera esgotado (${Math.round(timeoutMs / 1000)}s).`);
+    return false;
+  }
 }
 
 export default new InterventionManager();

@@ -7,11 +7,14 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
   <title>ACHAki Autopilot — Cockpit Studio</title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#0f172a">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="/audio-alerts.js"></script>
   <style>
     :root {
       --bg: #07090e;
@@ -1670,6 +1673,24 @@
         </div>
         <div style="display:none;" id="modeLiveStatus">● Sistema Ativo</div>
       </div>
+
+      <!-- Sidebar Audio Box -->
+      <div class="sidebar-mode-box" style="margin-top: 10px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <div class="sidebar-section-title" style="margin-bottom: 0;">🔊 Voz do Robô</div>
+          <button id="btnToggleAudio" onclick="toggleAudioAlerts()" style="background: transparent; border: none; color: #38bdf8; cursor: pointer; font-size: 0.72rem; font-weight: 700;">LIGADO</button>
+        </div>
+        <div style="font-size: 0.68rem; color: var(--text-dim); margin-bottom: 8px;">
+          Alertas falados ao vivo quando houver desafio:
+        </div>
+        <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+          <button class="topbar-btn" style="padding: 4px 7px; font-size: 0.65rem;" onclick="window.achakiAudio?.playMarketplaceAudio('mercadolivre')">🟠 ML</button>
+          <button class="topbar-btn" style="padding: 4px 7px; font-size: 0.65rem;" onclick="window.achakiAudio?.playMarketplaceAudio('shopee')">🟧 Shopee</button>
+          <button class="topbar-btn" style="padding: 4px 7px; font-size: 0.65rem;" onclick="window.achakiAudio?.playMarketplaceAudio('amazon')">🟡 Amazon</button>
+          <button class="topbar-btn" style="padding: 4px 7px; font-size: 0.65rem;" onclick="window.achakiAudio?.playMarketplaceAudio('facebook')">🔵 FB</button>
+          <button class="topbar-btn" style="padding: 4px 7px; font-size: 0.65rem; color: #34d399; border-color: rgba(52,211,153,0.3);" onclick="window.achakiAudio?.notifyResolved()">🎉 Sucesso</button>
+        </div>
+      </div>
     </aside>
 
     <!-- ══════════════════════════════════════════════════════════
@@ -2420,6 +2441,8 @@
       if (intContainer) {
         if (data.interventions && data.interventions.length > 0) {
           intContainer.style.display = 'block';
+          // Dispara alerta de áudio e voz do robô
+          window.achakiAudio?.notifyIntervention(data.interventions[0]);
           intContainer.innerHTML = data.interventions.map(item => `
             <div class="intervention-banner">
               <div class="intervention-header">
@@ -2780,6 +2803,20 @@
       }
     }
 
+    function toggleAudioAlerts() {
+      if (!window.achakiAudio) return;
+      const newState = !window.achakiAudio.enabled;
+      window.achakiAudio.toggle(newState);
+      const btn = document.getElementById('btnToggleAudio');
+      if (btn) {
+        btn.textContent = newState ? 'LIGADO' : 'MUTADO';
+        btn.style.color = newState ? '#38bdf8' : '#64748b';
+      }
+      if (newState) {
+        window.achakiAudio.playSynthBeep(true);
+      }
+    }
+
     async function resolveIntervention(interventionId) {
       if (!confirm('Você concluiu o desafio/verificação na página do marketplace?')) return;
       try {
@@ -2789,6 +2826,7 @@
           body: JSON.stringify({ action: 'RESOLVE_INTERVENTION', interventionId })
         });
         if (res.ok) {
+          window.achakiAudio?.notifyResolved();
           loadDashboard();
         } else {
           const err = await res.json();
@@ -3875,6 +3913,13 @@
       initRealtimeLogs();
       loadCreativesGallery();
       setInterval(loadDashboard, 15000);
+
+      // Registra Service Worker PWA para instalação no celular
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js').catch(err => {
+          console.debug('Service Worker não registrado:', err.message);
+        });
+      }
     });
   </script>
 </body>

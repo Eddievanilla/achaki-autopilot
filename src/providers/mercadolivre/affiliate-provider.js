@@ -73,7 +73,7 @@ export class MercadoLivreAffiliateProvider {
       const currentUrl = page.url();
       if (currentUrl.includes('login') || currentUrl.includes('checkpoint') || currentUrl.includes('challenge')) {
         logger.warn(`[MLAffiliateProvider] Desafio/Login detectado ao acessar gerador: ${currentUrl}`);
-        await interventionManager.requestIntervention({
+        const intervention = await interventionManager.requestIntervention({
           type: currentUrl.includes('login') ? 'LOGIN' : 'SECURITY_CHALLENGE',
           marketplace: 'mercadolivre',
           title: currentUrl.includes('login') ? 'Login Necessário no Mercado Livre Afiliados' : 'Desafio de Segurança no Mercado Livre Afiliados',
@@ -81,10 +81,19 @@ export class MercadoLivreAffiliateProvider {
           targetUrl: currentUrl || 'https://www.mercadolivre.com.br/afiliados/linkbuilder#hub',
           actionLabel: 'Abrir Página do Desafio ↗',
           metadata: { currentUrl, productUrl },
-        }).catch(() => {});
+        }).catch(() => null);
 
-        // Depois da intervenção humana, tenta recarregar a página para aproveitar a sessão recém-validada.
-        await page.waitForTimeout(2000);
+        // Aguarda resolução humana ativa (via painel/celular ou diretamente no navegador)
+        await interventionManager.waitForResolution(
+          intervention?.id,
+          180000, // Aguarda até 3 minutos
+          async () => {
+            const nowUrl = page.url();
+            return !nowUrl.includes('login') && !nowUrl.includes('checkpoint') && !nowUrl.includes('challenge');
+          }
+        );
+
+        // Recarrega a página do gerador com a sessão recém-validada
         await page.goto('https://www.mercadolivre.com.br/afiliados/linkbuilder#hub', {
           waitUntil: 'domcontentloaded',
           timeout: 30000,
