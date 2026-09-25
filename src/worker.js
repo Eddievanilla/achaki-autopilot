@@ -29,6 +29,7 @@ import PriceValidationEngine from './services/price-validation-engine.js';
 import logger from './utils/logger.js';
 import DemandIntelligenceEngine from './services/demand/demand-intelligence-engine.js';
 import OpportunityEngine from './services/demand/opportunity-engine.js';
+import creativeJobQueue from './services/factory/creative-job-queue.js';
 
 const WORKER_ID = process.env.WORKER_ID || `worker-${os.hostname().toLowerCase().replace(/[^a-z0-9]/g, '')}`;
 const HEARTBEAT_INTERVAL_MS = 10000; // 10 segundos
@@ -62,6 +63,7 @@ class RobotWorker {
     this.demandEngine = new DemandIntelligenceEngine();
     this.opportunityEngine = new OpportunityEngine({ priceValidationEngine: this.priceValidationEngine });
     this.stateChannel = null;
+    this.creativeJobTimer = null;
   }
 
   /**
@@ -114,6 +116,11 @@ class RobotWorker {
         } catch {}
       }
 
+      let factorySnapshot = null;
+      try {
+        factorySnapshot = await creativeJobQueue.getFactorySnapshot();
+      } catch {}
+
       const payload = {
         worker_id: this.workerId,
         last_heartbeat_at: new Date().toISOString(),
@@ -121,6 +128,7 @@ class RobotWorker {
         current_step: step,
         current_run_id: this.currentRunId,
         hostname: this.hostname,
+        creative_factory: factorySnapshot,
         metadata: {
           pid: process.pid,
           nodeVersion: process.version,
@@ -182,8 +190,14 @@ class RobotWorker {
     //    20 minutos = ciclo de observação, NÃO obrigação de publicar
     this.demandScanTimer = setInterval(() => this._runDemandScanCycle(), DEMAND_SCAN_INTERVAL_MS);
 
+    // 7. Fila assíncrona da fábrica de criativos locais (comfyui / ffmpeg)
+    this.creativeJobTimer = setInterval(() => {
+      creativeJobQueue.processNextJob().catch(() => {});
+    }, 10000);
+
     console.log('✓ Worker escutando comandos do Centro de Comando...\n');
     console.log(`✓ Ciclo de inteligência de demanda agendado (${DEMAND_SCAN_INTERVAL_MS / 60000} min).\n`);
+    console.log('✓ Fábrica de criativos local integrada e ativa (polling 10s).\n');
   }
 
   /**
@@ -1497,6 +1511,7 @@ class RobotWorker {
     clearInterval(this.heartbeatTimer);
     clearInterval(this.pollTimer);
     clearInterval(this.demandScanTimer);
+    clearInterval(this.creativeJobTimer);
 
     if (this.realtimeChannel) {
       try {

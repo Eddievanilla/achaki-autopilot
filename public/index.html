@@ -2142,6 +2142,69 @@
             </div>
           </div>
 
+          <!-- GRID FÁBRICA LOCAL & FREQUÊNCIA DE PUBLICAÇÃO -->
+          <div class="grid-2" style="margin-top: 14px;">
+            <!-- FÁBRICA LOCAL DE CRIATIVOS (COMFYUI + FFMPEG) -->
+            <div class="card" style="border-color: rgba(168,85,247,0.35);">
+              <div class="card-header">
+                <span class="card-title" style="color: #d8b4fe;">🎨 Fábrica Local de Criativos</span>
+                <span class="status-tag NO_RITMO" id="factoryStatusTag">LOCAL WORKER</span>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:8px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.25); padding:8px 12px; border-radius:8px;">
+                  <div>
+                    <span style="font-size:0.7rem; color:var(--text-dim); text-transform:uppercase; font-weight:700;">ComfyUI Local</span>
+                    <div style="font-size:0.85rem; font-weight:800;" id="factoryComfyStatus">OFFLINE (127.0.0.1:8188)</div>
+                  </div>
+                  <div style="text-align:right;">
+                    <span style="font-size:0.7rem; color:var(--text-dim); text-transform:uppercase; font-weight:700;">GPU / VRAM</span>
+                    <div style="font-size:0.85rem; font-weight:800; color:#34d399;" id="factoryGpuStatus">RTX 3050 (6GB)</div>
+                  </div>
+                </div>
+                <div class="grid-2" style="margin-top:2px;">
+                  <div>
+                    <span style="font-size:0.7rem; color:var(--text-dim);">Job em Andamento:</span>
+                    <div style="font-size:0.78rem; font-weight:700; color:#fff;" id="factoryActiveJob">Nenhum (Livre)</div>
+                  </div>
+                  <div>
+                    <span style="font-size:0.7rem; color:var(--text-dim);">Fila Local:</span>
+                    <div style="font-size:0.78rem; font-weight:700; color:#60a5fa;" id="factoryQueueCount">0 pendentes</div>
+                  </div>
+                </div>
+                <div style="font-size:0.7rem; color:var(--text-muted); line-height:1.35; padding-top:6px; border-top:1px solid rgba(255,255,255,0.06);" id="factorySummaryText">
+                  Motor de vídeo híbrido: prioriza geração local de baixo custo. FFmpeg ativo para composição 9:16 nativa.
+                </div>
+              </div>
+            </div>
+
+            <!-- FREQUÊNCIA DE PUBLICAÇÃO (AUTÔNOMA vs MANUAL) -->
+            <div class="card" style="border-color: rgba(59,130,246,0.35);">
+              <div class="card-header">
+                <span class="card-title" style="color: #60a5fa;">⏱️ Frequência de Publicação</span>
+                <span class="status-tag NO_RITMO" id="pubFreqTag">AUTÔNOMA</span>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:8px;">
+                <div style="display:flex; gap:8px;">
+                  <button id="btnFreqAuto" class="topbar-btn topbar-btn-primary" style="flex:1; justify-content:center; padding:6px 10px; font-size:0.75rem;" onclick="setPublicationFrequency('AUTONOMOUS')">
+                    🤖 Autônoma
+                  </button>
+                  <button id="btnFreqManual" class="topbar-btn" style="flex:1; justify-content:center; padding:6px 10px; font-size:0.75rem;" onclick="setPublicationFrequency('MANUAL')">
+                    ⚙️ Manual
+                  </button>
+                </div>
+                <div id="manualFreqControl" style="display:none; align-items:center; gap:8px; background:rgba(0,0,0,0.25); padding:8px 12px; border-radius:8px;">
+                  <span style="font-size:0.75rem; color:#cbd5e1;">Meta diária:</span>
+                  <input type="number" id="manualTargetInput" value="2" min="1" max="10" style="width:60px; background:#0f172a; border:1px solid rgba(255,255,255,0.2); color:#fff; padding:4px 8px; border-radius:6px; font-size:0.8rem; text-align:center;" />
+                  <span style="font-size:0.75rem; color:var(--text-dim);">posts/dia</span>
+                  <button class="topbar-btn" style="font-size:0.72rem; padding:4px 8px; margin-left:auto;" onclick="saveManualTarget()">Salvar</button>
+                </div>
+                <div style="font-size:0.72rem; color:#cbd5e1; line-height:1.35;" id="pubFreqReason">
+                  GoalManager decide a frequência ótima baseado na atratividade das ofertas e volume de criativos prontos. Monitorar ≠ publicar.
+                </div>
+              </div>
+            </div>
+          </div>
+
           <!-- ESTRATÉGIA ATIVA -->
           <div class="card">
             <div class="card-header">
@@ -3202,6 +3265,11 @@
                   <div>
                     <div style="font-size:0.92rem; font-weight:700; color:#fff; margin-bottom:4px;">${item.title}</div>
                     <div style="font-size:0.8rem; color:#cbd5e1; line-height:1.4;">${item.message}</div>
+                    <div style="font-size:0.72rem; color:#94a3b8; margin-top:6px; display:flex; gap:12px; flex-wrap:wrap; background:rgba(0,0,0,0.25); padding:4px 8px; border-radius:6px;">
+                      <span>🕒 Detectado: <strong>${item.firstDetectedAt ? new Date(item.firstDetectedAt).toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' }) : item.time}</strong></span>
+                      <span>⏱️ Última: <strong>${item.lastDetectedAt ? new Date(item.lastDetectedAt).toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' }) : item.time}</strong></span>
+                      <span>🔁 Tentativas: <strong style="color:#fbbf24;">${item.attemptCount || 1}</strong></span>
+                    </div>
                   </div>
                   <div class="intervention-actions" style="margin-top:10px;">
                     <a href="${item.targetUrl || '#'}" target="_blank" rel="noopener noreferrer" class="btn-intervention-direct">
@@ -3396,6 +3464,51 @@
 
         if (dn.lastScanAt) {
           el('demandLastScan', new Date(dn.lastScanAt).toLocaleTimeString('pt-BR'));
+        }
+      }
+
+      // 6.5 Fábrica Local de Criativos
+      if (data.creativeFactory) {
+        const cf = data.creativeFactory;
+        const comfyEl = document.getElementById('factoryComfyStatus');
+        if (comfyEl) {
+          comfyEl.textContent = cf.comfyui === 'ONLINE' ? 'ONLINE (8188)' : 'OFFLINE (127.0.0.1:8188)';
+          comfyEl.style.color = cf.comfyui === 'ONLINE' ? '#34d399' : '#f87171';
+        }
+        const gpuEl = document.getElementById('factoryGpuStatus');
+        if (gpuEl) {
+          gpuEl.textContent = cf.gpuName ? `${cf.gpuName.replace('NVIDIA GeForce ', '')}` : 'GPU Local';
+        }
+        el('factoryActiveJob', cf.activeJob ? `Job ${cf.activeJob.id.slice(0, 8)}... (${cf.activeJob.priority})` : 'Nenhum (Livre)');
+        el('factoryQueueCount', `${cf.queueLength || 0} pendentes`);
+
+        const sumText = document.getElementById('factorySummaryText');
+        if (sumText) {
+          if (cf.comfyui === 'ONLINE' && cf.wanModelAvailable) {
+            sumText.textContent = 'Wan 2.2 detectado localmente. Geração de vídeo generativo Image-to-Video ativa.';
+          } else {
+            sumText.textContent = 'ComfyUI offline ou sem modelo de vídeo. VideoComposer FFmpeg ativo para composição 9:16 nativa de custo zero.';
+          }
+        }
+      }
+
+      // 6.6 Frequência de Publicação
+      if (data.goals?.publicationFrequency) {
+        const pf = data.goals.publicationFrequency;
+        const freqTag = document.getElementById('pubFreqTag');
+        if (freqTag) {
+          freqTag.textContent = pf.mode === 'MANUAL' ? `MANUAL (${pf.targetPerDay}/DIA)` : 'AUTÔNOMA';
+        }
+        el('pubFreqReason', pf.reason || 'GoalManager calculando frequência ideal.');
+        const btnAuto = document.getElementById('btnFreqAuto');
+        const btnMan = document.getElementById('btnFreqManual');
+        const manCtrl = document.getElementById('manualFreqControl');
+        if (btnAuto && btnMan) {
+          btnAuto.className = 'topbar-btn ' + (pf.mode === 'AUTONOMOUS' ? 'topbar-btn-primary' : '');
+          btnMan.className = 'topbar-btn ' + (pf.mode === 'MANUAL' ? 'topbar-btn-primary' : '');
+        }
+        if (manCtrl) {
+          manCtrl.style.display = pf.mode === 'MANUAL' ? 'flex' : 'none';
         }
       }
 
@@ -3654,6 +3767,40 @@
         alert('Erro ao alterar modo de metas: ' + err.message);
         loadDashboard();
       }
+    }
+
+    async function setPublicationFrequency(frequencyMode) {
+      const manCtrl = document.getElementById('manualFreqControl');
+      const targetInput = document.getElementById('manualTargetInput');
+      const targetVal = targetInput ? Number(targetInput.value) || 2 : 2;
+
+      if (manCtrl) {
+        manCtrl.style.display = frequencyMode === 'MANUAL' ? 'flex' : 'none';
+      }
+
+      try {
+        const res = await fetch('/api/controls', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'SET_PUBLICATION_FREQUENCY',
+            frequencyMode,
+            targetPerDay: targetVal,
+          })
+        });
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.error || 'Falha ao alterar frequência.');
+        loadDashboard();
+      } catch (err) {
+        alert('Erro ao atualizar frequência de publicação: ' + err.message);
+        loadDashboard();
+      }
+    }
+
+    async function saveManualTarget() {
+      const targetInput = document.getElementById('manualTargetInput');
+      const targetVal = targetInput ? Number(targetInput.value) || 2 : 2;
+      await setPublicationFrequency('MANUAL');
     }
 
     function updateGoalBadge(elementId, status) {

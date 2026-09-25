@@ -31,3 +31,9 @@ Thumbs.db
 .vercel
 
 scratch/
+
+# Local Creative Factory artifacts
+data/generated_creatives/
+data/temp_creatives/
+data/media/
+

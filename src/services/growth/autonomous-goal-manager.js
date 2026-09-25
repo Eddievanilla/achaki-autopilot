@@ -148,13 +148,23 @@ export class AutonomousGoalManager {
       // 4. Decide alocação prioritária entre Growth e Monetization
       const activeDecision = this._decideEnginePriority(evaluatedGoals, realMetrics, context);
 
-      // 5. Salva estado calibrado de metas no Supabase (sem travar se der erro de rede)
+      // 5. Avalia frequência de publicação (AUTÔNOMA vs MANUAL)
+      const pubFrequency = this.decidePublicationFrequency({
+        mode: context.publicationFrequencyMode || this.mode,
+        manualTarget: context.publicationFrequencyTarget || 2,
+        todayPublishedCount: context.todayPublicationsCount || 0,
+        availableCreativesCount: context.availableCreativesCount || 0,
+        demandScore: context.demandScore || 70,
+      });
+
+      // 6. Salva estado calibrado de metas no Supabase (sem travar se der erro de rede)
       await this._persistGoals(evaluatedGoals);
 
       return {
         mode: this.mode,
         evaluatedGoals,
         activeDecision,
+        publicationFrequency: pubFrequency,
         realMetricsSummary: {
           followersTotal: realMetrics.followers.total,
           viewsToday: realMetrics.views.today,
@@ -166,6 +176,52 @@ export class AutonomousGoalManager {
       logger.warn(`[AutonomousGoalManager] Erro ao avaliar metas: ${err.message}`);
       return this._fallbackState();
     }
+  }
+
+  /**
+   * Decide a frequência diária de publicações (Autônoma vs Manual).
+   * Princípio: Monitorar demanda periodicamente ≠ Obrigação de publicar.
+   */
+  decidePublicationFrequency({
+    mode = 'AUTONOMOUS',
+    manualTarget = 2,
+    todayPublishedCount = 0,
+    availableCreativesCount = 0,
+    demandScore = 50,
+  } = {}) {
+    if (mode === 'MANUAL') {
+      const target = Math.max(1, Math.min(10, Number(manualTarget) || 2));
+      const remaining = Math.max(0, target - todayPublishedCount);
+      return {
+        mode: 'MANUAL',
+        targetPerDay: target,
+        todayPublished: todayPublishedCount,
+        remainingToday: remaining,
+        shouldPublishNow: remaining > 0 && availableCreativesCount > 0,
+        reason: `Modo MANUAL ativo: meta fixada pelo operador em ${target} publicações/dia (${todayPublishedCount} realizadas hoje).`,
+      };
+    }
+
+    // Modo AUTÔNOMO:
+    let recommendedTarget = 2; // base equilibrada
+
+    if (demandScore >= 80 && availableCreativesCount >= 2) {
+      recommendedTarget = 3; // alta tração
+    } else if (demandScore < 50 || availableCreativesCount === 0) {
+      recommendedTarget = 1; // preservação de audiência e controle de saturação
+    }
+
+    const remaining = Math.max(0, recommendedTarget - todayPublishedCount);
+    const shouldPublishNow = remaining > 0 && availableCreativesCount > 0 && demandScore >= 60;
+
+    return {
+      mode: 'AUTONOMOUS',
+      targetPerDay: recommendedTarget,
+      todayPublished: todayPublishedCount,
+      remainingToday: remaining,
+      shouldPublishNow,
+      reason: `Modo AUTÔNOMO: Meta calculada de ${recommendedTarget} posts/dia com base em demanda (${demandScore}/100) e criativos disponíveis (${availableCreativesCount}).`,
+    };
   }
 
   /**

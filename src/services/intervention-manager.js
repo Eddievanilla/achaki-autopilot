@@ -40,25 +40,50 @@ class InterventionManager {
     try {
       logger.warn(`[InterventionManager] ⚠️ Solicitação de Intervenção Operacional: [${marketplace}] ${title}`);
 
-      // Verifica se já existe uma intervenção PENDING idêntica aberta recentemente (últimos 15 min)
-      const fifteenMinAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+      // Verifica se já existe uma intervenção PENDING idêntica aberta
       let query = supabase
         .from('operator_interventions')
-        .select('id')
+        .select('*')
         .eq('status', 'PENDING')
         .eq('type', type)
-        .eq('marketplace', marketplace)
-        .gte('created_at', fifteenMinAgo);
+        .eq('marketplace', marketplace);
 
       if (metadata?.approvalId) {
         query = query.filter('metadata->>approvalId', 'eq', metadata.approvalId);
       }
 
-      const { data: existing } = await query.maybeSingle();
+      const { data: existingList } = await query.order('created_at', { ascending: false }).limit(1);
+      const existing = existingList?.[0] || null;
 
       let recordId = existing?.id;
+      const nowIso = new Date().toISOString();
 
-      if (!recordId) {
+      if (existing) {
+        // Atualiza intervenção existente: incrementa tentativas e atualiza última detecção
+        const newCount = (existing.attempt_count || 1) + 1;
+        const { error: updErr } = await supabase
+          .from('operator_interventions')
+          .update({
+            last_detected_at: nowIso,
+            attempt_count: newCount,
+            title: title || existing.title,
+            message: message || existing.message,
+            target_url: targetUrl || existing.target_url,
+            metadata: {
+              ...(existing.metadata || {}),
+              ...metadata,
+              lastDetectedAt: nowIso,
+              totalAttempts: newCount,
+            },
+          })
+          .eq('id', existing.id);
+
+        if (updErr) {
+          logger.warn(`[InterventionManager] Erro ao atualizar contadores de intervenção: ${updErr.message}`);
+        } else {
+          logger.info(`[InterventionManager] 🔁 Intervenção PENDING atualizada [ID: ${existing.id}] - Tentativa #${newCount}`);
+        }
+      } else {
         const { data: inserted, error: insertErr } = await supabase
           .from('operator_interventions')
           .insert({
@@ -69,11 +94,16 @@ class InterventionManager {
             target_url: targetUrl,
             action_label: actionLabel,
             status: 'PENDING',
+            first_detected_at: nowIso,
+            last_detected_at: nowIso,
+            attempt_count: 1,
             creative_id: metadata?.creativeId || null,
             product_id: metadata?.productId || null,
             metadata: {
               ...metadata,
-              requestedAt: new Date().toISOString(),
+              firstDetectedAt: nowIso,
+              requestedAt: nowIso,
+              totalAttempts: 1,
             },
           })
           .select('id')

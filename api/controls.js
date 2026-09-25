@@ -43,10 +43,28 @@ export default async function handler(req, res) {
       'REMAKE_CREATIVE',
       'SUBMIT_AFFILIATE_LINK',
       'START_CREATIVE_PIPELINE',
+      'SET_PUBLICATION_FREQUENCY',
     ];
 
     if (!validActions.includes(action)) {
       return res.status(400).json({ error: `Ação inválida. Use uma das seguintes: ${validActions.join(', ')}` });
+    }
+
+    if (action === 'SET_PUBLICATION_FREQUENCY') {
+      const { frequencyMode = 'AUTONOMOUS', targetPerDay = 2 } = req.body || {};
+      await supabase
+        .from('system_state')
+        .update({
+          publication_frequency_mode: frequencyMode,
+          publication_frequency_target: Number(targetPerDay) || 2,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', 'autopilot');
+
+      return res.status(200).json({
+        success: true,
+        message: `Frequência de publicação atualizada para ${frequencyMode} (${targetPerDay}/dia).`,
+      });
     }
 
     // ─────────────────────────────────────────────────────────────

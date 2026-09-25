@@ -1175,10 +1175,25 @@ export default async function handler(req, res) {
         actionLabel: i.action_label || 'Intervir Agora ↗',
         productUrl: i.metadata?.productUrl || i.metadata?.product_url || null,
         productId: i.metadata?.productId || i.metadata?.product_id || null,
+        attemptCount: i.attempt_count || i.metadata?.totalAttempts || 1,
+        firstDetectedAt: i.first_detected_at || i.created_at,
+        lastDetectedAt: i.last_detected_at || i.created_at,
         metadata: i.metadata || {},
         createdAt: i.created_at,
         time: new Date(i.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
       })),
+      // 13.5 Telemetria da Fábrica Local de Criativos (ComfyUI + FFmpeg + Worker)
+      creativeFactory: heartbeatData?.creative_factory || {
+        worker: isWorkerOnline ? 'ONLINE' : 'OFFLINE',
+        comfyui: 'OFFLINE',
+        gpu: 'UNAVAILABLE',
+        gpuName: 'N/A',
+        vramFreeMb: 0,
+        activeJob: null,
+        queueLength: 0,
+        wanModelAvailable: false,
+        lastCreative: null,
+      },
       // 14. Galeria de Criativos 9:16 e Aprovações Mobile
       creatives: (creativeVersionsData || []).map((cv) => {
         const prod = cv.products || {};

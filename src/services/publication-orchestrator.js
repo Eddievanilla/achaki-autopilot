@@ -50,6 +50,8 @@ import { AffiliateLinkValidator, VALIDATION_STATUS } from './affiliate-link-vali
 import FacebookPublisher from '../publishers/facebook-publisher.js';
 import interventionManager from './intervention-manager.js';
 import StrategyLearningEngine from './growth/strategy-learning-engine.js';
+import CreativeCandidateScorer from './factory/creative-candidate-scorer.js';
+import creativeJobQueue from './factory/creative-job-queue.js';
 
 export const PIPELINE_STATES = {
   OPPORTUNITY_FOUND: 'OPPORTUNITY_FOUND',
@@ -115,14 +117,50 @@ export class PublicationOrchestrator {
   async startPipelineForProduct({ product, strategy = 'DESCONTO' }) {
     logger.info(`[PublicationOrchestrator] 🚀 Iniciando pipeline para produto [ID: ${product.id}] ${product.title}`);
 
+    // 0. Avaliação prévia com CreativeCandidateScorer (evita gastar recursos com produto fraco)
+    const candidateScore = CreativeCandidateScorer.scoreCandidate({
+      product,
+      demandContext: { score: 75, keyword: strategy },
+      minThreshold: 50,
+    });
+
+    if (!candidateScore.eligible) {
+      logger.warn(`[PublicationOrchestrator] Produto rejeitado pelo Scorer: ${candidateScore.reason}`);
+      await this.logDecisionDiary({
+        tag: 'CURADORIA',
+        icon: '⚠️',
+        message: `Produto descartado para criativo: ${candidateScore.reason}`,
+        productId: product.id,
+        metadata: { score: candidateScore.score, breakdown: candidateScore.breakdown },
+      });
+      return {
+        success: false,
+        status: 'CANDIDATE_DISCARDED_LOW_SCORE',
+        reason: candidateScore.reason,
+        score: candidateScore.score,
+      };
+    }
+
     // 1. OPPORTUNITY_FOUND -> CURATING -> CURATED
     await this.logDecisionDiary({
       tag: 'CURADORIA',
       icon: '🎯',
-      message: `Produto curado com sucesso: "${product.title}" (${product.marketplace}). Estratégia: ${strategy}.`,
+      message: `[POR QUE ESTE PRODUTO FOI ESCOLHIDO] ${candidateScore.reason}`,
       productId: product.id,
-      metadata: { strategy, price: product.current_price || product.price },
+      metadata: { strategy, price: product.current_price || product.price, score: candidateScore.score },
     });
+
+    // Enfileira job na fábrica de criativos
+    let creativeJob = null;
+    try {
+      creativeJob = await creativeJobQueue.enqueueJob({
+        productId: product.id,
+        creativeVersion: 1,
+        priority: candidateScore.priority,
+        headline: product.title,
+        metadata: { strategy, candidateScore: candidateScore.score },
+      });
+    } catch {}
 
     // 2. CREATIVE_GENERATING: CreativeAgent produz vídeo vertical 9:16
     await this.logDecisionDiary({
@@ -339,6 +377,17 @@ export class PublicationOrchestrator {
       productId: appr.product_id,
       metadata: { approvalId, remakeFocus, note },
     });
+
+    // Enfileira job de refação na fábrica local
+    try {
+      await creativeJobQueue.enqueueJob({
+        productId: appr.product_id,
+        creativeVersion: nextVersionNumber,
+        priority: 'HIGH',
+        headline: product.title,
+        metadata: { remakeFocus, previousApprovalId: approvalId },
+      });
+    } catch {}
 
     // CreativeAgent produz NOVA versão (V2, V3...) preservando anteriores
     const newCreative = await this.creativeAgent.produceCreative({
