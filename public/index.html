@@ -2907,56 +2907,38 @@
     </div>
   </div>
 
-  <!-- MODAL PLAYER VERTICAL 9:16 (MOBILE-FIRST REELS/TIKTOK/SHORTS) -->
+  <!-- MODAL DE REVISÃO DO CRIATIVO 9:16 -->
   <div class="modal-overlay" id="creativeVideoPlayerModal" onclick="closeCreativeVideoPlayer(event)">
-    <div class="modal-window" style="background:#05070c; border:1px solid rgba(255,255,255,0.15); border-radius:24px; padding:0; overflow:hidden; max-width:400px; width:95vw; box-shadow:0 30px 80px rgba(0,0,0,0.9), 0 0 40px rgba(59,130,246,0.3);" onclick="event.stopPropagation()">
-      <!-- Topbar do Player -->
-      <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; background:rgba(10,15,26,0.9); border-bottom:1px solid rgba(255,255,255,0.08);">
-        <div style="display:flex; align-items:center; gap:8px;">
-          <span style="background:rgba(59,130,246,0.2); border:1px solid rgba(59,130,246,0.4); color:#60a5fa; font-size:0.68rem; font-weight:800; padding:2px 8px; border-radius:99px;" id="playerVersionBadge">V1 • 9:16</span>
-          <span style="font-size:0.8rem; font-weight:700; color:#fff;" id="playerMarketplaceTag">MERCADO LIVRE</span>
+    <div class="modal-window" style="background:#05070c; border:1px solid rgba(255,255,255,0.15); border-radius:24px; padding:0; overflow:hidden; max-width:390px; width:95vw; box-shadow:0 30px 80px rgba(0,0,0,0.9), 0 0 40px rgba(59,130,246,0.3);" onclick="event.stopPropagation()">
+      <!-- Topbar do Modal: 🎬 Revisão do Criativo -->
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:14px 18px; background:rgba(10,15,26,0.95); border-bottom:1px solid rgba(255,255,255,0.08);">
+        <div style="font-size:1.02rem; font-weight:800; color:#fff; display:flex; align-items:center; gap:8px;">
+          🎬 Revisão do Criativo
         </div>
-        <button onclick="closeCreativeVideoPlayer()" style="background:transparent; border:none; color:var(--text-dim); font-size:1.3rem; cursor:pointer; padding:4px;">✖</button>
+        <button type="button" onclick="closeCreativeVideoPlayer()" style="background:transparent; border:none; color:var(--text-dim); font-size:1.3rem; cursor:pointer; padding:4px;" title="Fechar">✖</button>
       </div>
 
-      <!-- Área de Visualização 9:16 -->
-      <div style="position:relative; width:100%; aspect-ratio:9/16; max-height:60vh; background:#000; display:flex; align-items:center; justify-content:center; overflow:hidden;" id="playerViewport">
-        <img id="playerImagePreview" src="" alt="Criativo" style="width:100%; height:100%; object-fit:cover;" />
-        <div id="playerVideoContainer" style="display:none; width:100%; height:100%;">
-          <video id="playerVideoEl" controls playsinline style="width:100%; height:100%; object-fit:cover;"></video>
-        </div>
+      <!-- [ PLAYER VERTICAL 9:16 ] -->
+      <div style="position:relative; width:100%; aspect-ratio:9/16; max-height:56vh; background:#000; display:flex; align-items:center; justify-content:center; overflow:hidden;" id="playerViewport">
+        <video id="playerVideoEl" controls autoplay playsinline style="width:100%; height:100%; object-fit:contain; background:#000;"></video>
+      </div>
 
-        <!-- Overlays Dinâmicos do Roteiro -->
-        <div style="position:absolute; top:12px; left:12px; right:12px; z-index:3; display:flex; gap:4px;" id="playerTimelineBar">
-          <div style="flex:1; height:3px; background:#3b82f6; border-radius:2px;"></div>
-          <div style="flex:1; height:3px; background:rgba(255,255,255,0.25); border-radius:2px;"></div>
-          <div style="flex:1; height:3px; background:rgba(255,255,255,0.25); border-radius:2px;"></div>
-          <div style="flex:1; height:3px; background:rgba(255,255,255,0.25); border-radius:2px;"></div>
-          <div style="flex:1; height:3px; background:rgba(255,255,255,0.25); border-radius:2px;"></div>
-          <div style="flex:1; height:3px; background:rgba(255,255,255,0.25); border-radius:2px;"></div>
-        </div>
-
-        <!-- Overlay Textual / Gancho -->
-        <div style="position:absolute; bottom:14px; left:12px; right:12px; z-index:3; background:rgba(0,0,0,0.85); backdrop-filter:blur(8px); padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,0.12);">
-          <div style="font-size:0.65rem; color:#38bdf8; font-weight:800; text-transform:uppercase; letter-spacing:0.04em;" id="playerBlockName">HOOK • 0-3s</div>
-          <div style="font-size:0.82rem; font-weight:700; color:#fff; margin-top:2px; line-height:1.3;" id="playerBlockText">Carregando roteiro...</div>
+      <!-- Nome do produto -->
+      <div style="padding:14px 18px 6px; text-align:center;">
+        <div style="font-size:0.92rem; font-weight:700; color:#fff; line-height:1.35; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;" id="playerProductTitle">
+          Nome do produto
         </div>
       </div>
 
-      <!-- Roteiro Completo Expansível -->
-      <div style="padding:12px 16px; background:rgba(10,15,26,0.98); max-height:160px; overflow-y:auto; border-top:1px solid rgba(255,255,255,0.08);" id="playerScriptList">
-        <!-- Inserido dinamicamente -->
-      </div>
-
-      <!-- Barra de Ações Mobile -->
-      <div style="padding:14px 16px; background:rgba(6,9,16,1); border-top:1px solid rgba(255,255,255,0.1); display:flex; gap:8px;" id="playerActionButtons">
-        <button class="topbar-btn" style="flex:1; background:rgba(239,68,68,0.15); border-color:rgba(239,68,68,0.4); color:#f87171; font-weight:800; font-size:0.75rem; justify-content:center; padding:10px 4px;" onclick="closeCreativeVideoPlayer(); promptRejectCreative(activePlayerApprovalId);">
+      <!-- [ ❌ RECUSAR ] [ ♻️ REFAZER ] [ ✅ APROVAR ] (Interface visual na Etapa 1 sem função operacional) -->
+      <div style="padding:12px 18px 18px; background:rgba(6,9,16,1); display:flex; gap:8px;" id="playerActionButtons">
+        <button type="button" class="topbar-btn" style="flex:1; justify-content:center; background:rgba(239,68,68,0.15); border-color:rgba(239,68,68,0.4); color:#f87171; font-weight:800; font-size:0.8rem; padding:11px 4px; border-radius:8px; cursor:default;" title="Recusar">
           ❌ RECUSAR
         </button>
-        <button class="topbar-btn" style="flex:1; background:rgba(168,85,247,0.15); border-color:rgba(168,85,247,0.4); color:#d8b4fe; font-weight:800; font-size:0.75rem; justify-content:center; padding:10px 4px;" onclick="closeCreativeVideoPlayer(); promptRemakeCreative(activePlayerApprovalId);">
+        <button type="button" class="topbar-btn" style="flex:1; justify-content:center; background:rgba(168,85,247,0.15); border-color:rgba(168,85,247,0.4); color:#d8b4fe; font-weight:800; font-size:0.8rem; padding:11px 4px; border-radius:8px; cursor:default;" title="Refazer">
           ♻️ REFAZER
         </button>
-        <button class="topbar-btn topbar-btn-primary" style="flex:1.5; background:#10b981; border-color:#059669; color:#fff; font-weight:800; font-size:0.8rem; justify-content:center; padding:10px 4px; box-shadow:0 0 16px rgba(16,185,129,0.4);" onclick="closeCreativeVideoPlayer(); approveCreativeAction(activePlayerApprovalId);">
+        <button type="button" class="topbar-btn topbar-btn-primary" style="flex:1.2; justify-content:center; background:#10b981; border-color:#059669; color:#fff; font-weight:800; font-size:0.82rem; padding:11px 4px; border-radius:8px; box-shadow:0 0 16px rgba(16,185,129,0.35); cursor:default;" title="Aprovar">
           ✅ APROVAR
         </button>
       </div>
@@ -3042,6 +3024,7 @@
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const data = await res.json();
         dashboardState = data;
+        window.lastDashboardData = data;
         renderDashboard(data);
       } catch (err) {
         console.warn('Falha ao consultar dashboard:', err.message);
@@ -3050,6 +3033,7 @@
 
     function renderDashboard(data) {
       if (!data) return;
+      window.lastDashboardData = data;
 
       // 1. Status do Robô (Sidebar & Dock)
       const statusBadge = document.getElementById('robotStatusBadge');
@@ -3097,6 +3081,7 @@
             time: new Date(data.activeApproval.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
             productUrl: data.activeApproval.productUrl,
             productId: data.activeApproval.productId,
+            actionLabel: 'Revisar Criativo 9:16',
             metadata: {
               approvalId: data.activeApproval.id,
               creativeId: data.activeApproval.creativeId,
@@ -3109,11 +3094,19 @@
               strategy: data.activeApproval.strategy,
               versionNumber: data.activeApproval.versionNumber,
               headline: data.activeApproval.headline,
+              productTitle: data.activeApproval.title,
               aspectRatio: '9:16',
               step: data.activeApproval.status,
             }
           });
         }
+
+        // Armazena no mapa global para lookup instantâneo e seguro sem problemas de serialização JSON
+        window.achakiInterventionsMap = new Map();
+        interventions.forEach(item => {
+          if (item && item.id) window.achakiInterventionsMap.set(String(item.id), item);
+        });
+        window.achakiInterventionsList = interventions;
 
         if (interventions.length > 0) {
           intContainer.style.display = 'block';
@@ -3137,11 +3130,11 @@
               // ══════════════════════════════════════════════════════════
               // CASO A: REVISÃO MOBILE DE CRIATIVO 9:16 (CREATIVE_REVIEW)
               // ══════════════════════════════════════════════════════════
-              if (item.type === 'CREATIVE_REVIEW' || meta.step === 'WAITING_ADMIN_REVIEW') {
+              if (item.type === 'CREATIVE_REVIEW' || meta.step === 'WAITING_ADMIN_REVIEW' || item.actionLabel === 'Revisar Criativo 9:16') {
                 const version = meta.versionNumber || 1;
                 const priceFormatted = meta.price ? `R$ ${Number(meta.price).toFixed(2).replace('.', ',')}` : 'Preço Validado';
                 const discountText = meta.discountPercent ? `${meta.discountPercent}% OFF` : '';
-                const videoPreview = meta.videoUrl || meta.thumbnailUrl || 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=400';
+                const videoPreview = meta.thumbnailUrl || meta.videoUrl || 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=400';
 
                 return `
                   <div class="intervention-banner" id="interventionCard-${item.id}" style="margin-bottom:14px; border-color:rgba(59,130,246,0.4); background:linear-gradient(180deg, rgba(14,20,32,0.95) 0%, rgba(10,15,26,0.98) 100%);">
@@ -3155,8 +3148,8 @@
 
                     <!-- Layout Mobile: Grid Compacta Vídeo + Detalhes -->
                     <div style="display:flex; gap:14px; margin-top:8px; flex-wrap:wrap;">
-                      <!-- Miniatura Vertical 9:16 com Play -->
-                      <div style="width:110px; height:180px; border-radius:12px; overflow:hidden; position:relative; background:#000; border:1px solid rgba(255,255,255,0.15); flex-shrink:0; cursor:pointer; box-shadow:0 8px 20px rgba(0,0,0,0.6);" onclick="openCreativeVideoPlayerFromMeta('${escapeHtml(JSON.stringify(meta))}')" title="Toque para assistir">
+                      <!-- Miniatura Vertical 9:16 com Play (Abre Modal de Revisão) -->
+                      <div style="width:110px; height:180px; border-radius:12px; overflow:hidden; position:relative; background:#000; border:1px solid rgba(255,255,255,0.15); flex-shrink:0; cursor:pointer; box-shadow:0 8px 20px rgba(0,0,0,0.6);" onclick="openCreativeReviewModal('${item.id}')" title="Toque para revisar o vídeo 9:16">
                         <img src="${videoPreview}" alt="Preview" style="width:100%; height:100%; object-fit:cover;" />
                         <div style="position:absolute; inset:0; background:rgba(0,0,0,0.35); display:flex; align-items:center; justify-content:center;">
                           <div style="width:38px; height:38px; border-radius:50%; background:#2563eb; color:#fff; display:flex; align-items:center; justify-content:center; font-size:1.1rem; box-shadow:0 0 16px rgba(37,99,235,0.8);">▶</div>
@@ -3180,9 +3173,9 @@
                           </div>
                         </div>
 
-                        <!-- Botão de Assistir no Celular -->
-                        <button class="topbar-btn" style="width:100%; justify-content:center; padding:8px; margin-top:10px; background:rgba(59,130,246,0.15); border-color:rgba(59,130,246,0.4); color:#93c5fd; font-weight:700; font-size:0.78rem;" onclick="openCreativeVideoPlayerFromMeta('${escapeHtml(JSON.stringify(meta))}')">
-                          ▶ ASSISTIR NO CELULAR (9:16)
+                        <!-- Botão de Revisão do Criativo 9:16 (NÃO abre Mercado Livre, abre Player do Criativo) -->
+                        <button type="button" class="topbar-btn topbar-btn-primary" style="width:100%; justify-content:center; padding:10px; margin-top:10px; background:#2563eb; border-color:#3b82f6; color:#fff; font-weight:800; font-size:0.85rem; box-shadow:0 0 14px rgba(37,99,235,0.4); cursor:pointer;" onclick="openCreativeReviewModal('${item.id}')">
+                          🎬 Revisar Criativo 9:16
                         </button>
                       </div>
                     </div>
@@ -3253,6 +3246,8 @@
               // ══════════════════════════════════════════════════════════
               // CASO C: INTERVENÇÃO PADRÃO (CAPTCHA, LOGIN, DESAFIO)
               // ══════════════════════════════════════════════════════════
+              const isCreativeReviewInC = item.type === 'CREATIVE_REVIEW' || item.actionLabel === 'Revisar Criativo 9:16' || item.action_label === 'Revisar Criativo 9:16';
+
               return `
                 <div class="intervention-banner" id="interventionCard-${item.id}" style="margin-bottom:12px;">
                   <div class="intervention-header">
@@ -3272,9 +3267,15 @@
                     </div>
                   </div>
                   <div class="intervention-actions" style="margin-top:10px;">
-                    <a href="${item.targetUrl || '#'}" target="_blank" rel="noopener noreferrer" class="btn-intervention-direct">
-                      ${item.actionLabel || 'Resolver Desafio ↗'}
-                    </a>
+                    ${isCreativeReviewInC ? `
+                      <button type="button" class="btn-intervention-direct" style="background:#2563eb; border-color:#3b82f6; cursor:pointer;" onclick="openCreativeReviewModal('${item.id}')">
+                        🎬 Revisar Criativo 9:16
+                      </button>
+                    ` : `
+                      <a href="${item.targetUrl || '#'}" target="_blank" rel="noopener noreferrer" class="btn-intervention-direct">
+                        ${item.actionLabel || 'Resolver Desafio ↗'}
+                      </a>
+                    `}
                     <button class="btn-intervention-resolve" onclick="resolveIntervention('${item.id}')">
                       ✓ Desafio Resolvido
                     </button>
@@ -5400,95 +5401,125 @@
       } catch (err) {
         alert('Erro ao remover criativo: ' + err.message);
       }
+    }
+
     // ─────────────────────────────────────────────────────────────
     // 🎬 FLUXO OPERACIONAL: APROVAÇÃO MOBILE, REFAÇÃO, RECUSA E LINK OFICIAL
     // ─────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────
+    // 🎬 ETAPA 1: REVISÃO VISUAL DO CRIATIVO 9:16 NO MODAL LOCAL
+    // ─────────────────────────────────────────────────────────────
+    function openCreativeReviewModal(itemId) {
+      // 1. Localiza item pelo mapa de intervenções, lista ou activeApproval
+      let item = window.achakiInterventionsMap?.get(String(itemId)) 
+        || (window.achakiInterventionsList || []).find(i => String(i.id) === String(itemId))
+        || (window.lastDashboardData?.interventions || []).find(i => String(i.id) === String(itemId));
+
+      if (!item && window.lastDashboardData?.activeApproval) {
+        const app = window.lastDashboardData.activeApproval;
+        if (String(app.id) === String(itemId) || ('appr-' + app.id) === String(itemId)) {
+          item = {
+            id: app.id,
+            title: app.title,
+            productId: app.productId,
+            metadata: {
+              productTitle: app.title,
+              videoUrl: app.videoUrl,
+              thumbnailUrl: app.thumbnailUrl,
+              approvalId: app.id
+            }
+          };
+        }
+      }
+
+      const meta = item?.metadata || {};
+
+      // 2. Extrai nome real do produto
+      let productTitle = meta.productTitle || meta.product_title;
+      if (!productTitle && item?.message) {
+        const match = item.message.match(/para "([^"]+)"/i);
+        if (match && match[1]) productTitle = match[1];
+      }
+      if (!productTitle) {
+        productTitle = meta.headline 
+          || (item?.title ? item.title.replace('🎬 Novo vídeo ACHAki pronto para aprovação', '').replace(/^Vídeo 9:16 gerado para\s*/i, '').replace(/^"|"$/g, '').trim() : '')
+          || 'Produto Selecionado';
+      }
+
+      // 3. Extrai URL REAL do vídeo 9:16 (sem mocks)
+      let videoUrl = meta.videoUrl || meta.video_url || meta.storage_url || meta.media_url || item?.videoUrl;
+
+      // Fallback em creatives carregados
+      if (!videoUrl && window.lastDashboardData?.creatives) {
+        const found = window.lastDashboardData.creatives.find(c => 
+          (meta.creativeId && c.id === meta.creativeId) ||
+          (item?.creative_id && c.id === item.creative_id) ||
+          (item?.productId && c.productId === item.productId) ||
+          (meta.productId && c.productId === meta.productId)
+        );
+        if (found) {
+          videoUrl = found.videoUrl || found.storage_url;
+          if (!productTitle || productTitle === 'Produto Selecionado') {
+            productTitle = found.title || productTitle;
+          }
+        }
+      }
+
+      if (!videoUrl && window.lastDashboardData?.activeApproval?.videoUrl) {
+        videoUrl = window.lastDashboardData.activeApproval.videoUrl;
+      }
+
+      console.log('🎬 [openCreativeReviewModal] Abrindo revisão do criativo 9:16:', {
+        itemId,
+        productTitle,
+        videoUrl: videoUrl ? videoUrl.slice(0, 80) + '...' : null
+      });
+
+      const modal = document.getElementById('creativeVideoPlayerModal');
+      const vidEl = document.getElementById('playerVideoEl');
+      const titleEl = document.getElementById('playerProductTitle');
+
+      if (titleEl) {
+        titleEl.textContent = productTitle;
+      }
+
+      if (vidEl) {
+        if (videoUrl) {
+          vidEl.src = videoUrl;
+          vidEl.load();
+          vidEl.play().catch(err => {
+            console.warn('[openCreativeReviewModal] Autoplay prevenido pelo browser:', err);
+          });
+        } else {
+          vidEl.removeAttribute('src');
+          vidEl.load();
+        }
+      }
+
+      if (modal) {
+        modal.classList.add('open');
+      }
+    }
+
     function openCreativeVideoPlayerFromMeta(metaStr) {
       try {
         const meta = typeof metaStr === 'string' ? JSON.parse(metaStr) : metaStr;
-        openCreativeVideoPlayer({
-          approvalId: meta.approvalId,
-          versionNumber: meta.versionNumber || 1,
-          title: meta.product_title || meta.headline || 'Criativo Vertical 9:16',
-          marketplace: meta.marketplace || 'mercadolivre',
-          videoUrl: meta.videoUrl,
-          thumbnailUrl: meta.thumbnailUrl || meta.videoUrl,
-          headline: meta.headline,
-          duration: meta.duration || 18,
-          scriptData: meta.scriptData || null,
-        });
+        if (meta && (meta.approvalId || meta.creativeId)) {
+          openCreativeReviewModal(meta.approvalId || meta.creativeId);
+        }
       } catch (e) {
         console.error('Erro ao abrir player:', e);
       }
     }
 
-    function openCreativeVideoPlayer({ approvalId, versionNumber = 1, title, marketplace = 'MERCADO LIVRE', videoUrl, thumbnailUrl, headline, duration = 18, scriptData = null }) {
-      activePlayerApprovalId = approvalId;
-      const modal = document.getElementById('creativeVideoPlayerModal');
-      const badge = document.getElementById('playerVersionBadge');
-      const mktTag = document.getElementById('playerMarketplaceTag');
-      const imgPrev = document.getElementById('playerImagePreview');
-      const vidCont = document.getElementById('playerVideoContainer');
-      const vidEl = document.getElementById('playerVideoEl');
-      const blockName = document.getElementById('playerBlockName');
-      const blockText = document.getElementById('playerBlockText');
-      const scriptList = document.getElementById('playerScriptList');
-
-      if (badge) badge.textContent = `V${versionNumber} • 9:16 VERTICAL`;
-      if (mktTag) mktTag.textContent = marketplace.toUpperCase();
-
-      const isRealVideo = videoUrl && (videoUrl.endsWith('.mp4') || videoUrl.endsWith('.webm'));
-
-      if (isRealVideo && vidEl && vidCont && imgPrev) {
-        imgPrev.style.display = 'none';
-        vidCont.style.display = 'block';
-        vidEl.src = videoUrl;
-        vidEl.play().catch(() => {});
-      } else if (imgPrev && vidCont) {
-        vidCont.style.display = 'none';
-        imgPrev.style.display = 'block';
-        imgPrev.src = thumbnailUrl || videoUrl || 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=600';
-      }
-
-      if (blockName) blockName.textContent = 'ESTRUTURA 9:16 • ROTEIRO FACTUAL';
-      if (blockText) blockText.textContent = headline || title || 'Achadinho ACHAki verificado';
-
-      // Blocos do roteiro
-      const blocks = scriptData?.blocks || [
-        { name: 'HOOK', startSecond: 0, endSecond: 3, text: headline || 'Olha esse achadinho que encontrei hoje!' },
-        { name: 'PROBLEMA', startSecond: 3, endSecond: 6, text: 'Praticidade no dia a dia com excelente custo-benefício.' },
-        { name: 'DEMONSTRAÇÃO', startSecond: 6, endSecond: 10, text: title || 'Apresentando o produto oficial.' },
-        { name: 'BENEFÍCIO', startSecond: 10, endSecond: 14, text: 'Avaliação verificada no marketplace com entrega rápida.' },
-        { name: 'OFERTA', startSecond: 14, endSecond: 17, text: 'Desconto real comprovado vs histórico de preços.' },
-        { name: 'CTA', startSecond: 17, endSecond: 20, text: 'Link comissionado oficial na bio e comentários!' },
-      ];
-
-      if (scriptList) {
-        scriptList.innerHTML = `
-          <div style="font-size:0.7rem; color:var(--text-dim); font-weight:800; text-transform:uppercase; margin-bottom:6px;">
-            📜 Estrutura do Roteiro Factual (Zero Invenção):
-          </div>
-          <div style="display:flex; flex-direction:column; gap:6px;">
-            ${blocks.map(b => `
-              <div style="display:flex; gap:8px; font-size:0.75rem; line-height:1.3; background:rgba(255,255,255,0.02); padding:4px 8px; border-radius:6px; border-left:2px solid #3b82f6;">
-                <span style="font-weight:800; color:#60a5fa; min-width:85px; font-family:'JetBrains Mono';">${b.name} (${b.startSecond}-${b.endSecond}s):</span>
-                <span style="color:#e2e8f0;">${escapeHtml(b.text)}</span>
-              </div>
-            `).join('')}
-          </div>
-        `;
-      }
-
-      if (modal) modal.classList.add('open');
-    }
-
     function closeCreativeVideoPlayer(e) {
-      if (e && e.target && !e.target.classList.contains('modal-overlay')) return;
+      if (e && e.target && !e.target.classList.contains('modal-overlay') && !e.target.closest('button')) return;
       const modal = document.getElementById('creativeVideoPlayerModal');
       const vidEl = document.getElementById('playerVideoEl');
       if (vidEl) {
         vidEl.pause();
-        vidEl.src = '';
+        vidEl.removeAttribute('src');
+        vidEl.load();
       }
       if (modal) modal.classList.remove('open');
       activePlayerApprovalId = null;

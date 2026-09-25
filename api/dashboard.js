@@ -336,7 +336,7 @@ export default async function handler(req, res) {
       .limit(30);
 
     const activeApproval = (approvalsData || []).find(a =>
-      a.status === 'WAITING_ADMIN_REVIEW' || a.status === 'WAITING_AFFILIATE_LINK'
+      a.status === 'WAITING_ADMIN_REVIEW' || a.status === 'PENDING' || a.status === 'WAITING_AFFILIATE_LINK'
     );
 
     // Se houver aprovação de criativo aguardando admin, atualiza o status do robô
@@ -1233,8 +1233,8 @@ export default async function handler(req, res) {
         title: activeApproval.products?.title || activeApproval.metadata?.product_title || 'Produto Selecionado',
         marketplace: activeApproval.products?.marketplace || activeApproval.metadata?.marketplace || 'mercadolivre',
         productUrl: activeApproval.products?.product_url || activeApproval.metadata?.product_url,
-        videoUrl: activeApproval.metadata?.video_url,
-        thumbnailUrl: activeApproval.products?.image_url,
+        videoUrl: activeApproval.metadata?.videoUrl || activeApproval.metadata?.video_url || null,
+        thumbnailUrl: activeApproval.products?.image_url || activeApproval.metadata?.thumbnailUrl || null,
         price: activeApproval.metadata?.price,
         discountPercent: activeApproval.metadata?.discount_percent,
         strategy: activeApproval.metadata?.strategy || 'DESCONTO',

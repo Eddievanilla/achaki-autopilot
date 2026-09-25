@@ -389,7 +389,7 @@ export class CreativeJobQueue {
           marketplace: product.marketplace || 'mercadolivre',
           marketplace_product_id: product.marketplace_product_id,
           approval_token: approvalToken,
-          status: 'PENDING',
+          status: 'WAITING_ADMIN_REVIEW',
           affiliate_link_status: 'WAITING',
           idempotency_key: idempotencyKey,
           metadata: {
