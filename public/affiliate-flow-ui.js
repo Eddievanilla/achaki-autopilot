@@ -4,49 +4,63 @@
   }[c]));
 
   let activeWatcher = null;
+  let lastCheckedText = '';
 
-  async function checkAndSubmitClipboard(interventionId) {
+  async function submitAffiliateLink(interventionId, rawLink) {
+    const text = (rawLink || '').trim();
+    if (!text) return false;
+
+    const isAffiliate = /meli\.la\/[a-zA-Z0-9_-]+/i.test(text) ||
+                        /(?:s\.shopee\.com\.br|shope\.ee)\/[a-zA-Z0-9_-]+/i.test(text) ||
+                        /(?:amzn\.to\/[a-zA-Z0-9_-]+|amazon\.com\.br\/.*tag=)/i.test(text);
+
+    if (!isAffiliate) return false;
+
+    const feedback = document.querySelector(`[data-affiliate-feedback="${interventionId}"]`);
+    if (feedback) feedback.textContent = '⚡ Link detectado! Validando e associando ao produto...';
+
+    try {
+      const res = await fetch('/api/controls', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'SUBMIT_AFFILIATE_LINK',
+          interventionId,
+          rawLink: text
+        })
+      });
+      const result = await res.json();
+      if (res.ok && result.success && result.status === 'AFFILIATE_LINK_READY') {
+        if (activeWatcher) {
+          clearInterval(activeWatcher);
+          activeWatcher = null;
+        }
+        if (feedback) feedback.textContent = '✅ Link validado e salvo com sucesso!';
+        if (window.loadDashboard) window.loadDashboard();
+        return true;
+      } else if (feedback && result.reason) {
+        feedback.textContent = `Atenção: ${result.reason}`;
+      }
+    } catch (e) {
+      if (feedback) feedback.textContent = `Erro ao salvar: ${e.message}`;
+    }
+    return false;
+  }
+
+  async function checkClipboard(interventionId) {
     try {
       if (!navigator.clipboard || !navigator.clipboard.readText) return;
       const text = (await navigator.clipboard.readText() || '').trim();
-      if (!text) return;
-
-      const isAffiliate = /meli\.la\/[a-zA-Z0-9_-]+/i.test(text) ||
-                          /(?:s\.shopee\.com\.br|shope\.ee)\/[a-zA-Z0-9_-]+/i.test(text) ||
-                          /(?:amzn\.to\/[a-zA-Z0-9_-]+|amazon\.com\.br\/.*tag=)/i.test(text);
-
-      if (isAffiliate) {
-        const feedback = document.querySelector(`[data-affiliate-feedback="${interventionId}"]`);
-        if (feedback) feedback.textContent = '⚡ Link detectado na área de transferência! Validando e salvando...';
-
-        const res = await fetch('/api/controls', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'SUBMIT_AFFILIATE_LINK',
-            interventionId,
-            rawLink: text
-          })
-        });
-        const result = await res.json();
-        if (res.ok && result.success && result.status === 'AFFILIATE_LINK_READY') {
-          if (activeWatcher) {
-            clearInterval(activeWatcher);
-            activeWatcher = null;
-          }
-          if (feedback) feedback.textContent = '✅ Link validado e salvo com sucesso!';
-          if (window.loadDashboard) window.loadDashboard();
-        } else if (feedback && result.reason) {
-          feedback.textContent = `Atenção: ${result.reason}`;
-        }
-      }
+      if (!text || text === lastCheckedText) return;
+      lastCheckedText = text;
+      await submitAffiliateLink(interventionId, text);
     } catch (_) {}
   }
 
   function startClipboardWatcher(interventionId) {
     if (activeWatcher) clearInterval(activeWatcher);
-    window.addEventListener('focus', () => checkAndSubmitClipboard(interventionId));
-    activeWatcher = setInterval(() => checkAndSubmitClipboard(interventionId), 1500);
+    window.addEventListener('focus', () => checkClipboard(interventionId));
+    activeWatcher = setInterval(() => checkClipboard(interventionId), 1200);
   }
 
   window.renderAffiliateLinkCard = function (item) {
@@ -56,6 +70,7 @@
     const id = escape(item.id);
     const price = Number(meta.price);
     const scoreVal = meta.score ?? 'Não informado';
+    const prodUrl = escape(meta.productUrl || '');
 
     return `<div class="intervention-banner" id="interventionCard-${id}" style="margin-bottom:14px; border-color:rgba(59,130,246,0.5); background:linear-gradient(180deg, rgba(14,20,32,0.95) 0%, rgba(10,15,26,0.98) 100%);">
       <div class="intervention-header">
@@ -80,50 +95,108 @@
         </div>
       ` : `
         <div style="margin-top:12px;">
-          <button type="button" class="topbar-btn topbar-btn-primary" data-affiliate-open="${id}" style="width:100%; justify-content:center; padding:12px; font-size:0.9rem; font-weight:800; background:#2563eb; border-color:#3b82f6; color:#fff; box-shadow:0 0 16px rgba(37,99,235,0.4); cursor:pointer;">
-            🔗 GERAR LINK
-          </button>
-          <div style="font-size:0.75rem; color:#94a3b8; margin-top:8px; line-height:1.4;">
-            ${meta.productUrlPreparedAt 
-              ? 'URL preenchida. Clique em Gerar/Copiar no marketplace; o ACHAki detecta, valida e salva o link automaticamente.' 
-              : 'O ACHAki abre o gerador oficial do marketplace. Ao clicar em copiar o link, o ACHAki detecta imediatamente.'}
+          <div style="display:flex; gap:8px; margin-bottom:8px;">
+            <button type="button" class="topbar-btn topbar-btn-primary" data-affiliate-open="${id}" data-product-url="${prodUrl}" style="flex:1; justify-content:center; padding:12px; font-size:0.9rem; font-weight:800; background:#2563eb; border-color:#3b82f6; color:#fff; box-shadow:0 0 16px rgba(37,99,235,0.4); cursor:pointer;">
+              🔗 GERAR LINK
+            </button>
+            <button type="button" class="topbar-btn" data-copy-prod-url="${prodUrl}" title="Copiar URL original do produto" style="background:rgba(255,255,255,0.08); border-color:rgba(255,255,255,0.2); color:#e2e8f0; font-weight:700; padding:0 14px; font-size:0.8rem; cursor:pointer;">
+              📋 Copiar URL
+            </button>
           </div>
-          <div style="margin-top:8px;">
+
+          <div style="font-size:0.75rem; color:#94a3b8; line-height:1.4; background:rgba(0,0,0,0.3); padding:8px 10px; border-radius:6px; border-left:3px solid #3b82f6;">
+            💡 <strong>Como funciona:</strong> Ao clicar em <strong>GERAR LINK</strong>, a URL do produto é copiada para você e o gerador oficial é aberto. Basta dar <strong>Ctrl+V</strong> no campo e clicar em <em>Gerar</em>. Ao clicar em <strong>Copiar</strong> no Mercado Livre, o ACHAki detecta imediatamente!
+          </div>
+
+          <div style="margin-top:10px;">
             <label style="font-size:0.7rem; color:var(--text-dim); display:block; margin-bottom:2px;">URL original do produto selecionado:</label>
-            <input type="text" readonly value="${escape(meta.productUrl)}" style="width:100%; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); border-radius:6px; padding:6px 10px; font-size:0.75rem; color:#94a3b8; font-family:'JetBrains Mono';" aria-label="URL original do produto">
+            <input type="text" readonly value="${prodUrl}" style="width:100%; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); border-radius:6px; padding:6px 10px; font-size:0.75rem; color:#94a3b8; font-family:'JetBrains Mono';" aria-label="URL original do produto">
           </div>
+
+          <div style="margin-top:10px; padding-top:8px; border-top:1px dashed rgba(255,255,255,0.1);">
+            <label style="font-size:0.7rem; color:var(--text-dim); display:block; margin-bottom:4px;">Ou cole o link gerado aqui se preferir:</label>
+            <div style="display:flex; gap:6px;">
+              <input type="text" data-manual-link-input="${id}" placeholder="Ex: https://meli.la/..." style="flex:1; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.15); border-radius:6px; padding:6px 10px; font-size:0.75rem; color:#fff; font-family:'JetBrains Mono';">
+              <button type="button" class="topbar-btn" data-manual-link-submit="${id}" style="background:#059669; border-color:#10b981; color:#fff; font-weight:700; font-size:0.75rem; padding:6px 12px; cursor:pointer;">
+                Salvar
+              </button>
+            </div>
+          </div>
+
           ${meta.interventionRequired ? `<p style="color:#fbbf24; font-size:0.75rem; margin-top:6px;">⚠️ ${escape(meta.interventionRequired)}: conclua a verificação solicitada pelo marketplace nessa janela.</p>` : ''}
           ${meta.captureStatus === 'TIMED_OUT' ? '<p style="color:#f87171; font-size:0.75rem; margin-top:6px;">Link ainda não confirmado. Clique em GERAR LINK para retomar a captura.</p>' : ''}
         </div>
       `}
       ${!ready && ['ERROR', 'CLOSED'].includes(meta.captureStatus) ? '<p style="color:#f87171; font-size:0.75rem; margin-top:6px;">A captura foi interrompida. Clique em GERAR LINK para tentar novamente.</p>' : ''}
-      <div data-affiliate-feedback="${id}" role="status" style="font-size:0.75rem; color:#38bdf8; margin-top:6px; font-weight:600;"></div>
+      <div data-affiliate-feedback="${id}" role="status" style="font-size:0.78rem; color:#38bdf8; margin-top:8px; font-weight:600;"></div>
     </div>`;
   };
 
   document.addEventListener('click', async event => {
+    // 1. Botão de copiar URL original do produto
+    const copyProdBtn = event.target.closest('[data-copy-prod-url]');
+    if (copyProdBtn) {
+      const url = copyProdBtn.dataset.copyProdUrl;
+      if (url && navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(url).catch(() => {});
+        const prevText = copyProdBtn.textContent;
+        copyProdBtn.textContent = '✅ Copiado!';
+        setTimeout(() => { copyProdBtn.textContent = prevText; }, 2000);
+      }
+      return;
+    }
+
+    // 2. Botão manual de submissão do link
+    const submitManualBtn = event.target.closest('[data-manual-link-submit]');
+    if (submitManualBtn) {
+      const id = submitManualBtn.dataset.manualLinkSubmit;
+      const input = document.querySelector(`[data-manual-link-input="${id}"]`);
+      if (input && input.value) {
+        submitManualBtn.disabled = true;
+        await submitAffiliateLink(id, input.value);
+        submitManualBtn.disabled = false;
+      }
+      return;
+    }
+
+    // 3. Botão principal GERAR LINK
     const button = event.target.closest('[data-affiliate-open]');
     if (!button || button.disabled) return;
     const id = button.dataset.affiliateOpen;
-    const feedback = button.parentElement.querySelector(`[data-affiliate-feedback="${id}"]`) || button.parentElement.querySelector('[data-affiliate-feedback]');
+    const prodUrl = button.dataset.productUrl;
+    const feedback = button.parentElement.parentElement.querySelector(`[data-affiliate-feedback="${id}"]`) || document.querySelector(`[data-affiliate-feedback="${id}"]`);
     button.disabled = true;
+
     try {
-      if (feedback) feedback.textContent = 'Abrindo gerador oficial do marketplace...';
+      if (feedback) feedback.textContent = 'Preparando link do produto e gerador oficial...';
+
+      // Copia previamente a URL do produto para o clipboard
+      if (prodUrl && navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(prodUrl).catch(() => {});
+      }
+
       const response = await fetch('/api/controls', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'OPEN_AFFILIATE_GENERATOR', interventionId: id }),
       });
       const data = await response.json();
       if (!response.ok || !data.success) throw new Error(data.error || data.reason || 'Não foi possível abrir o gerador.');
-      
-      // Abre o gerador na nova aba do navegador para o operador
+
+      // Se a API retornou productUrl mais atualizada, copia também
+      if (data.productUrl && navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(data.productUrl).catch(() => {});
+      }
+
+      // Abre a aba do gerador oficial para o operador
       if (data.generatorUrl) {
         window.open(data.generatorUrl, '_blank', 'noopener,noreferrer');
       }
 
-      if (feedback) feedback.textContent = 'Gerador aberto! Ao copiar o link gerado, o ACHAki detecta e salva automaticamente.';
-      
-      // Inicia a detecção automática pelo Clipboard
+      if (feedback) {
+        feedback.innerHTML = '📋 <strong>URL do produto copiada!</strong> Cole no gerador (Ctrl+V) e clique em <em>Gerar</em>.<br>Ao clicar em <strong>Copiar</strong> no Mercado Livre, o ACHAki detecta na hora!';
+      }
+
+      // Inicia a escuta ativa do clipboard
       startClipboardWatcher(id);
     } catch (error) {
       if (feedback) feedback.textContent = error.message;

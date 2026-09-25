@@ -78,7 +78,7 @@ export default class ManualAffiliateFlow {
     if (!pending.length) checked(await this.db.from('robot_commands').insert({
       command: 'OPEN_AFFILIATE_GENERATOR', status: 'PENDING', metadata: { interventionId: id },
     }));
-    return { success: true, status: 'QUEUED', generatorUrl: target,
+    return { success: true, status: 'QUEUED', generatorUrl: target, productUrl: product.product_url,
       message: 'O ACHAki abrirá o gerador na sessão integrada e preencherá a URL. Clique apenas em Gerar no marketplace.' };
   }
 
@@ -88,9 +88,12 @@ export default class ManualAffiliateFlow {
     // Never fill a login, challenge or unrelated page, including redirects from the generator.
     if (current.origin !== expected.origin || current.pathname !== expected.pathname) return false;
     if (product.marketplace === 'amazon') return true; // SiteStripe uses the current product page.
-    const input = product.marketplace === 'mercadolivre'
+    let input = product.marketplace === 'mercadolivre'
       ? page.locator('#url-0')
       : page.getByRole('textbox', { name: /URL|link original|link do produto/i });
+    if (await input.count() !== 1 && product.marketplace === 'mercadolivre') {
+      input = page.locator('textarea');
+    }
     if (await input.count() !== 1 || !await input.isVisible() || !await input.isEditable()) return false;
     await input.fill(product.product_url, { timeout: 4000 });
     return await input.inputValue() === product.product_url;
