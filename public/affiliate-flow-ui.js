@@ -47,6 +47,31 @@
     return false;
   }
 
+  async function copyToClipboard(text) {
+    if (!text) return false;
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+    } catch (_) {}
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      ta.style.top = '-9999px';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      return ok;
+    } catch (_) {
+      return false;
+    }
+  }
+
   async function checkClipboard(interventionId) {
     try {
       if (!navigator.clipboard || !navigator.clipboard.readText) return;
@@ -59,8 +84,12 @@
 
   function startClipboardWatcher(interventionId) {
     if (activeWatcher) clearInterval(activeWatcher);
-    window.addEventListener('focus', () => checkClipboard(interventionId));
-    activeWatcher = setInterval(() => checkClipboard(interventionId), 1200);
+    const trigger = () => checkClipboard(interventionId);
+    window.addEventListener('focus', trigger);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') trigger();
+    });
+    activeWatcher = setInterval(trigger, 1000);
   }
 
   window.renderAffiliateLinkCard = function (item) {
@@ -137,8 +166,8 @@
     const copyProdBtn = event.target.closest('[data-copy-prod-url]');
     if (copyProdBtn) {
       const url = copyProdBtn.dataset.copyProdUrl;
-      if (url && navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(url).catch(() => {});
+      if (url) {
+        await copyToClipboard(url);
         const prevText = copyProdBtn.textContent;
         copyProdBtn.textContent = '✅ Copiado!';
         setTimeout(() => { copyProdBtn.textContent = prevText; }, 2000);
@@ -171,8 +200,8 @@
       if (feedback) feedback.textContent = 'Preparando link do produto e gerador oficial...';
 
       // Copia previamente a URL do produto para o clipboard
-      if (prodUrl && navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(prodUrl).catch(() => {});
+      if (prodUrl) {
+        await copyToClipboard(prodUrl);
       }
 
       const response = await fetch('/api/controls', {
@@ -183,8 +212,8 @@
       if (!response.ok || !data.success) throw new Error(data.error || data.reason || 'Não foi possível abrir o gerador.');
 
       // Se a API retornou productUrl mais atualizada, copia também
-      if (data.productUrl && navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(data.productUrl).catch(() => {});
+      if (data.productUrl) {
+        await copyToClipboard(data.productUrl);
       }
 
       // Abre a aba do gerador oficial para o operador
