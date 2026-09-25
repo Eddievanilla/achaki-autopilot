@@ -32,10 +32,52 @@ export default async function handler(req, res) {
       'CHOOSE_ANOTHER_OFFER',
       'RESOLVE_INTERVENTION',
       'CLEAR_ALL_INTERVENTIONS',
+      'SET_GOAL_MODE',
+      'SET_CONFIGURED_GOAL',
     ];
 
     if (!validActions.includes(action)) {
       return res.status(400).json({ error: `Ação inválida. Use uma das seguintes: ${validActions.join(', ')}` });
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // 0.0 ALTERAR MODO DE METAS (AUTÔNOMAS OU CONFIGURADAS)
+    // ─────────────────────────────────────────────────────────────
+    if (action === 'SET_GOAL_MODE') {
+      const { mode } = req.body || {};
+      const targetMode = mode === 'CONFIGURED' ? 'CONFIGURED' : 'AUTONOMOUS';
+
+      await supabase
+        .from('system_state')
+        .update({
+          goal_mode: targetMode,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', 'autopilot');
+
+      return res.status(200).json({ ok: true, mode: targetMode, message: `Modo de metas atualizado para [${targetMode}].` });
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // 0.01 CONFIGURAR META MANUAL DO OPERADOR
+    // ─────────────────────────────────────────────────────────────
+    if (action === 'SET_CONFIGURED_GOAL') {
+      const { metric, value } = req.body || {};
+      if (!metric || value == null) {
+        return res.status(400).json({ error: 'metric e value são obrigatórios.' });
+      }
+
+      await supabase
+        .from('goals')
+        .upsert({
+          id: `goal-${metric}`,
+          metric,
+          mode: 'CONFIGURED',
+          current_goal: Number(value),
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'id' });
+
+      return res.status(200).json({ ok: true, metric, value: Number(value), message: `Meta para [${metric}] configurada em ${value}.` });
     }
 
     // ─────────────────────────────────────────────────────────────

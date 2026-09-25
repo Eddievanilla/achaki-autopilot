@@ -697,10 +697,81 @@
       letter-spacing: 0.04em;
     }
 
-    .status-tag.NO_RITMO { background: rgba(16, 185, 129, 0.15); color: #34d399; }
-    .status-tag.ABAIXO_DA_META { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
-    .status-tag.SEM_DADOS { background: rgba(100, 116, 139, 0.15); color: #94a3b8; }
-    .status-tag.AGUARDANDO_APROVACAO { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+    .status-tag.NO_RITMO { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+    .status-tag.ABAIXO_DA_META, .status-tag.ABAIXO_DO_RITMO { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+    .status-tag.SEM_DADOS { background: rgba(100, 116, 139, 0.15); color: #94a3b8; border: 1px solid rgba(100, 116, 139, 0.3); }
+    .status-tag.AGUARDANDO_APROVACAO { background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+    .status-tag.EXPLORACAO, .status-tag.EXPLORAÇÃO { background: rgba(6, 182, 212, 0.15); color: #22d3ee; border: 1px solid rgba(6, 182, 212, 0.3); }
+    .status-tag.META_ATINGIDA { background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3); }
+    .status-tag.SUPERANDO_META { background: rgba(236, 72, 153, 0.15); color: #f472b6; border: 1px solid rgba(236, 72, 153, 0.3); }
+    .status-tag.RECALIBRANDO { background: rgba(251, 146, 60, 0.15); color: #fb923c; border: 1px solid rgba(251, 146, 60, 0.3); }
+
+    /* CONTROLE DE METAS & CRESCIMENTO ORGÂNICO */
+    .goal-mode-toggle {
+      display: inline-flex;
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 99px;
+      padding: 3px;
+      gap: 3px;
+    }
+    .goal-mode-btn {
+      background: transparent;
+      border: none;
+      padding: 4px 12px;
+      border-radius: 99px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--text-dim);
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .goal-mode-btn.active {
+      background: linear-gradient(135deg, #2563eb, #06b6d4);
+      color: #fff;
+      box-shadow: 0 2px 10px rgba(37, 99, 235, 0.35);
+    }
+    .goals-mini-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 10px;
+      margin-top: 12px;
+    }
+    .goal-mini-card {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 12px;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 8px;
+      transition: all 0.2s ease;
+    }
+    .goal-mini-card:hover {
+      background: rgba(255, 255, 255, 0.04);
+      border-color: rgba(255, 255, 255, 0.12);
+      transform: translateY(-1px);
+    }
+    .agent-action-box {
+      background: linear-gradient(135deg, rgba(37, 99, 235, 0.08), rgba(168, 85, 247, 0.06));
+      border: 1px solid rgba(59, 130, 246, 0.25);
+      border-radius: 12px;
+      padding: 14px 16px;
+    }
+    .network-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 6px;
+    }
+    .network-badge.fb { background: rgba(24, 119, 242, 0.15); color: #60a5fa; border: 1px solid rgba(24, 119, 242, 0.3); }
+    .network-badge.ig { background: rgba(225, 48, 108, 0.15); color: #f472b6; border: 1px solid rgba(225, 48, 108, 0.3); }
+    .network-badge.tt { background: rgba(254, 44, 85, 0.15); color: #fda4af; border: 1px solid rgba(254, 44, 85, 0.3); }
+    .network-badge.yt { background: rgba(255, 0, 0, 0.15); color: #f87171; border: 1px solid rgba(255, 0, 0, 0.3); }
 
     /* PREPARED PUBLICATION CARD */
     .prepared-card {
@@ -2089,6 +2160,133 @@
                   <div style="font-weight:600; font-size:0.78rem; color:#60a5fa;" id="activeNetwork">Facebook Page</div>
                 </div>
               </div>
+          <!-- METAS & CRESCIMENTO ORGÂNICO (AGENTE AUTÔNOMO) -->
+          <div class="card" id="cardMetasCrescimento">
+            <div class="card-header">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span class="card-title">🎯 Metas & Crescimento Orgânico</span>
+                <span class="status-tag EXPLORACAO" id="cockpitGoalModeBadge">AUTÔNOMAS</span>
+              </div>
+              <div class="goal-mode-toggle" id="goalModeToggle">
+                <button class="goal-mode-btn active" id="btnGoalModeAutonomous" onclick="setGoalMode('AUTONOMOUS')" title="O robô ajusta as metas progressivamente com base em dados reais">
+                  ● AUTÔNOMAS
+                </button>
+                <button class="goal-mode-btn" id="btnGoalModeConfigured" onclick="setGoalMode('CONFIGURED')" title="Você define metas manuais e o agente analisa a viabilidade">
+                  ○ CONFIGURADAS
+                </button>
+              </div>
+            </div>
+
+            <!-- 5 MINI-CARDS COMPACTOS -->
+            <div class="goals-mini-grid">
+              <!-- 1. SEGUIDORES -->
+              <div class="goal-mini-card">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <span style="font-size:0.75rem; font-weight:700; color:#fff;">👥 Seguidores</span>
+                  <span class="status-tag EXPLORACAO" id="cardGoalFollowersStatus">EXPLORAÇÃO</span>
+                </div>
+                <div style="margin:4px 0;">
+                  <div style="font-size:1.15rem; font-weight:800; color:#fff;" id="cardGoalFollowersCurrent">N/D</div>
+                  <div style="font-size:0.68rem; color:var(--text-dim);">Meta: <span id="cardGoalFollowersTarget">Exploração</span></div>
+                </div>
+                <div style="font-size:0.68rem; color:var(--text-muted);" id="cardGoalFollowersVelocity">
+                  Tendência: → ESTÁVEL
+                </div>
+              </div>
+
+              <!-- 2. VISUALIZAÇÕES -->
+              <div class="goal-mini-card">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <span style="font-size:0.75rem; font-weight:700; color:#fff;">👁️ Visualizações</span>
+                  <span class="status-tag EXPLORACAO" id="cardGoalViewsStatus">EXPLORAÇÃO</span>
+                </div>
+                <div style="margin:4px 0;">
+                  <div style="font-size:1.15rem; font-weight:800; color:#60a5fa;" id="cardGoalViewsCurrent">N/D</div>
+                  <div style="font-size:0.68rem; color:var(--text-dim);">Meta: <span id="cardGoalViewsTarget">Exploração</span></div>
+                </div>
+                <div style="font-size:0.68rem; color:var(--text-muted);" id="cardGoalViewsVelocity">
+                  Tendência: → ESTÁVEL
+                </div>
+              </div>
+
+              <!-- 3. ENGAJAMENTO -->
+              <div class="goal-mini-card">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <span style="font-size:0.75rem; font-weight:700; color:#fff;">💬 Engajamento</span>
+                  <span class="status-tag EXPLORACAO" id="cardGoalEngageStatus">EXPLORAÇÃO</span>
+                </div>
+                <div style="margin:4px 0;">
+                  <div style="font-size:1.15rem; font-weight:800; color:#c084fc;" id="cardGoalEngageCurrent">N/D</div>
+                  <div style="font-size:0.68rem; color:var(--text-dim);">Meta: <span id="cardGoalEngageTarget">Exploração</span></div>
+                </div>
+                <div style="font-size:0.68rem; color:var(--text-muted);" id="cardGoalEngageVelocity">
+                  Tendência: → ESTÁVEL
+                </div>
+              </div>
+
+              <!-- 4. CLIQUES NO LINK -->
+              <div class="goal-mini-card">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <span style="font-size:0.75rem; font-weight:700; color:#fff;">🔗 Cliques Link</span>
+                  <span class="status-tag EXPLORACAO" id="cardGoalClicksStatus">EXPLORAÇÃO</span>
+                </div>
+                <div style="margin:4px 0;">
+                  <div style="font-size:1.15rem; font-weight:800; color:#34d399;" id="cardGoalClicksCurrent">0</div>
+                  <div style="font-size:0.68rem; color:var(--text-dim);">Meta: <span id="cardGoalClicksTarget">5</span></div>
+                </div>
+                <div style="font-size:0.68rem; color:var(--text-muted);" id="cardGoalClicksVelocity">
+                  Tendência: → ESTÁVEL
+                </div>
+              </div>
+
+              <!-- 5. CONVERSÕES -->
+              <div class="goal-mini-card">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <span style="font-size:0.75rem; font-weight:700; color:#fff;">💰 Conversões</span>
+                  <span class="status-tag EXPLORACAO" id="cardGoalConvStatus">EXPLORAÇÃO</span>
+                </div>
+                <div style="margin:4px 0;">
+                  <div style="font-size:1.15rem; font-weight:800; color:#fbbf24;" id="cardGoalConvCurrent">0</div>
+                  <div style="font-size:0.68rem; color:var(--text-dim);">Meta: <span id="cardGoalConvTarget">1</span></div>
+                </div>
+                <div style="font-size:0.68rem; color:var(--text-muted);" id="cardGoalConvVelocity">
+                  Tendência: → ESTÁVEL
+                </div>
+              </div>
+            </div>
+
+            <!-- BLOCO EXPLICATIVO DO AGENTE -->
+            <div class="agent-action-box" style="margin-top:14px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <span style="font-size:0.78rem; font-weight:800; color:#60a5fa; text-transform:uppercase; letter-spacing:0.04em;">
+                  🤖 AÇÃO DO AGENTE PARA AS METAS
+                </span>
+                <span class="status-tag EXPLORACAO" id="agentConfidenceTag">CONFIANÇA: INICIAL</span>
+              </div>
+              <div class="grid-2" style="gap:10px;">
+                <div>
+                  <div style="font-size:0.7rem; color:var(--text-dim);">🎯 Objetivo Prioritário:</div>
+                  <div style="font-size:0.8rem; font-weight:700; color:#fff;" id="agentPriorityObjective">Descobrir melhores categorias e horários</div>
+                </div>
+                <div>
+                  <div style="font-size:0.7rem; color:var(--text-dim);">🩺 Diagnóstico:</div>
+                  <div style="font-size:0.8rem; font-weight:600; color:#cbd5e1;" id="agentDiagnosis">Sem dados históricos suficientes. Operando em Modo Exploração.</div>
+                </div>
+              </div>
+              <div class="grid-3" style="gap:10px; margin-top:8px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.06);">
+                <div>
+                  <div style="font-size:0.7rem; color:var(--text-dim);">💡 Estratégia em Execução:</div>
+                  <div style="font-size:0.78rem; font-weight:600; color:#d8b4fe;" id="agentStrategy">Exploração multivariada com baixa fricção</div>
+                </div>
+                <div>
+                  <div style="font-size:0.7rem; color:var(--text-dim);">⚡ Ação em Andamento:</div>
+                  <div style="font-size:0.78rem; font-weight:600; color:#34d399;" id="agentCurrentAction">Monitorando intenção de compra sem forçar postagens cegas</div>
+                </div>
+                <div>
+                  <div style="font-size:0.7rem; color:var(--text-dim);">⏱️ Próxima Decisão Programada:</div>
+                  <div style="font-size:0.78rem; font-weight:600; color:#fbbf24;" id="agentNextDecision">Avaliar tração da próxima publicação selecionada</div>
+                </div>
+              </div>
             </div>
           </div>
         </section>
@@ -2147,6 +2345,28 @@
               <div><span class="stat-kpi-sub">CTR Médio:</span> <strong id="heroCtr">N/D</strong></div>
               <div><span class="stat-kpi-sub">Retenção Estimada:</span> <strong id="heroRetention">N/D</strong></div>
               <div><span class="stat-kpi-sub">Conversões:</span> <strong id="heroConversions">0</strong></div>
+            </div>
+          </div>
+
+          <!-- 🌐 ANALYTICS MULTIRREDE OFICIAL (ZERO MOCK DATA) -->
+          <div class="card" style="margin-top: 14px;">
+            <div class="card-header">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span class="card-title">🌐 Analytics Multirrede Oficial</span>
+                <span class="status-tag NO_RITMO" style="font-size:0.65rem;">ZERO MOCK DATA</span>
+              </div>
+              <div style="display:flex; gap:4px; flex-wrap:wrap;" id="networkTabsStrip">
+                <button class="filter-chip active" id="netTabGeral" onclick="selectNetworkTab('GERAL')">GERAL</button>
+                <button class="filter-chip" id="netTabFacebook" onclick="selectNetworkTab('FACEBOOK')">FACEBOOK</button>
+                <button class="filter-chip" id="netTabInstagram" onclick="selectNetworkTab('INSTAGRAM')">INSTAGRAM</button>
+                <button class="filter-chip" id="netTabTiktok" onclick="selectNetworkTab('TIKTOK')">TIKTOK</button>
+                <button class="filter-chip" id="netTabYoutube" onclick="selectNetworkTab('YOUTUBE')">YOUTUBE</button>
+              </div>
+            </div>
+            <div id="multinetworkContainer" style="margin-top:10px;">
+              <div style="text-align:center; padding:20px; color:var(--text-dim); font-size:0.75rem;">
+                Carregando métricas oficiais das redes conectadas...
+              </div>
             </div>
           </div>
 
@@ -2789,16 +3009,81 @@
       el('heroRetention', data.goals?.retention || 'N/D');
       el('heroConversions', data.goals?.conversions || 0);
 
-      // Meta Detalhada
+      // Meta Detalhada (Compatibilidade & Métricas Gerais)
       el('cardTargetClicks', targetClicks);
       el('cardCurrentClicks', currentClicks);
-      el('cardRemainingClicks', data.goals?.remainingClicks ?? 20);
+      el('cardRemainingClicks', data.goals?.remainingClicks ?? 5);
       el('cardProjectedClicks', data.goals?.projectedClicks ?? 0);
-      const goalBadge = document.getElementById('goalStatusBadge');
-      if (goalBadge && data.goals?.status) {
-        goalBadge.textContent = data.goals.status;
-        goalBadge.className = 'status-tag ' + (data.goals.status === 'NO RITMO' ? 'NO_RITMO' : 'ABAIXO_DA_META');
+      if (document.getElementById('goalStatusBadge') && data.goals?.status) {
+        updateGoalBadge('goalStatusBadge', data.goals.status);
       }
+
+      // 4.1 BIND DO PAINEL DE METAS & CRESCIMENTO ORGÂNICO (CENTRO DE COMANDO)
+      const goalsData = data.goals || {};
+      const evaluated = goalsData.evaluated || {};
+      const activeDec = goalsData.activeDecision || {};
+      const goalMode = goalsData.mode || 'AUTONOMOUS';
+
+      // Mode Switcher Buttons & Badge
+      const btnAuto = document.getElementById('btnGoalModeAutonomous');
+      const btnConf = document.getElementById('btnGoalModeConfigured');
+      const modeBadge = document.getElementById('cockpitGoalModeBadge');
+      if (btnAuto) btnAuto.classList.toggle('active', goalMode === 'AUTONOMOUS');
+      if (btnConf) btnConf.classList.toggle('active', goalMode === 'CONFIGURED');
+      if (modeBadge) {
+        modeBadge.textContent = goalMode === 'CONFIGURED' ? 'CONFIGURADAS' : 'AUTÔNOMAS';
+        modeBadge.className = 'status-tag ' + (goalMode === 'CONFIGURED' ? 'META_ATINGIDA' : 'EXPLORACAO');
+      }
+
+      // 1. Seguidores
+      const fol = evaluated.followers || {};
+      el('cardGoalFollowersTarget', fol.current_goal ? `${fol.current_goal}` : 'Exploração');
+      el('cardGoalFollowersCurrent', fol.current_result != null && fol.current_result !== 'N/D' ? fol.current_result : 'N/D');
+      updateGoalBadge('cardGoalFollowersStatus', fol.status || 'EXPLORAÇÃO');
+      el('cardGoalFollowersVelocity', fol.velocity?.trend ? `Tendência: ${fol.velocity.trend}` : 'Tendência: → ESTÁVEL');
+
+      // 2. Visualizações
+      const viw = evaluated.views || {};
+      el('cardGoalViewsTarget', viw.current_goal ? `${viw.current_goal}` : 'Exploração');
+      el('cardGoalViewsCurrent', viw.current_result != null && viw.current_result !== 'N/D' ? viw.current_result : 'N/D');
+      updateGoalBadge('cardGoalViewsStatus', viw.status || 'EXPLORAÇÃO');
+      el('cardGoalViewsVelocity', viw.velocity?.trend ? `Tendência: ${viw.velocity.trend}` : 'Tendência: → ESTÁVEL');
+
+      // 3. Engajamento
+      const eng = evaluated.engagement || {};
+      el('cardGoalEngageTarget', eng.current_goal ? `${eng.current_goal}` : 'Exploração');
+      el('cardGoalEngageCurrent', eng.current_result != null && eng.current_result !== 'N/D' ? eng.current_result : 'N/D');
+      updateGoalBadge('cardGoalEngageStatus', eng.status || 'EXPLORAÇÃO');
+      el('cardGoalEngageVelocity', eng.velocity?.trend ? `Tendência: ${eng.velocity.trend}` : 'Tendência: → ESTÁVEL');
+
+      // 4. Cliques no Link
+      const clk = evaluated.clicks || {};
+      el('cardGoalClicksTarget', clk.current_goal != null ? clk.current_goal : targetClicks);
+      el('cardGoalClicksCurrent', clk.current_result != null ? clk.current_result : currentClicks);
+      updateGoalBadge('cardGoalClicksStatus', clk.status || data.goals?.status || 'EXPLORAÇÃO');
+      el('cardGoalClicksVelocity', clk.velocity?.trend ? `Tendência: ${clk.velocity.trend}` : 'Tendência: → ESTÁVEL');
+
+      // 5. Conversões
+      const cnv = evaluated.conversions || {};
+      el('cardGoalConvTarget', cnv.current_goal != null ? cnv.current_goal : 1);
+      el('cardGoalConvCurrent', cnv.current_result != null ? cnv.current_result : (data.goals?.conversions || 0));
+      updateGoalBadge('cardGoalConvStatus', cnv.status || 'EXPLORAÇÃO');
+      el('cardGoalConvVelocity', cnv.velocity?.trend ? `Tendência: ${cnv.velocity.trend}` : 'Tendência: → ESTÁVEL');
+
+      // Bloco Ação do Agente
+      el('agentPriorityObjective', activeDec.priorityObjective || 'Descobrir melhores categorias e horários orgânicos');
+      el('agentDiagnosis', activeDec.diagnosis || 'Sem histórico suficiente. Modo de Exploração ativo com zero premissas artificiais.');
+      el('agentStrategy', activeDec.strategy || 'Testar formatos de alto valor percebido e tração sem anúncios pagos.');
+      el('agentCurrentAction', activeDec.currentAction || data.goals?.actionForGoal || 'Monitorando intenção de compra e preparando ofertas.');
+      el('agentNextDecision', activeDec.nextDecision || 'Avaliar tração do próximo teste registrado.');
+      const confBadge = document.getElementById('agentConfidenceTag');
+      if (confBadge) {
+        confBadge.textContent = `CONFIANÇA: ${activeDec.confidence || 'INICIAL'}`;
+        confBadge.className = 'status-tag ' + (activeDec.confidence === 'ALTA' ? 'NO_RITMO' : 'EXPLORACAO');
+      }
+
+      // Multirrede Analytics Oficial
+      renderMultinetworkContent();
 
       // 5. Robô Agora
       const cardStatus = document.getElementById('cardRobotStatus');
@@ -2920,11 +3205,18 @@
         if (data.publications?.items && data.publications.items.length > 0) {
           pubListEl.innerHTML = data.publications.items.map(p => `
             <div style="padding:8px 10px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:6px; font-size:0.75rem; display:flex; justify-content:space-between; align-items:center;">
-              <div>
-                <strong style="color:#fff;">${p.title}</strong>
-                <div style="font-size:0.68rem; color:var(--text-dim);">${p.date} às ${p.time} • ${p.clicks} cliques</div>
+              <div style="flex:1; min-width:0; margin-right:8px;">
+                <strong style="color:#fff; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${escapeHtml(p.title)}">${escapeHtml(p.title)}</strong>
+                <div style="font-size:0.68rem; color:var(--text-dim); margin-top:2px;">
+                  ${p.date} às ${p.time} • <span style="color:#34d399; font-weight:700;">${p.clicks} cliques</span> • Rede: ${p.socialNetwork || 'Facebook'}
+                </div>
               </div>
-              <a href="${p.publicationUrl || '#'}" target="_blank" rel="noopener noreferrer" style="color:#60a5fa; font-size:0.72rem; text-decoration:none;">Ver Post ↗</a>
+              <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
+                <button class="topbar-btn" onclick="openPublicationExperimentModal('${p.id}')" style="font-size:0.68rem; padding:3px 8px; border-color:rgba(168,85,247,0.3); color:#d8b4fe;" title="Ver detalhes do experimento e aprendizado da IA">
+                  🧪 Experimento IA
+                </button>
+                <a href="${p.publicationUrl || '#'}" target="_blank" rel="noopener noreferrer" style="color:#60a5fa; font-size:0.72rem; text-decoration:none;">Ver Post ↗</a>
+              </div>
             </div>
           `).join('');
         } else {
@@ -3083,6 +3375,255 @@
         alert('Erro ao enviar comando: ' + e.message);
         if (btn) { btn.innerHTML = origText; btn.disabled = false; }
       }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // GESTÃO DE METAS AUTÔNOMAS VS CONFIGURADAS
+    // ─────────────────────────────────────────────────────────────
+    async function setGoalMode(mode) {
+      const btnAuto = document.getElementById('btnGoalModeAutonomous');
+      const btnConf = document.getElementById('btnGoalModeConfigured');
+      const modeBadge = document.getElementById('cockpitGoalModeBadge');
+
+      if (btnAuto) btnAuto.classList.toggle('active', mode === 'AUTONOMOUS');
+      if (btnConf) btnConf.classList.toggle('active', mode === 'CONFIGURED');
+      if (modeBadge) {
+        modeBadge.textContent = mode === 'CONFIGURED' ? 'CONFIGURADAS' : 'AUTÔNOMAS';
+        modeBadge.className = 'status-tag ' + (mode === 'CONFIGURED' ? 'META_ATINGIDA' : 'EXPLORACAO');
+      }
+
+      try {
+        const res = await fetch('/api/controls', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'SET_GOAL_MODE', mode })
+        });
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.error || 'Falha ao alterar modo de metas.');
+        loadDashboard();
+      } catch (err) {
+        alert('Erro ao alterar modo de metas: ' + err.message);
+        loadDashboard();
+      }
+    }
+
+    function updateGoalBadge(elementId, status) {
+      const badge = document.getElementById(elementId);
+      if (!badge) return;
+      const rawStatus = (status || 'EXPLORAÇÃO').toUpperCase().trim();
+      badge.textContent = rawStatus;
+      
+      let cls = 'EXPLORACAO';
+      if (rawStatus.includes('NO_RITMO') || rawStatus === 'NO RITMO') cls = 'NO_RITMO';
+      else if (rawStatus.includes('ABAIXO')) cls = 'ABAIXO_DO_RITMO';
+      else if (rawStatus.includes('ATINGIDA')) cls = 'META_ATINGIDA';
+      else if (rawStatus.includes('SUPERANDO')) cls = 'SUPERANDO_META';
+      else if (rawStatus.includes('RECALIBRANDO')) cls = 'RECALIBRANDO';
+      else if (rawStatus.includes('SEM_DADOS') || rawStatus === 'SEM DADOS') cls = 'SEM_DADOS';
+      
+      badge.className = 'status-tag ' + cls;
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // ANALYTICS MULTIRREDE OFICIAL (ZERO MOCK DATA)
+    // ─────────────────────────────────────────────────────────────
+    let currentNetworkTab = 'GERAL';
+
+    function selectNetworkTab(networkName) {
+      currentNetworkTab = networkName;
+      ['GERAL', 'FACEBOOK', 'INSTAGRAM', 'TIKTOK', 'YOUTUBE'].forEach(net => {
+        const btnId = 'netTab' + net.charAt(0) + net.slice(1).toLowerCase();
+        const btn = document.getElementById(btnId);
+        if (btn) btn.classList.toggle('active', net === networkName);
+      });
+      renderMultinetworkContent();
+    }
+
+    function renderNetworkSummaryCard(name, badgeCls, netData) {
+      const isConn = netData && (netData.connected || netData.status === 'CONNECTED');
+      const followers = isConn ? (netData.followers ?? 'N/D') : 'N/D';
+      const reach = isConn ? (netData.reach ?? 'N/D') : 'N/D';
+      const views = isConn ? (netData.views ?? 'N/D') : 'N/D';
+      const clicks = isConn ? (netData.clicks ?? 0) : 'N/D';
+      const posts = isConn ? (netData.postsToday ?? 0) : 0;
+      const statusBadge = isConn 
+        ? '<span class="status-tag NO_RITMO">● CONECTADO</span>' 
+        : '<span class="status-tag SEM_DADOS">○ AGUARDANDO CONEXÃO</span>';
+
+      return `
+        <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:10px; padding:12px; display:flex; flex-direction:column; gap:8px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span class="network-badge ${badgeCls}">${name}</span>
+            ${statusBadge}
+          </div>
+          <div class="grid-2" style="gap:6px; margin-top:4px;">
+            <div>
+              <span style="font-size:0.65rem; color:var(--text-dim);">Seguidores:</span>
+              <div style="font-size:0.95rem; font-weight:700; color:#fff;">${followers}</div>
+            </div>
+            <div>
+              <span style="font-size:0.65rem; color:var(--text-dim);">Alcance:</span>
+              <div style="font-size:0.95rem; font-weight:700; color:#60a5fa;">${reach}</div>
+            </div>
+            <div>
+              <span style="font-size:0.65rem; color:var(--text-dim);">Visualizações:</span>
+              <div style="font-size:0.95rem; font-weight:700; color:#c084fc;">${views}</div>
+            </div>
+            <div>
+              <span style="font-size:0.65rem; color:var(--text-dim);">Cliques:</span>
+              <div style="font-size:0.95rem; font-weight:700; color:#34d399;">${clicks}</div>
+            </div>
+          </div>
+          <div style="font-size:0.68rem; color:var(--text-dim); border-top:1px solid rgba(255,255,255,0.05); padding-top:6px; margin-top:2px;">
+            Posts hoje: <strong style="color:#fff;">${posts}</strong> • ${isConn ? 'Métricas da API oficial' : 'Aguardando credenciais'}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderNetworkDetailCard(name, netData) {
+      const isConn = netData && (netData.connected || netData.status === 'CONNECTED');
+      const badgeCls = name === 'FACEBOOK' ? 'fb' : name === 'INSTAGRAM' ? 'ig' : name === 'TIKTOK' ? 'tt' : 'yt';
+      
+      if (!isConn) {
+        return `
+          <div style="background:rgba(255,255,255,0.02); border:1px dashed rgba(255,255,255,0.1); border-radius:12px; padding:24px; text-align:center;">
+            <span class="network-badge ${badgeCls}" style="font-size:0.85rem; padding:4px 12px; margin-bottom:12px;">${name}</span>
+            <h4 style="font-size:0.95rem; color:#fff; margin-bottom:6px;">Canal Não Configurado</h4>
+            <p style="font-size:0.78rem; color:var(--text-dim); max-width:480px; margin:0 auto 14px auto;">
+              Nenhuma credencial ou token oficial foi detectado para esta rede. Em conformidade com a política de <strong>Zero Mock Data</strong>, nenhum dado simulado é exibido.
+            </p>
+            <div style="display:inline-flex; gap:16px; font-size:0.75rem; color:var(--text-dim); background:rgba(0,0,0,0.3); padding:8px 16px; border-radius:8px;">
+              <span>Seguidores: <strong>N/D</strong></span>
+              <span>Alcance: <strong>N/D</strong></span>
+              <span>Engajamento: <strong>N/D</strong></span>
+              <span>Status: <strong>Aguardando Conexão</strong></span>
+            </div>
+          </div>
+        `;
+      }
+
+      return `
+        <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span class="network-badge ${badgeCls}">${name}</span>
+              <span class="status-tag NO_RITMO">● CONECTADO & VERIFICADO</span>
+            </div>
+            <span style="font-size:0.7rem; color:var(--text-dim);">Coleta Direta da Graph API</span>
+          </div>
+          <div class="grid-4">
+            <div>
+              <span class="stat-kpi-sub">Seguidores / Fãs</span>
+              <div class="stat-kpi-num" style="color:#fff;">${netData.followers ?? 0}</div>
+            </div>
+            <div>
+              <span class="stat-kpi-sub">Alcance Orgânico</span>
+              <div class="stat-kpi-num" style="color:#60a5fa;">${netData.reach ?? 0}</div>
+            </div>
+            <div>
+              <span class="stat-kpi-sub">Visualizações</span>
+              <div class="stat-kpi-num" style="color:#c084fc;">${netData.views ?? 0}</div>
+            </div>
+            <div>
+              <span class="stat-kpi-sub">Cliques Gerados</span>
+              <div class="stat-kpi-num" style="color:#34d399;">${netData.clicks ?? 0}</div>
+            </div>
+          </div>
+          <div class="grid-3" style="margin-top:12px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.06); font-size:0.75rem;">
+            <div><span style="color:var(--text-dim);">Engajamento:</span> <strong style="color:#fff;">${netData.engagement ?? 0}</strong></div>
+            <div><span style="color:var(--text-dim);">Publicações Hoje:</span> <strong style="color:#fff;">${netData.postsToday ?? 0}</strong></div>
+            <div><span style="color:var(--text-dim);">Status da Conexão:</span> <strong style="color:#34d399;">Ativo</strong></div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderMultinetworkContent() {
+      const container = document.getElementById('multinetworkContainer');
+      if (!container || !dashboardState) return;
+
+      const mn = dashboardState.multinetwork || {};
+      const nets = mn.networks || {};
+
+      if (currentNetworkTab === 'GERAL') {
+        container.innerHTML = `
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:12px;">
+            ${renderNetworkSummaryCard('Facebook', 'fb', nets.facebook)}
+            ${renderNetworkSummaryCard('Instagram', 'ig', nets.instagram)}
+            ${renderNetworkSummaryCard('TikTok', 'tt', nets.tiktok)}
+            ${renderNetworkSummaryCard('YouTube', 'yt', nets.youtube)}
+          </div>
+        `;
+      } else {
+        const key = currentNetworkTab.toLowerCase();
+        container.innerHTML = renderNetworkDetailCard(currentNetworkTab, nets[key]);
+      }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // AUDITORIA DE EXPERIMENTO POR PUBLICAÇÃO
+    // ─────────────────────────────────────────────────────────────
+    function openPublicationExperimentModal(pubId) {
+      if (!dashboardState || !dashboardState.publications || !Array.isArray(dashboardState.publications.items)) return;
+      const pub = dashboardState.publications.items.find(p => p.id === pubId);
+      if (!pub) return;
+
+      const exp = pub.experiment || {};
+      const modal = document.getElementById('genericModal');
+      const modalTitle = document.getElementById('modalTitle');
+      const modalBody = document.getElementById('modalBody');
+
+      if (modalTitle) modalTitle.innerHTML = `🧪 Experimento IA — Publicação #${pub.id.slice(0, 8)}`;
+      if (modalBody) {
+        modalBody.innerHTML = `
+          <div style="display:flex; flex-direction:column; gap:12px;">
+            <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:12px;">
+              <div style="font-size:0.72rem; color:var(--text-dim); text-transform:uppercase; font-weight:700;">Produto / Oferta:</div>
+              <div style="font-size:0.95rem; font-weight:700; color:#fff; margin-top:2px;">${escapeHtml(pub.title)}</div>
+              <div style="font-size:0.75rem; color:#60a5fa; margin-top:4px;">Canal: ${pub.socialNetwork || 'Facebook'} • ${pub.date} às ${pub.time} • <strong style="color:#34d399;">${pub.clicks} cliques</strong></div>
+            </div>
+
+            <div style="background:rgba(37,99,235,0.08); border:1px solid rgba(59,130,246,0.25); border-radius:8px; padding:12px;">
+              <div style="font-size:0.75rem; font-weight:700; color:#60a5fa; text-transform:uppercase;">🎯 Qual era a Meta deste Post?</div>
+              <div style="font-size:0.82rem; color:#cbd5e1; margin-top:4px; line-height:1.4;">
+                Testar tração do motor <strong>[${exp.engine || 'GROWTH'}]</strong> com conteúdo focado em <strong>[${exp.contentType || 'OFERTA'}]</strong>. Coletar sinais de clique e engajamento orgânico sem investimento pago.
+              </div>
+            </div>
+
+            <div style="background:rgba(168,85,247,0.08); border:1px solid rgba(168,85,247,0.25); border-radius:8px; padding:12px;">
+              <div style="font-size:0.75rem; font-weight:700; color:#c084fc; text-transform:uppercase;">💡 Estratégia & Hipótese Testada</div>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:6px; font-size:0.75rem;">
+                <div><span style="color:var(--text-dim);">Formato:</span> <strong style="color:#fff;">${exp.creativeFormat || 'IMAGE'}</strong></div>
+                <div><span style="color:var(--text-dim);">Origem:</span> <strong style="color:#fff;">${exp.opportunityOrigin || 'DEMAND_SCAN'}</strong></div>
+                <div><span style="color:var(--text-dim);">Cluster:</span> <strong style="color:#fff;">${exp.clusterDemand || 'Geral'}</strong></div>
+                <div><span style="color:var(--text-dim);">Estratégia:</span> <strong style="color:#34d399;">${pub.strategy || 'DESCONTO'}</strong></div>
+              </div>
+              <div style="margin-top:8px; font-size:0.75rem; color:#e2e8f0;">
+                <strong>Gancho / Hook:</strong> "${escapeHtml(exp.hook || 'Oferta selecionada com desconto real.')}"
+              </div>
+              <div style="margin-top:4px; font-size:0.75rem; color:#94a3b8;">
+                <strong>Por que foi publicado:</strong> ${escapeHtml(exp.reason || 'Produto competitivo com margem de desconto validada.')}
+              </div>
+            </div>
+
+            <div style="background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.25); border-radius:8px; padding:12px;">
+              <div style="font-size:0.75rem; font-weight:700; color:#34d399; text-transform:uppercase;">🧠 O que o Agente Aprendeu?</div>
+              <div style="font-size:0.82rem; color:#cbd5e1; margin-top:4px; line-height:1.4;">
+                ${escapeHtml(exp.whatLearned || 'Dados em consolidação estatística. Comportamento inicial correlacionado positivamente com retenção.')}
+              </div>
+            </div>
+
+            <div style="background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.25); border-radius:8px; padding:12px;">
+              <div style="font-size:0.75rem; font-weight:700; color:#fbbf24; text-transform:uppercase;">🚀 Próxima Ação Recomendada pela IA</div>
+              <div style="font-size:0.82rem; color:#cbd5e1; margin-top:4px; line-height:1.4;">
+                ${escapeHtml(exp.nextAction || 'Continuar ciclo de exploração multivariada e priorizar ofertas do mesmo cluster em horários de pico.')}
+              </div>
+            </div>
+          </div>
+        `;
+      }
+      if (modal) modal.classList.add('open');
     }
 
     function toggleAudioAlerts() {

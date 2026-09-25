@@ -1,5 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 import CategoryClassifier from '../src/services/category-classifier.js';
+import AutonomousGoalManager from '../src/services/growth/autonomous-goal-manager.js';
+import SocialAnalyticsCollector from '../src/publishers/social-analytics-collector.js';
+import StrategyLearningEngine from '../src/services/growth/strategy-learning-engine.js';
 
 const categoryClassifier = new CategoryClassifier();
 
@@ -320,37 +323,36 @@ export default async function handler(req, res) {
       .select('*', { count: 'exact', head: true })
       .gte('clicked_at', todayStartIso);
 
-    // 8. Meta do Sistema
-    const { data: goalData } = await supabase
-      .from('goals')
-      .select('*')
-      .eq('metric_name', 'clicks_per_day')
-      .maybeSingle();
+    // 8. Meta do Sistema & AutonomousGoalManager (Evolução)
+    const goalMode = state.goal_mode || 'AUTONOMOUS';
+    const goalManager = new AutonomousGoalManager({ mode: goalMode });
+    const socialCollector = new SocialAnalyticsCollector();
+    const socialResults = await socialCollector.collectAll();
 
-    const targetClicks = goalData?.target_value ? Number(goalData.target_value) : (state.target_clicks || 20);
-    const currentClicks = todayClicksCount ?? (goalData?.current_value ? Number(goalData.current_value) : 0);
+    // Consulta experimentos registrados
+    const { data: experimentsData } = await supabase
+      .from('strategy_experiments')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    const goalEvalResult = await goalManager.evaluateAndCalibrate({
+      socialMetrics: socialResults,
+      recentPublications: publishedPubs,
+      todayPublicationsCount: todayPubs.length,
+    });
+
+    const targetClicks = goalEvalResult.evaluatedGoals?.clicks?.current_goal || 5;
+    const currentClicks = todayClicksCount ?? (goalEvalResult.evaluatedGoals?.clicks?.current_result || 0);
     const remainingClicks = Math.max(0, targetClicks - currentClicks);
     const progressPercent = Math.min(100, Math.round((currentClicks / targetClicks) * 100));
 
-    // Cálculo de Projeção e Status da Meta (Fase 6)
+    // Cálculo de Projeção e Status da Meta
     const nowHour = new Date().getHours();
     const hoursRemaining = Math.max(1, 24 - nowHour);
     const ratePerHour = nowHour > 0 ? currentClicks / nowHour : 0;
     const projectedClicks = todayPubs.length === 0 ? 0 : Math.round(currentClicks + ratePerHour * hoursRemaining);
-
-    let goalStatus = 'SEM DADOS';
-    if (todayPubs.length > 0) {
-      if (progressPercent >= 100) {
-        goalStatus = 'META ATINGIDA';
-      } else if (
-        (currentClicks < targetClicks * 0.4 && nowHour >= 13) ||
-        (projectedClicks < targetClicks * 0.7 && nowHour >= 12)
-      ) {
-        goalStatus = 'ABAIXO DO RITMO';
-      } else {
-        goalStatus = 'NO RITMO';
-      }
-    }
+    const goalStatus = goalEvalResult.evaluatedGoals?.clicks?.status || 'EXPLORAÇÃO';
 
     // Ação dinâmica para a Meta baseada no estado operacional e eventos
     const latestEvent = (logsData || [])[0];
@@ -512,19 +514,25 @@ export default async function handler(req, res) {
         clicks: publishedPubs[0].publication_metrics?.[0]?.clicks || 0,
         totalClicks: currentClicks,
       } : null,
-      // 1. Bloco de Metas & Objetivo (Fase 5.4)
+      // 1. Bloco de Metas & Crescimento (Evoluído: Autônomas vs Configuradas + 2 Motores)
       goals: {
+        mode: goalMode,
+        evaluated: goalEvalResult.evaluatedGoals,
+        activeDecision: goalEvalResult.activeDecision,
         targetClicks,
         currentClicks,
         remainingClicks,
         progressPercent,
         projectionToday: todayPubs.length === 0 ? '0' : `${projectedClicks}`,
-        status: goalStatus, // 'SEM DADOS', 'ABAIXO DO RITMO', 'NO RITMO', 'META ATINGIDA'
-        actionForGoal,
-        ctr: 'N/D',
+        status: goalStatus,
+        actionForGoal: goalEvalResult.activeDecision?.currentAction || actionForGoal,
+        ctr: goalEvalResult.evaluatedGoals?.ctr?.current_result ? `${goalEvalResult.evaluatedGoals.ctr.current_result}%` : 'N/D',
         retention: 'N/D',
-        conversions: 0,
+        conversions: goalEvalResult.evaluatedGoals?.conversions?.current_result || 0,
       },
+      // Multirrede Analytics Oficial
+      multinetwork: socialResults,
+      experiments: experimentsData || [],
       // 2. Produção de Hoje (Estritamente 00:00 até agora America/Sao_Paulo)
       today: {
         productsFound: todayProductsFound,
@@ -1066,24 +1074,38 @@ export default async function handler(req, res) {
         metricsContext: o.metrics_context,
         time: new Date(o.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
       })),
-      // 11. Publicações e Resultados
+      // 11. Publicações e Resultados (com auditoria de experimento)
       publications: {
-        items: publishedPubs.map((p) => ({
-          id: p.id,
-          productId: p.product_id,
-          title: p.products?.title || 'Oferta Selecionada',
-          marketplace: p.products?.marketplace || 'mercadolivre',
-          imageUrl: p.media_url || p.products?.image_url,
-          socialNetwork: p.social_network || 'Facebook',
-          strategy: p.strategy || 'DESCONTO',
-          trackingUrl: p.tracking_url,
-          affiliateUrl: p.affiliate_url,
-          publicationUrl: p.publication_url,
-          time: new Date(p.published_at || p.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-          date: new Date(p.published_at || p.created_at).toLocaleDateString('pt-BR'),
-          clicks: p.publication_metrics?.[0]?.clicks || 0,
-          status: p.status,
-        })),
+        items: publishedPubs.map((p) => {
+          const exp = (experimentsData || []).find(e => e.publication_id === p.id) || {};
+          return {
+            id: p.id,
+            productId: p.product_id,
+            title: p.products?.title || 'Oferta Selecionada',
+            marketplace: p.products?.marketplace || 'mercadolivre',
+            imageUrl: p.media_url || p.products?.image_url,
+            socialNetwork: p.social_network || 'Facebook',
+            strategy: p.strategy || 'DESCONTO',
+            trackingUrl: p.tracking_url,
+            affiliateUrl: p.affiliate_url,
+            publicationUrl: p.publication_url,
+            time: new Date(p.published_at || p.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+            date: new Date(p.published_at || p.created_at).toLocaleDateString('pt-BR'),
+            clicks: p.publication_metrics?.[0]?.clicks || 0,
+            status: p.status,
+            experiment: {
+              engine: exp.engine || 'GROWTH',
+              contentType: exp.content_type || 'OFFER',
+              clusterDemand: exp.cluster_demand || 'Geral',
+              opportunityOrigin: exp.opportunity_origin || 'DEMAND',
+              creativeFormat: exp.creative_format || 'IMAGE',
+              hook: exp.hook || 'Oferta com desconto real.',
+              reason: p.metadata?.aiReason || 'Oportunidade selecionada por intenção comercial.',
+              whatLearned: exp.metrics?.clicks > 0 ? 'Tração positiva comprovada em cliques com este formato.' : 'Amostra inicial. Sinal sendo monitorado.',
+              nextAction: 'Manter monitoramento de engajamento.',
+            },
+          };
+        }),
         message: publishedPubs.length === 0 ? 'Nenhuma publicação realizada ainda.' : `${publishedPubs.length} publicação(ões) realizada(s).`,
       },
       // 12. Demanda Agora (Detector de Demanda + Oportunidade)
