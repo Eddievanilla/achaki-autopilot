@@ -12,6 +12,7 @@
 import BrowserManager from '../../browser/browser.js';
 import logger from '../../utils/logger.js';
 import interventionManager from '../../services/intervention-manager.js';
+import { supabase } from '../../database/supabase.js';
 
 export class MercadoLivreAffiliateProvider {
   /**
@@ -92,6 +93,31 @@ export class MercadoLivreAffiliateProvider {
             return !nowUrl.includes('login') && !nowUrl.includes('checkpoint') && !nowUrl.includes('challenge');
           }
         );
+
+        if (intervention?.id) {
+          try {
+            const { data: invData } = await supabase
+              .from('operator_interventions')
+              .select('metadata')
+              .eq('id', intervention.id)
+              .maybeSingle();
+
+            if (invData?.metadata?.manual_affiliate_url) {
+              const manUrl = invData.metadata.manual_affiliate_url;
+              logger.info(`[MLAffiliateProvider] ✓ Link comissionado manual informado pelo operador: ${manUrl}`);
+              return {
+                marketplace: 'mercadolivre',
+                productUrl,
+                affiliateUrl: manUrl,
+                shortUrl: manUrl,
+                affiliateVerified: true,
+                generatedAt: new Date().toISOString(),
+              };
+            }
+          } catch (e) {
+            logger.warn(`[MLAffiliateProvider] Falha ao verificar link manual: ${e.message}`);
+          }
+        }
 
         // Recarrega a página do gerador com a sessão recém-validada
         await page.goto('https://www.mercadolivre.com.br/afiliados/linkbuilder#hub', {

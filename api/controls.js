@@ -41,13 +41,37 @@ export default async function handler(req, res) {
     // 0. RESOLVER INTERVENÇÃO DO OPERADOR
     // ─────────────────────────────────────────────────────────────
     if (action === 'RESOLVE_INTERVENTION') {
+      const { affiliateUrl, productId } = req.body || {};
       if (interventionId) {
+        let updateData = { status: 'RESOLVED', resolved_at: new Date().toISOString() };
+        if (affiliateUrl) {
+          const { data: cur } = await supabase
+            .from('operator_interventions')
+            .select('metadata')
+            .eq('id', interventionId)
+            .maybeSingle();
+
+          updateData.metadata = {
+            ...(cur?.metadata || {}),
+            manual_affiliate_url: affiliateUrl,
+            resolvedVia: 'MOBILE_MANUAL_LINK',
+          };
+        }
+
         await supabase
           .from('operator_interventions')
-          .update({ status: 'RESOLVED', resolved_at: new Date().toISOString() })
+          .update(updateData)
           .eq('id', interventionId);
       }
-      return res.status(200).json({ ok: true, message: 'Intervenção marcada como resolvida.' });
+
+      if (affiliateUrl && productId) {
+        await supabase
+          .from('products')
+          .update({ affiliate_url: affiliateUrl })
+          .eq('marketplace_product_id', productId);
+      }
+
+      return res.status(200).json({ ok: true, message: 'Intervenção marcada como resolvida com sucesso.' });
     }
 
     // ─────────────────────────────────────────────────────────────
