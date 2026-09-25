@@ -23,6 +23,7 @@ import OpenRouterAgent from './agents/openrouter-agent.js';
 import JevAgent from './agents/jev-agent.js';
 import ProductSearchService from './services/product-search.js';
 import AffiliateLinkService from './services/affiliate-link-service.js';
+import ManualAffiliateFlow from './services/manual-affiliate-flow.js';
 import TrackingService from './services/tracking-service.js';
 import CreativeEngine from './services/creative-engine.js';
 import PriceValidationEngine from './services/price-validation-engine.js';
@@ -340,6 +341,16 @@ class RobotWorker {
 
       if (cmd.command === 'RUN_NOW') {
         await this._executeRealPipeline(cmd, runId);
+      } else if (cmd.command === 'OPEN_AFFILIATE_GENERATOR') {
+        const browser = new BrowserManager();
+        browser.headless = false;
+        try {
+          await browser.launch();
+          await this.setStep('AGUARDANDO LINK DO ADMINISTRADOR');
+          await new ManualAffiliateFlow().captureInSession(cmd.metadata.interventionId, browser);
+        } finally {
+          await browser.close();
+        }
       } else if (cmd.command === 'APPROVE_PUBLICATION') {
         await this._executeApprovePublication(cmd, runId);
       } else if (cmd.command === 'PAUSE') {
@@ -965,6 +976,21 @@ class RobotWorker {
         );
 
         // ─────────────────────────────────────────────────────────────
+        // Produto selecionado: interrompe este ciclo antes de criativos/publicação.
+        const marketplace = evaluatedOffer.marketplace || 'mercadolivre';
+        let productQuery = supabase.from('products').select('*');
+        productQuery = evaluatedOffer.dbId
+          ? productQuery.eq('id', evaluatedOffer.dbId)
+          : productQuery.eq('marketplace', marketplace).eq('marketplace_product_id', evaluatedOffer.productId);
+        const { data: selectedProduct, error: selectedError } = await productQuery.single();
+        if (selectedError || !selectedProduct) throw new Error(selectedError?.message || 'Produto selecionado não persistido.');
+        await new ManualAffiliateFlow().selectProduct({
+          ...selectedProduct, current_price: evaluatedOffer.currentPrice,
+          score: evaluatedOffer.finalScore ?? evaluatedOffer.score ?? evaluatedOffer.aiScore,
+        });
+        await this.setStep('AGUARDANDO LINK DO ADMINISTRADOR');
+        return;
+
         // RESOLUÇÃO DE LINK DE AFILIADO (meli.la) PARA ESTE CANDIDATO
         // ─────────────────────────────────────────────────────────────
         await this.setStep('GERANDO LINK');

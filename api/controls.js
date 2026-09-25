@@ -8,6 +8,7 @@ const supabase = createClient(supabaseUrl, supabaseKey, {
 });
 
 import PublicationOrchestrator from '../src/services/publication-orchestrator.js';
+import ManualAffiliateFlow from '../src/services/manual-affiliate-flow.js';
 
 const orchestrator = new PublicationOrchestrator({ supabaseClient: supabase });
 
@@ -42,6 +43,7 @@ export default async function handler(req, res) {
       'REJECT_CREATIVE',
       'REMAKE_CREATIVE',
       'SUBMIT_AFFILIATE_LINK',
+      'OPEN_AFFILIATE_GENERATOR',
       'START_CREATIVE_PIPELINE',
       'SET_PUBLICATION_FREQUENCY',
     ];
@@ -86,6 +88,35 @@ export default async function handler(req, res) {
       if (!approvalId) return res.status(400).json({ error: 'approvalId é obrigatório para solicitação de refação.' });
       const result = await orchestrator.adminRequestRemake({ approvalId, remakeFocus: remakeFocus || 'GANCHO', note: note || '' });
       return res.status(200).json(result);
+    }
+
+    if (action === 'OPEN_AFFILIATE_GENERATOR') {
+      if (!interventionId) return res.status(400).json({ error: 'interventionId é obrigatório.' });
+      let realId = interventionId;
+      if (interventionId.startsWith('appr-')) {
+        const approvalId = interventionId.replace('appr-', '');
+        const { data: appr } = await supabase.from('publication_approvals').select('product_id').eq('id', approvalId).maybeSingle();
+        if (appr?.product_id) {
+          const { data: intRow } = await supabase.from('operator_interventions').select('id').eq('product_id', appr.product_id).eq('status', 'PENDING').maybeSingle();
+          if (intRow?.id) realId = intRow.id;
+        }
+      }
+      const result = await new ManualAffiliateFlow({ supabaseClient: supabase }).requestOpen(realId);
+      return res.status(200).json(result);
+    }
+
+    if (action === 'SUBMIT_AFFILIATE_LINK' && interventionId) {
+      let realId = interventionId;
+      if (interventionId.startsWith('appr-')) {
+        const approvalId = interventionId.replace('appr-', '');
+        const { data: appr } = await supabase.from('publication_approvals').select('product_id').eq('id', approvalId).maybeSingle();
+        if (appr?.product_id) {
+          const { data: intRow } = await supabase.from('operator_interventions').select('id').eq('product_id', appr.product_id).eq('status', 'PENDING').maybeSingle();
+          if (intRow?.id) realId = intRow.id;
+        }
+      }
+      const result = await new ManualAffiliateFlow({ supabaseClient: supabase }).saveDetectedLink(realId, rawLink);
+      return res.status(result.success ? 200 : 422).json(result);
     }
 
     if (action === 'SUBMIT_AFFILIATE_LINK') {
@@ -161,34 +192,16 @@ export default async function handler(req, res) {
     // 0.1 RESOLVER INTERVENÇÃO DO OPERADOR
     // ─────────────────────────────────────────────────────────────
     if (action === 'RESOLVE_INTERVENTION') {
-      const { affiliateUrl, productId } = req.body || {};
-      if (interventionId) {
-        let updateData = { status: 'RESOLVED', resolved_at: new Date().toISOString() };
-        if (affiliateUrl) {
-          const { data: cur } = await supabase
-            .from('operator_interventions')
-            .select('metadata')
-            .eq('id', interventionId)
-            .maybeSingle();
-
-          updateData.metadata = {
-            ...(cur?.metadata || {}),
-            manual_affiliate_url: affiliateUrl,
-            resolvedVia: 'MOBILE_MANUAL_LINK',
-          };
-        }
-
-        await supabase
-          .from('operator_interventions')
-          .update(updateData)
-          .eq('id', interventionId);
+      const { affiliateUrl } = req.body || {};
+      if (affiliateUrl) {
+        if (!interventionId) return res.status(400).json({ error: 'Solicitação de link obrigatória.' });
+        const result = await new ManualAffiliateFlow({ supabaseClient: supabase }).saveDetectedLink(interventionId, affiliateUrl);
+        return res.status(result.success ? 200 : 422).json(result);
       }
-
-      if (affiliateUrl && productId) {
-        await supabase
-          .from('products')
-          .update({ affiliate_url: affiliateUrl })
-          .eq('marketplace_product_id', productId);
+      if (interventionId) {
+        const { error } = await supabase.from('operator_interventions')
+          .update({ status: 'RESOLVED', resolved_at: new Date().toISOString() }).eq('id', interventionId);
+        if (error) throw new Error(error.message);
       }
 
       return res.status(200).json({ ok: true, message: 'Intervenção marcada como resolvida com sucesso.' });

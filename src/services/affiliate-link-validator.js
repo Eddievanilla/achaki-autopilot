@@ -12,6 +12,7 @@
 
 import { supabase } from '../database/supabase.js';
 import logger from '../utils/logger.js';
+import { affiliatePattern, productIdentity, normalizeMarketplace, officialHost, generatorUrl } from './affiliate-marketplaces.js';
 
 export const VALIDATION_STATUS = {
   VERIFIED: 'VERIFIED',
@@ -21,8 +22,9 @@ export const VALIDATION_STATUS = {
 };
 
 export class AffiliateLinkValidator {
-  constructor({ supabaseClient = supabase } = {}) {
+  constructor({ supabaseClient = supabase, fetchImpl = globalThis.fetch } = {}) {
     this.supabase = supabaseClient;
+    this.fetch = fetchImpl;
   }
 
   /**
@@ -31,58 +33,11 @@ export class AffiliateLinkValidator {
    * @param {string} url
    * @returns {{ marketplace: string, detectedId: string|null, isAffiliatePattern: boolean }}
    */
-  parseAffiliateUrl(url) {
-    if (!url || typeof url !== 'string') {
-      return { marketplace: 'UNKNOWN', detectedId: null, isAffiliatePattern: false };
+  parseAffiliateUrl(raw) {
+    for (const marketplace of ['mercadolivre', 'shopee', 'amazon']) {
+      if (affiliatePattern(raw, marketplace)) return { marketplace, detectedId: productIdentity(raw, marketplace), isAffiliatePattern: true };
     }
-
-    const trimmed = url.trim();
-
-    // 1. Mercado Livre Oficial Afiliado (meli.la)
-    if (trimmed.includes('meli.la')) {
-      // Formato típico: https://meli.la/1xxxxxx ou https://meli.la/2xxxxxx
-      const match = trimmed.match(/meli\.la\/([a-zA-Z0-9_\-]+)/i);
-      return {
-        marketplace: 'mercadolivre',
-        detectedId: match ? match[1] : null,
-        isAffiliatePattern: true,
-      };
-    }
-
-    // 2. Mercado Livre Comum (NÃO é link oficial comissionado meli.la)
-    if (trimmed.includes('mercadolivre.com.br') || trimmed.includes('mercadolibre.com')) {
-      const mlbMatch = trimmed.match(/(MLB-?[0-9]+)/i);
-      return {
-        marketplace: 'mercadolivre',
-        detectedId: mlbMatch ? mlbMatch[1].replace('-', '') : null,
-        isAffiliatePattern: false, // É URL de produto comum, reprovada para afiliação
-      };
-    }
-
-    // 3. Shopee Afiliado (s.shopee.com.br ou shope.ee)
-    if (trimmed.includes('s.shopee.com.br') || trimmed.includes('shope.ee')) {
-      const match = trimmed.match(/(?:shope\.ee|s\.shopee\.com\.br)\/([a-zA-Z0-9_\-]+)/i);
-      return {
-        marketplace: 'shopee',
-        detectedId: match ? match[1] : null,
-        isAffiliatePattern: true,
-      };
-    }
-
-    // 4. Amazon Afiliado (amzn.to)
-    if (trimmed.includes('amzn.to')) {
-      return {
-        marketplace: 'amazon',
-        detectedId: null,
-        isAffiliatePattern: true,
-      };
-    }
-
-    return {
-      marketplace: 'GENERIC',
-      detectedId: null,
-      isAffiliatePattern: false,
-    };
+    return { marketplace: 'UNKNOWN', detectedId: null, isAffiliatePattern: false };
   }
 
   /**
@@ -99,77 +54,58 @@ export class AffiliateLinkValidator {
    *   validatedUrl: string|null
    * }>}
    */
-  async validateLink({ rawLink, expectedProduct, approvalId = null }) {
-    if (!rawLink || typeof rawLink !== 'string' || !rawLink.startsWith('http')) {
-      const result = {
-        valid: false,
-        status: VALIDATION_STATUS.INVALID,
-        reason: 'O link fornecido não é uma URL HTTP/HTTPS válida.',
-        validatedUrl: null,
-      };
-      await this.recordEvent({ approvalId, expectedProduct, rawLink, result });
-      return result;
-    }
-
-    const trimmed = rawLink.trim();
-    const parsed = this.parseAffiliateUrl(trimmed);
-    const expectedMarketplace = (expectedProduct.marketplace || 'mercadolivre').toLowerCase();
-
-    // 1. Verificação de Marketplace
-    if (parsed.marketplace !== 'GENERIC' && parsed.marketplace !== expectedMarketplace) {
-      const result = {
-        valid: false,
-        status: VALIDATION_STATUS.INVALID,
-        reason: `Marketplace divergente: esperado [${expectedMarketplace}], detectado [${parsed.marketplace}].`,
-        validatedUrl: null,
-      };
-      await this.recordEvent({ approvalId, expectedProduct, rawLink: trimmed, result });
-      return result;
-    }
-
-    // 2. Verificação estrita para Mercado Livre
-    if (expectedMarketplace === 'mercadolivre') {
-      if (!parsed.isAffiliatePattern || !trimmed.includes('meli.la')) {
-        const result = {
-          valid: false,
-          status: VALIDATION_STATUS.UNVERIFIED,
-          reason: 'Link de produto comum detectado. Para o Mercado Livre, é obrigatório gerar o link comissionado oficial no padrão meli.la.',
-          validatedUrl: null,
-        };
-        await this.recordEvent({ approvalId, expectedProduct, rawLink: trimmed, result });
-        return result;
+  async validateLink({ rawLink, expectedProduct, approvalId = null, captureEvidence = null }) {
+    const marketplace = normalizeMarketplace(expectedProduct?.marketplace);
+    const trimmed = typeof rawLink === 'string' ? rawLink.trim() : '';
+    let result = { valid: false, status: VALIDATION_STATUS.UNVERIFIED,
+      reason: 'Não foi possível confirmar o link comissionado e o produto de destino.', validatedUrl: null };
+    if (!affiliatePattern(trimmed, marketplace) || trimmed === expectedProduct.product_url) {
+      result.status = VALIDATION_STATUS.INVALID;
+      result.reason = 'URL comum, inválida ou de outro marketplace. Gere um link oficial de afiliado.';
+    } else {
+      // Evidence comes only from the local session observer, never from an API request.
+      const officialCapture = captureEvidence?.sourceProductUrl === expectedProduct.product_url &&
+        captureEvidence?.affiliateUrl === trimmed &&
+        captureEvidence?.generatorUrl === generatorUrl(expectedProduct);
+      let matches = officialCapture;
+      if (!matches) {
+        try {
+          const destination = await this.resolveDestination(trimmed, marketplace);
+          const expected = productIdentity(expectedProduct.product_url, marketplace);
+          const actual = productIdentity(destination, marketplace);
+          matches = !!expected && expected === actual;
+          if (expected && actual && expected !== actual) result.status = VALIDATION_STATUS.PRODUCT_MISMATCH;
+        } catch { /* Redirects/login/challenges that cannot establish identity remain unverified. */ }
       }
+      if (matches) result = { valid: true, status: VALIDATION_STATUS.VERIFIED,
+        reason: 'Link oficial e produto confirmados.', validatedUrl: trimmed };
     }
-
-    // 3. Verificação de Correspondência de Produto (PRODUCT MATCH)
-    // Se o link contiver explicitamente um ID de produto que diverge do esperado
-    if (parsed.detectedId && expectedProduct.marketplace_product_id) {
-      const expIdClean = String(expectedProduct.marketplace_product_id).replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
-      const detectedClean = String(parsed.detectedId).replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
-
-      // Se for URL comum com outro MLB
-      if (detectedClean.startsWith('MLB') && !detectedClean.includes(expIdClean) && !expIdClean.includes(detectedClean)) {
-        const result = {
-          valid: false,
-          status: VALIDATION_STATUS.PRODUCT_MISMATCH,
-          reason: '⚠️ O link gerado não corresponde ao produto aprovado.',
-          validatedUrl: null,
-        };
-        await this.recordEvent({ approvalId, expectedProduct, rawLink: trimmed, result });
-        return result;
-      }
-    }
-
-    // Link Verificado com Sucesso
-    const result = {
-      valid: true,
-      status: VALIDATION_STATUS.VERIFIED,
-      reason: 'Link oficial de afiliado validado e associado ao produto com sucesso.',
-      validatedUrl: trimmed,
-    };
-
     await this.recordEvent({ approvalId, expectedProduct, rawLink: trimmed, result });
     return result;
+  }
+
+  async resolveDestination(raw, marketplace) {
+    let url = new URL(raw);
+    for (let hop = 0; hop < 8; hop++) {
+      if (url.protocol !== 'https:' || url.username || url.password || url.port || !officialHost(url.hostname, marketplace)) throw new Error('Destino não autorizado.');
+      const response = await this.fetch(url.href, {
+        redirect: 'manual',
+        signal: AbortSignal.timeout(10000),
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        }
+      });
+      const location = response.headers.get('location');
+      await response.body?.cancel();
+      if (response.status >= 300 && response.status < 400 && location) {
+        url = new URL(location, url);
+        continue;
+      }
+      if (!response.ok) throw new Error('Destino não confirmado.');
+      return url.href;
+    }
+    throw new Error('Redirecionamentos não confirmados.');
   }
 
   /**

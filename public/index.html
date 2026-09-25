@@ -15,6 +15,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script src="/audio-alerts.js"></script>
+  <script src="/affiliate-flow-ui.js"></script>
   <style>
     :root {
       --bg: #07090e;
@@ -3066,7 +3067,7 @@
         const interventions = [...(data.interventions || [])];
         
         // Se houver activeApproval vindo do backend que ainda não está como intervenção separada
-        if (data.activeApproval && !interventions.some(i => i.metadata?.approvalId === data.activeApproval.id)) {
+        if (data.activeApproval && !interventions.some(i => i.metadata?.approvalId === data.activeApproval.id || i.metadata?.productId === data.activeApproval.productId)) {
           interventions.unshift({
             id: 'appr-' + data.activeApproval.id,
             type: data.activeApproval.status === 'WAITING_ADMIN_REVIEW' ? 'CREATIVE_REVIEW' : 'AFFILIATE_LINK_REQUIRED',
@@ -3130,7 +3131,7 @@
               // ══════════════════════════════════════════════════════════
               // CASO A: REVISÃO MOBILE DE CRIATIVO 9:16 (CREATIVE_REVIEW)
               // ══════════════════════════════════════════════════════════
-              if (item.type === 'CREATIVE_REVIEW' || meta.step === 'WAITING_ADMIN_REVIEW' || item.actionLabel === 'Revisar Criativo 9:16') {
+              if (item.type !== 'AFFILIATE_LINK_REQUIRED' && (item.type === 'CREATIVE_REVIEW' || meta.step === 'WAITING_ADMIN_REVIEW' || item.actionLabel === 'Revisar Criativo 9:16')) {
                 const version = meta.versionNumber || 1;
                 const priceFormatted = meta.price ? `R$ ${Number(meta.price).toFixed(2).replace('.', ',')}` : 'Preço Validado';
                 const discountText = meta.discountPercent ? `${meta.discountPercent}% OFF` : '';
@@ -3199,48 +3200,8 @@
               // ══════════════════════════════════════════════════════════
               // CASO B: GERAÇÃO HUMANA DO LINK OFICIAL (WAITING_AFFILIATE_LINK)
               // ══════════════════════════════════════════════════════════
-              if (item.type === 'AFFILIATE_LINK_REQUIRED' || meta.step === 'WAITING_AFFILIATE_LINK') {
-                return `
-                  <div class="intervention-banner" id="interventionCard-${item.id}" style="margin-bottom:14px; border-color:rgba(245,158,11,0.5); background:linear-gradient(180deg, rgba(20,24,14,0.95) 0%, rgba(10,15,26,0.98) 100%);">
-                    <div class="intervention-header">
-                      <span class="intervention-tag" style="background:rgba(245,158,11,0.15); border-color:rgba(245,158,11,0.4); color:#fbbf24;">
-                        <span class="pulse-dot" style="background:#fbbf24;"></span>
-                        🔗 VÍDEO APROVADO • GERE O LINK OFICIAL
-                      </span>
-                      <span style="font-size:0.72rem; color:var(--text-dim);">${item.time || ''}</span>
-                    </div>
-
-                    <div style="margin-top:6px;">
-                      <div style="font-size:0.95rem; font-weight:800; color:#fff;">
-                        Vídeo aprovado! Agora gere o link oficial de afiliado para este produto.
-                      </div>
-                      <div style="font-size:0.78rem; color:#cbd5e1; margin-top:4px; line-height:1.4;">
-                        O robô não automatiza CAPTCHA nem 2FA. Toque no botão abaixo para ir direto à página oficial do produto no marketplace, copie o link comissionado oficial (padrão <strong>meli.la</strong> para ML) e cole no campo.
-                      </div>
-                    </div>
-
-                    <!-- PASSO 1: BOTÃO DE CONDUÇÃO DIRETA AO PRODUTO NO MARKETPLACE -->
-                    <div style="margin-top:12px;">
-                      <a href="${targetProductUrl}" target="_blank" rel="noopener noreferrer" class="topbar-btn topbar-btn-primary" style="width:100%; justify-content:center; padding:12px 16px; font-size:0.88rem; font-weight:800; text-decoration:none; background:#2563eb; box-shadow:0 0 16px rgba(37,99,235,0.4);" title="Abrir página oficial do produto">
-                        🔗 GERAR LINK NO MARKETPLACE ↗
-                      </a>
-                    </div>
-
-                    <!-- PASSO 2: CAMPO DE ENTRADA DO LINK + VALIDAÇÃO E CONTINUAÇÃO -->
-                    <div style="background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:12px; margin-top:10px;">
-                      <div style="font-size:0.75rem; color:#86efac; font-weight:700; margin-bottom:6px;">
-                        Cole o link oficial gerado abaixo:
-                      </div>
-                      <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                        <input type="url" id="affLinkInput-${approvalId}" placeholder="https://meli.la/..." style="flex:1; min-width:200px; background:#070a12; border:1px solid rgba(255,255,255,0.2); border-radius:8px; padding:10px 12px; font-size:0.84rem; color:#fff; font-family:'JetBrains Mono', monospace;" />
-                        <button class="topbar-btn" style="background:#10b981; border-color:#059669; color:#fff; font-weight:800; font-size:0.82rem; padding:10px 16px; box-shadow:0 0 14px rgba(16,185,129,0.35);" onclick="validateAndPublishAffiliateLink('${approvalId}', 'affLinkInput-${approvalId}', true)">
-                          🛡️ VALIDAR E CONTINUAR 🚀
-                        </button>
-                      </div>
-                      <div id="affFeedback-${approvalId}" style="display:none; font-size:0.75rem; margin-top:6px; font-weight:600;"></div>
-                    </div>
-                  </div>
-                `;
+              if (item.type === 'AFFILIATE_LINK_REQUIRED' || meta.step === 'WAITING_AFFILIATE_LINK' || meta.step === 'AFFILIATE_LINK_READY') {
+                return window.renderAffiliateLinkCard(item);
               }
 
               // ══════════════════════════════════════════════════════════
@@ -5659,7 +5620,7 @@
         });
         const data = await res.json();
 
-        if (!data.success || !data.valid) {
+        if (!data.success) {
           if (feedback) {
             feedback.style.color = '#f87171';
             feedback.textContent = `❌ ${data.reason || 'Link inválido ou não corresponde ao produto aprovado.'}`;
@@ -5670,11 +5631,11 @@
 
         if (feedback) {
           feedback.style.color = '#34d399';
-          feedback.textContent = '✓ Link oficial validado! Publicação concluída com sucesso.';
+          feedback.textContent = '✓ Link oficial validado e salvo.';
         }
 
         window.achakiAudio?.notifyResolved();
-        alert('🚀 Sucesso!\n\nLink validado e publicação autorizada concluída automaticamente!');
+        alert('🚀 Sucesso!\n\nLink afiliado validado e salvo!');
         await loadDashboard();
       } catch (err) {
         if (feedback) {
