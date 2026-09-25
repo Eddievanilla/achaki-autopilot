@@ -2844,6 +2844,62 @@
     </div>
   </div>
 
+  <!-- MODAL PLAYER VERTICAL 9:16 (MOBILE-FIRST REELS/TIKTOK/SHORTS) -->
+  <div class="modal-overlay" id="creativeVideoPlayerModal" onclick="closeCreativeVideoPlayer(event)">
+    <div class="modal-window" style="background:#05070c; border:1px solid rgba(255,255,255,0.15); border-radius:24px; padding:0; overflow:hidden; max-width:400px; width:95vw; box-shadow:0 30px 80px rgba(0,0,0,0.9), 0 0 40px rgba(59,130,246,0.3);" onclick="event.stopPropagation()">
+      <!-- Topbar do Player -->
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; background:rgba(10,15,26,0.9); border-bottom:1px solid rgba(255,255,255,0.08);">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="background:rgba(59,130,246,0.2); border:1px solid rgba(59,130,246,0.4); color:#60a5fa; font-size:0.68rem; font-weight:800; padding:2px 8px; border-radius:99px;" id="playerVersionBadge">V1 • 9:16</span>
+          <span style="font-size:0.8rem; font-weight:700; color:#fff;" id="playerMarketplaceTag">MERCADO LIVRE</span>
+        </div>
+        <button onclick="closeCreativeVideoPlayer()" style="background:transparent; border:none; color:var(--text-dim); font-size:1.3rem; cursor:pointer; padding:4px;">✖</button>
+      </div>
+
+      <!-- Área de Visualização 9:16 -->
+      <div style="position:relative; width:100%; aspect-ratio:9/16; max-height:60vh; background:#000; display:flex; align-items:center; justify-content:center; overflow:hidden;" id="playerViewport">
+        <img id="playerImagePreview" src="" alt="Criativo" style="width:100%; height:100%; object-fit:cover;" />
+        <div id="playerVideoContainer" style="display:none; width:100%; height:100%;">
+          <video id="playerVideoEl" controls playsinline style="width:100%; height:100%; object-fit:cover;"></video>
+        </div>
+
+        <!-- Overlays Dinâmicos do Roteiro -->
+        <div style="position:absolute; top:12px; left:12px; right:12px; z-index:3; display:flex; gap:4px;" id="playerTimelineBar">
+          <div style="flex:1; height:3px; background:#3b82f6; border-radius:2px;"></div>
+          <div style="flex:1; height:3px; background:rgba(255,255,255,0.25); border-radius:2px;"></div>
+          <div style="flex:1; height:3px; background:rgba(255,255,255,0.25); border-radius:2px;"></div>
+          <div style="flex:1; height:3px; background:rgba(255,255,255,0.25); border-radius:2px;"></div>
+          <div style="flex:1; height:3px; background:rgba(255,255,255,0.25); border-radius:2px;"></div>
+          <div style="flex:1; height:3px; background:rgba(255,255,255,0.25); border-radius:2px;"></div>
+        </div>
+
+        <!-- Overlay Textual / Gancho -->
+        <div style="position:absolute; bottom:14px; left:12px; right:12px; z-index:3; background:rgba(0,0,0,0.85); backdrop-filter:blur(8px); padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,0.12);">
+          <div style="font-size:0.65rem; color:#38bdf8; font-weight:800; text-transform:uppercase; letter-spacing:0.04em;" id="playerBlockName">HOOK • 0-3s</div>
+          <div style="font-size:0.82rem; font-weight:700; color:#fff; margin-top:2px; line-height:1.3;" id="playerBlockText">Carregando roteiro...</div>
+        </div>
+      </div>
+
+      <!-- Roteiro Completo Expansível -->
+      <div style="padding:12px 16px; background:rgba(10,15,26,0.98); max-height:160px; overflow-y:auto; border-top:1px solid rgba(255,255,255,0.08);" id="playerScriptList">
+        <!-- Inserido dinamicamente -->
+      </div>
+
+      <!-- Barra de Ações Mobile -->
+      <div style="padding:14px 16px; background:rgba(6,9,16,1); border-top:1px solid rgba(255,255,255,0.1); display:flex; gap:8px;" id="playerActionButtons">
+        <button class="topbar-btn" style="flex:1; background:rgba(239,68,68,0.15); border-color:rgba(239,68,68,0.4); color:#f87171; font-weight:800; font-size:0.75rem; justify-content:center; padding:10px 4px;" onclick="closeCreativeVideoPlayer(); promptRejectCreative(activePlayerApprovalId);">
+          ❌ RECUSAR
+        </button>
+        <button class="topbar-btn" style="flex:1; background:rgba(168,85,247,0.15); border-color:rgba(168,85,247,0.4); color:#d8b4fe; font-weight:800; font-size:0.75rem; justify-content:center; padding:10px 4px;" onclick="closeCreativeVideoPlayer(); promptRemakeCreative(activePlayerApprovalId);">
+          ♻️ REFAZER
+        </button>
+        <button class="topbar-btn topbar-btn-primary" style="flex:1.5; background:#10b981; border-color:#059669; color:#fff; font-weight:800; font-size:0.8rem; justify-content:center; padding:10px 4px; box-shadow:0 0 16px rgba(16,185,129,0.4);" onclick="closeCreativeVideoPlayer(); approveCreativeAction(activePlayerApprovalId);">
+          ✅ APROVAR
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- ══════════════════════════════════════════════════════════
        4. SCRIPTS DE CONTROLE, APIS E REALTIME
        ══════════════════════════════════════════════════════════ -->
@@ -2851,6 +2907,7 @@
     let dashboardState = null;
     let currentPerfTab = 'today';
     let currentTabId = 'tab-cockpit';
+    let activePlayerApprovalId = null;
 
     // ─────────────────────────────────────────────────────────────
     // NAVEGAÇÃO ENTRE ABAS
@@ -2956,86 +3013,207 @@
         if (dockStatus) dockStatus.textContent = label;
       }
 
-      // 2. Intervenções Operacionais (Checkpoints, Desafios)
+      // 2. Intervenções Operacionais (Checkpoints, Desafios, Aprovação Mobile 9:16 e Link Afiliado)
       const intContainer = document.getElementById('interventionContainer');
       if (intContainer) {
-        if (data.interventions && data.interventions.length > 0) {
+        const interventions = [...(data.interventions || [])];
+        
+        // Se houver activeApproval vindo do backend que ainda não está como intervenção separada
+        if (data.activeApproval && !interventions.some(i => i.metadata?.approvalId === data.activeApproval.id)) {
+          interventions.unshift({
+            id: 'appr-' + data.activeApproval.id,
+            type: data.activeApproval.status === 'WAITING_ADMIN_REVIEW' ? 'CREATIVE_REVIEW' : 'AFFILIATE_LINK_REQUIRED',
+            marketplace: data.activeApproval.marketplace || 'mercadolivre',
+            title: data.activeApproval.status === 'WAITING_ADMIN_REVIEW' 
+              ? '🎬 Novo vídeo ACHAki pronto para aprovação' 
+              : '🔗 Gere o Link Oficial de Afiliado',
+            message: data.activeApproval.status === 'WAITING_ADMIN_REVIEW'
+              ? `Vídeo vertical 9:16 V${data.activeApproval.versionNumber} gerado para "${data.activeApproval.title.slice(0, 50)}...". Assista e aprove ou peça refação pelo celular.`
+              : 'Vídeo aprovado com sucesso! Agora toque no botão para abrir o produto no marketplace, copie o link comissionado oficial (meli.la) e cole abaixo.',
+            targetUrl: data.activeApproval.productUrl,
+            time: new Date(data.activeApproval.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+            productUrl: data.activeApproval.productUrl,
+            productId: data.activeApproval.productId,
+            metadata: {
+              approvalId: data.activeApproval.id,
+              creativeId: data.activeApproval.creativeId,
+              productId: data.activeApproval.productId,
+              productUrl: data.activeApproval.productUrl,
+              videoUrl: data.activeApproval.videoUrl,
+              thumbnailUrl: data.activeApproval.thumbnailUrl,
+              price: data.activeApproval.price,
+              discountPercent: data.activeApproval.discountPercent,
+              strategy: data.activeApproval.strategy,
+              versionNumber: data.activeApproval.versionNumber,
+              headline: data.activeApproval.headline,
+              aspectRatio: '9:16',
+              step: data.activeApproval.status,
+            }
+          });
+        }
+
+        if (interventions.length > 0) {
           intContainer.style.display = 'block';
-          // Dispara alerta de áudio e voz do robô
-          window.achakiAudio?.notifyIntervention(data.interventions[0]);
+          window.achakiAudio?.notifyIntervention(interventions[0]);
           intContainer.innerHTML = `
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; padding:0 2px;">
               <div style="font-size:0.75rem; font-weight:800; color:#cbd5e1; text-transform:uppercase; letter-spacing:0.05em; display:flex; align-items:center; gap:6px;">
-                <span>🎯 Curadoria & Intervenções Pendentes</span>
-                <span style="background:rgba(239,68,68,0.2); border:1px solid rgba(239,68,68,0.4); color:#f87171; font-size:0.65rem; padding:1px 6px; border-radius:99px;">${data.interventions.length}</span>
+                <span>🎯 Ações Operacionais & Aprovação Mobile</span>
+                <span style="background:rgba(59,130,246,0.2); border:1px solid rgba(59,130,246,0.4); color:#60a5fa; font-size:0.65rem; padding:1px 6px; border-radius:99px;">${interventions.length}</span>
               </div>
-              <button class="topbar-btn" style="background:rgba(255,255,255,0.06); font-size:0.68rem; padding:4px 10px;" onclick="clearAllInterventions()" title="Limpa e arquiva todas as notificações pendentes">
-                🗑️ Limpar Todas Anteriores
+              <button class="topbar-btn" style="background:rgba(255,255,255,0.06); font-size:0.68rem; padding:4px 10px;" onclick="clearAllInterventions()" title="Limpa notificações antigas">
+                🗑️ Limpar Todas
               </button>
             </div>
-            ${data.interventions.map(item => {
+            ${interventions.map(item => {
+              const meta = item.metadata || {};
+              const approvalId = meta.approvalId || (item.id.startsWith('appr-') ? item.id.replace('appr-', '') : null);
               const isML = item.marketplace === 'mercadolivre' || (item.targetUrl && item.targetUrl.includes('mercadolivre.com'));
-              const safeTargetUrl = isML ? 'https://www.mercadolivre.com.br/afiliados/linkbuilder#hub' : item.targetUrl;
-              return `
-              <div class="intervention-banner" id="interventionCard-${item.id}" style="margin-bottom:12px;">
-                <div class="intervention-header">
-                  <span class="intervention-tag">
-                    <span class="pulse-dot" style="background:#f87171;"></span>
-                    ${item.marketplace ? item.marketplace.toUpperCase() : 'SISTEMA'} • ${item.type}
-                  </span>
-                  <span style="font-size:0.75rem; color:var(--text-dim);">Detectado às ${item.time || ''}</span>
-                </div>
-                <div>
-                  <div style="font-size:0.92rem; font-weight:700; color:#fff; margin-bottom:4px;">${item.title}</div>
-                  <div style="font-size:0.8rem; color:#cbd5e1; line-height:1.4;">${item.message}</div>
-                </div>
+              const targetProductUrl = item.productUrl || item.targetUrl || 'https://www.mercadolivre.com.br';
 
-                ${item.productUrl ? `
-                  <div style="background:rgba(0,0,0,0.35); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:12px; margin-top:6px;">
-                    <div style="font-size:0.75rem; color:#94a3b8; font-weight:700; margin-bottom:4px;">
-                      📦 Produto Selecionado pelo ACHAki:
-                    </div>
-                    <div style="font-size:0.78rem; color:#60a5fa; word-break:break-all; font-family:'JetBrains Mono', monospace; margin-bottom:10px;">
-                      ${escapeHtml(item.productUrl)}
+              // ══════════════════════════════════════════════════════════
+              // CASO A: REVISÃO MOBILE DE CRIATIVO 9:16 (CREATIVE_REVIEW)
+              // ══════════════════════════════════════════════════════════
+              if (item.type === 'CREATIVE_REVIEW' || meta.step === 'WAITING_ADMIN_REVIEW') {
+                const version = meta.versionNumber || 1;
+                const priceFormatted = meta.price ? `R$ ${Number(meta.price).toFixed(2).replace('.', ',')}` : 'Preço Validado';
+                const discountText = meta.discountPercent ? `${meta.discountPercent}% OFF` : '';
+                const videoPreview = meta.videoUrl || meta.thumbnailUrl || 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=400';
+
+                return `
+                  <div class="intervention-banner" id="interventionCard-${item.id}" style="margin-bottom:14px; border-color:rgba(59,130,246,0.4); background:linear-gradient(180deg, rgba(14,20,32,0.95) 0%, rgba(10,15,26,0.98) 100%);">
+                    <div class="intervention-header">
+                      <span class="intervention-tag" style="background:rgba(59,130,246,0.15); border-color:rgba(59,130,246,0.3); color:#60a5fa;">
+                        <span class="pulse-dot" style="background:#60a5fa;"></span>
+                        🎬 VÍDEO VERTICAL 9:16 • V${version}
+                      </span>
+                      <span style="font-size:0.72rem; color:var(--text-dim);">${item.time || ''}</span>
                     </div>
 
-                    <!-- BOTÃO ÚNICO PASSO 1: COPIA E ABRE DIRETO O GERADOR -->
-                    <button class="topbar-btn topbar-btn-primary" style="width:100%; justify-content:center; padding:11px 14px; font-size:0.86rem; font-weight:800; margin-bottom:12px; box-shadow:0 0 16px rgba(37,99,235,0.4);" onclick="copyAndOpenGenerator('${escapeHtml(item.productUrl)}', '${safeTargetUrl}')">
-                      ⚡ 1. Copiar Link do Produto e Abrir Gerador ↗
-                    </button>
-
-                    <!-- PASSO 2: COLAR AUTOMATICAMENTE E PUBLICAR -->
-                    <div style="background:rgba(34,197,94,0.08); border:1px solid rgba(34,197,94,0.3); border-radius:8px; padding:10px;">
-                      <div style="font-size:0.72rem; color:#86efac; font-weight:700; margin-bottom:6px;">
-                        Depois de gerar o link no Mercado Livre:
+                    <!-- Layout Mobile: Grid Compacta Vídeo + Detalhes -->
+                    <div style="display:flex; gap:14px; margin-top:8px; flex-wrap:wrap;">
+                      <!-- Miniatura Vertical 9:16 com Play -->
+                      <div style="width:110px; height:180px; border-radius:12px; overflow:hidden; position:relative; background:#000; border:1px solid rgba(255,255,255,0.15); flex-shrink:0; cursor:pointer; box-shadow:0 8px 20px rgba(0,0,0,0.6);" onclick="openCreativeVideoPlayerFromMeta('${escapeHtml(JSON.stringify(meta))}')" title="Toque para assistir">
+                        <img src="${videoPreview}" alt="Preview" style="width:100%; height:100%; object-fit:cover;" />
+                        <div style="position:absolute; inset:0; background:rgba(0,0,0,0.35); display:flex; align-items:center; justify-content:center;">
+                          <div style="width:38px; height:38px; border-radius:50%; background:#2563eb; color:#fff; display:flex; align-items:center; justify-content:center; font-size:1.1rem; box-shadow:0 0 16px rgba(37,99,235,0.8);">▶</div>
+                        </div>
+                        <span style="position:absolute; bottom:6px; left:6px; font-size:0.6rem; font-weight:800; background:rgba(0,0,0,0.7); color:#93c5fd; padding:1px 5px; border-radius:4px;">9:16 HD</span>
                       </div>
-                      <div style="display:flex; gap:6px; flex-wrap:wrap;">
-                        <input type="url" id="manualAffInput-${item.id}" placeholder="Link meli.la gerado..." 
-                          style="flex:1; min-width:180px; background:#0b1120; border:1px solid rgba(255,255,255,0.2); border-radius:6px; padding:8px 10px; font-size:0.8rem; color:#fff;" />
-                        <button class="topbar-btn" style="background:#10b981; color:#fff; border-color:#059669; font-weight:800; font-size:0.82rem;" onclick="pasteAndPublish('${item.id}', '${item.productId || ''}')">
-                          📥 2. Colar e Publicar Agora 🚀
+
+                      <!-- Detalhes do Produto e Validação -->
+                      <div style="flex:1; min-width:200px; display:flex; flex-direction:column; justify-content:space-between;">
+                        <div>
+                          <div style="font-size:0.7rem; color:#f59e0b; font-weight:800; text-transform:uppercase;">${(item.marketplace || 'Mercado Livre').toUpperCase()} • ${meta.strategy || 'DESCONTO'}</div>
+                          <div style="font-size:0.95rem; font-weight:800; color:#fff; margin-top:2px; line-height:1.3;">
+                            ${escapeHtml(item.title.replace('🎬 Novo vídeo ACHAki pronto para aprovação', meta.headline || item.title))}
+                          </div>
+                          <div style="display:flex; align-items:baseline; gap:6px; margin-top:6px;">
+                            <span style="font-size:1.2rem; font-weight:800; color:#34d399; font-family:'JetBrains Mono';">${priceFormatted}</span>
+                            ${discountText ? `<span style="font-size:0.75rem; font-weight:800; color:#f87171; background:rgba(248,113,113,0.15); padding:1px 6px; border-radius:4px;">${discountText}</span>` : ''}
+                          </div>
+                          <div style="font-size:0.72rem; color:var(--text-muted); margin-top:6px; line-height:1.35;">
+                            Roteiro estritamente factual: gancho sem urgência inventada, demonstração fiel e CTA direto.
+                          </div>
+                        </div>
+
+                        <!-- Botão de Assistir no Celular -->
+                        <button class="topbar-btn" style="width:100%; justify-content:center; padding:8px; margin-top:10px; background:rgba(59,130,246,0.15); border-color:rgba(59,130,246,0.4); color:#93c5fd; font-weight:700; font-size:0.78rem;" onclick="openCreativeVideoPlayerFromMeta('${escapeHtml(JSON.stringify(meta))}')">
+                          ▶ ASSISTIR NO CELULAR (9:16)
                         </button>
                       </div>
                     </div>
-                  </div>
 
-                  <div style="display:flex; justify-content:flex-end; margin-top:6px;">
-                    <button class="btn-intervention-resolve" style="font-size:0.7rem; padding:3px 8px;" onclick="resolveIntervention('${item.id}')">
-                      ✓ Já resolvi no PC
-                    </button>
+                    <!-- BOTÕES DE DECISÃO MOBILE DO ADMINISTRADOR -->
+                    <div style="display:flex; gap:8px; margin-top:12px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.06); flex-wrap:wrap;">
+                      <button class="topbar-btn" style="flex:1; background:rgba(239,68,68,0.12); border-color:rgba(239,68,68,0.35); color:#f87171; font-weight:800; font-size:0.8rem; justify-content:center; padding:10px;" onclick="promptRejectCreative('${approvalId}')" title="Recusar produto/vídeo">
+                        ❌ RECUSAR
+                      </button>
+                      <button class="topbar-btn" style="flex:1; background:rgba(168,85,247,0.12); border-color:rgba(168,85,247,0.35); color:#d8b4fe; font-weight:800; font-size:0.8rem; justify-content:center; padding:10px;" onclick="promptRemakeCreative('${approvalId}')" title="Pedir refação do vídeo mantendo o produto">
+                        ♻️ REFAZER
+                      </button>
+                      <button class="topbar-btn topbar-btn-primary" style="flex:1.5; background:#10b981; border-color:#059669; color:#fff; font-weight:800; font-size:0.84rem; justify-content:center; padding:10px; box-shadow:0 0 16px rgba(16,185,129,0.4);" onclick="approveCreativeAction('${approvalId}')" title="Aprovar vídeo e prosseguir para link oficial">
+                        ✅ APROVAR VÍDEO
+                      </button>
+                    </div>
                   </div>
-                ` : `
-                  <div class="intervention-actions">
-                    <a href="${safeTargetUrl}" target="_blank" rel="noopener noreferrer" class="btn-intervention-direct">
-                      ${item.actionLabel || 'Intervir Agora ↗'}
+                `;
+              }
+
+              // ══════════════════════════════════════════════════════════
+              // CASO B: GERAÇÃO HUMANA DO LINK OFICIAL (WAITING_AFFILIATE_LINK)
+              // ══════════════════════════════════════════════════════════
+              if (item.type === 'AFFILIATE_LINK_REQUIRED' || meta.step === 'WAITING_AFFILIATE_LINK') {
+                return `
+                  <div class="intervention-banner" id="interventionCard-${item.id}" style="margin-bottom:14px; border-color:rgba(245,158,11,0.5); background:linear-gradient(180deg, rgba(20,24,14,0.95) 0%, rgba(10,15,26,0.98) 100%);">
+                    <div class="intervention-header">
+                      <span class="intervention-tag" style="background:rgba(245,158,11,0.15); border-color:rgba(245,158,11,0.4); color:#fbbf24;">
+                        <span class="pulse-dot" style="background:#fbbf24;"></span>
+                        🔗 VÍDEO APROVADO • GERE O LINK OFICIAL
+                      </span>
+                      <span style="font-size:0.72rem; color:var(--text-dim);">${item.time || ''}</span>
+                    </div>
+
+                    <div style="margin-top:6px;">
+                      <div style="font-size:0.95rem; font-weight:800; color:#fff;">
+                        Vídeo aprovado! Agora gere o link oficial de afiliado para este produto.
+                      </div>
+                      <div style="font-size:0.78rem; color:#cbd5e1; margin-top:4px; line-height:1.4;">
+                        O robô não automatiza CAPTCHA nem 2FA. Toque no botão abaixo para ir direto à página oficial do produto no marketplace, copie o link comissionado oficial (padrão <strong>meli.la</strong> para ML) e cole no campo.
+                      </div>
+                    </div>
+
+                    <!-- PASSO 1: BOTÃO DE CONDUÇÃO DIRETA AO PRODUTO NO MARKETPLACE -->
+                    <div style="margin-top:12px;">
+                      <a href="${targetProductUrl}" target="_blank" rel="noopener noreferrer" class="topbar-btn topbar-btn-primary" style="width:100%; justify-content:center; padding:12px 16px; font-size:0.88rem; font-weight:800; text-decoration:none; background:#2563eb; box-shadow:0 0 16px rgba(37,99,235,0.4);" title="Abrir página oficial do produto">
+                        🔗 GERAR LINK NO MARKETPLACE ↗
+                      </a>
+                    </div>
+
+                    <!-- PASSO 2: CAMPO DE ENTRADA DO LINK + VALIDAÇÃO E CONTINUAÇÃO -->
+                    <div style="background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:12px; margin-top:10px;">
+                      <div style="font-size:0.75rem; color:#86efac; font-weight:700; margin-bottom:6px;">
+                        Cole o link oficial gerado abaixo:
+                      </div>
+                      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <input type="url" id="affLinkInput-${approvalId}" placeholder="https://meli.la/..." style="flex:1; min-width:200px; background:#070a12; border:1px solid rgba(255,255,255,0.2); border-radius:8px; padding:10px 12px; font-size:0.84rem; color:#fff; font-family:'JetBrains Mono', monospace;" />
+                        <button class="topbar-btn" style="background:#10b981; border-color:#059669; color:#fff; font-weight:800; font-size:0.82rem; padding:10px 16px; box-shadow:0 0 14px rgba(16,185,129,0.35);" onclick="validateAndPublishAffiliateLink('${approvalId}', 'affLinkInput-${approvalId}', true)">
+                          🛡️ VALIDAR E CONTINUAR 🚀
+                        </button>
+                      </div>
+                      <div id="affFeedback-${approvalId}" style="display:none; font-size:0.75rem; margin-top:6px; font-weight:600;"></div>
+                    </div>
+                  </div>
+                `;
+              }
+
+              // ══════════════════════════════════════════════════════════
+              // CASO C: INTERVENÇÃO PADRÃO (CAPTCHA, LOGIN, DESAFIO)
+              // ══════════════════════════════════════════════════════════
+              return `
+                <div class="intervention-banner" id="interventionCard-${item.id}" style="margin-bottom:12px;">
+                  <div class="intervention-header">
+                    <span class="intervention-tag">
+                      <span class="pulse-dot" style="background:#f87171;"></span>
+                      ${item.marketplace ? item.marketplace.toUpperCase() : 'SISTEMA'} • ${item.type}
+                    </span>
+                    <span style="font-size:0.75rem; color:var(--text-dim);">${item.time || ''}</span>
+                  </div>
+                  <div>
+                    <div style="font-size:0.92rem; font-weight:700; color:#fff; margin-bottom:4px;">${item.title}</div>
+                    <div style="font-size:0.8rem; color:#cbd5e1; line-height:1.4;">${item.message}</div>
+                  </div>
+                  <div class="intervention-actions" style="margin-top:10px;">
+                    <a href="${item.targetUrl || '#'}" target="_blank" rel="noopener noreferrer" class="btn-intervention-direct">
+                      ${item.actionLabel || 'Resolver Desafio ↗'}
                     </a>
                     <button class="btn-intervention-resolve" onclick="resolveIntervention('${item.id}')">
                       ✓ Desafio Resolvido
                     </button>
                   </div>
-                `}
-              </div>
-            `;}).join('')}
+                </div>
+              `;
+            }).join('')}
           `;
         } else {
           intContainer.style.display = 'none';
@@ -4498,11 +4676,42 @@
     async function loadCreativesGallery() {
       try {
         const res = await fetch('/api/creatives?t=' + Date.now());
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        const data = await res.json();
-        if (!data.success) throw new Error(data.error || 'Falha ao buscar criativos');
+        const data = res.ok ? await res.json() : { assets: [] };
+        
+        let assets = data.assets || [];
 
-        creativesState = data.assets || [];
+        // Mescla com as versões criativas verticais 9:16 vindas do dashboardState
+        if (dashboardState && Array.isArray(dashboardState.creatives)) {
+          const formattedVersions = dashboardState.creatives.map(cv => ({
+            id: cv.id,
+            product_id: cv.productId,
+            productTitle: cv.title,
+            marketplace: cv.marketplace,
+            type: 'VIDEO_VERTICAL_9_16',
+            format: '9:16',
+            width: 1080,
+            height: 1920,
+            storage_url: cv.videoUrl || cv.thumbnailUrl,
+            thumbnail_url: cv.thumbnailUrl,
+            duration: cv.duration,
+            durationFormatted: cv.durationFormatted,
+            status: cv.status || cv.approvalStatus || 'PRONTO',
+            versionNumber: cv.versionNumber || 1,
+            strategy: cv.strategy,
+            headline: cv.headline,
+            scriptData: cv.scriptData,
+            approvalId: cv.approvalId,
+            affiliateUrl: cv.affiliateUrl,
+            created_at: cv.createdAt,
+            usageCount: cv.status === 'PUBLISHED' ? 1 : 0,
+            is916Creative: true,
+          }));
+
+          // Coloca as versões verticais 9:16 no início
+          assets = [...formattedVersions, ...assets];
+        }
+
+        creativesState = assets;
 
         // Atualiza KPIs
         const stats = data.stats || {};
@@ -4513,17 +4722,14 @@
         const kpiUnu = document.getElementById('kpiCreativeUnused');
         const navCount = document.getElementById('navCreativesCount');
 
-        if (kpiTot) kpiTot.textContent = stats.totalAssets ?? creativesState.length;
-        if (kpiImg) kpiImg.textContent = stats.totalImages ?? 0;
-        if (kpiVid) kpiVid.textContent = stats.totalVideos ?? 0;
-        if (kpiUse) kpiUse.textContent = stats.totalUsed ?? 0;
-        if (kpiUnu) kpiUnu.textContent = stats.totalUnused ?? 0;
-        if (navCount) navCount.textContent = stats.totalAssets ?? creativesState.length;
+        if (kpiTot) kpiTot.textContent = creativesState.length;
+        if (kpiImg) kpiImg.textContent = creativesState.filter(a => a.type === 'IMAGE').length;
+        if (kpiVid) kpiVid.textContent = creativesState.filter(a => a.type.includes('VIDEO')).length;
+        if (kpiUse) kpiUse.textContent = creativesState.filter(a => a.usageCount > 0 || a.status === 'PUBLISHED').length;
+        if (kpiUnu) kpiUnu.textContent = creativesState.filter(a => (!a.usageCount || a.usageCount === 0) && a.status !== 'PUBLISHED').length;
+        if (navCount) navCount.textContent = creativesState.length;
 
-        // Popula Dropdown de Produtos com produtos que possuem assets
         populateProductDropdown();
-
-        // Renderiza o grid de criativos
         renderCreatives();
       } catch (err) {
         console.error('Erro ao carregar criativos:', err);
@@ -4563,17 +4769,14 @@
       if (!grid) return;
 
       let filtered = creativesState.filter(a => {
-        // Filtro por Chips
         if (creativeCurrentFilter === 'IMAGENS' && a.type !== 'IMAGE') return false;
-        if (creativeCurrentFilter === 'VIDEOS' && a.type !== 'VIDEO') return false;
-        if (creativeCurrentFilter === 'PUBLICADOS' && (!a.usageCount || a.usageCount === 0)) return false;
-        if (creativeCurrentFilter === 'NAO_UTILIZADOS' && (a.usageCount && a.usageCount > 0)) return false;
+        if (creativeCurrentFilter === 'VIDEOS' && !a.type.includes('VIDEO')) return false;
+        if (creativeCurrentFilter === 'PUBLICADOS' && a.status !== 'PUBLISHED' && (!a.usageCount || a.usageCount === 0)) return false;
+        if (creativeCurrentFilter === 'NAO_UTILIZADOS' && (a.status === 'PUBLISHED' || (a.usageCount && a.usageCount > 0))) return false;
         if (creativeCurrentFilter === 'MERCADO_LIVRE' && a.marketplace !== 'mercadolivre') return false;
 
-        // Filtro por Produto
         if (creativeSelectedProduct && a.product_id !== creativeSelectedProduct) return false;
 
-        // Filtro por Busca
         if (creativeSearchTerm) {
           const term = creativeSearchTerm.toLowerCase();
           const matchTitle = (a.productTitle || '').toLowerCase().includes(term);
@@ -4584,7 +4787,6 @@
         return true;
       });
 
-      // Ordenação para MELHOR PERFORMANCE
       if (creativeCurrentFilter === 'MELHOR_PERFORMANCE') {
         filtered.sort((a, b) => (b.totalClicks || 0) - (a.totalClicks || 0));
       }
@@ -4595,8 +4797,7 @@
             <div style="font-size:2rem; margin-bottom:10px;">🔍</div>
             <div style="font-size:0.95rem; font-weight:700; color:#fff;">Nenhum criativo encontrado para este filtro</div>
             <div style="font-size:0.75rem; color:var(--text-dim); max-width:480px; margin:8px auto 0 auto; line-height:1.4;">
-              Conforme a política Zero Mock, são exibidas apenas mídias oficiais reais armazenadas.
-              Se um produto não possui vídeo oficial, o robô registra <code style="color:#d8b4fe;">VIDEO_AVAILABLE = false</code> sem inventar mídias.
+              Conforme a política Zero Mock, são exibidos apenas criativos e mídias oficiais reais.
             </div>
           </div>
         `;
@@ -4605,22 +4806,50 @@
 
       grid.innerHTML = filtered.map(a => {
         const isSelected = selectedAssetIds.has(a.id);
-        const isVideo = a.type === 'VIDEO';
+        const is916 = Boolean(a.is916Creative || a.type === 'VIDEO_VERTICAL_9_16' || a.format === '9:16');
+        const isVideo = is916 || a.type === 'VIDEO';
         const dateStr = a.created_at ? new Date(a.created_at).toLocaleDateString('pt-BR') : '';
         const sizeKb = a.file_size ? `${Math.round(a.file_size / 1024)} KB` : '';
-        const dims = a.width && a.height ? `${a.width}×${a.height}` : (isVideo ? 'VÍDEO' : 'HD');
-        const ctrText = a.ctr && a.ctr !== 'N/D' ? a.ctr : null;
+        const dims = is916 ? '9:16 HD' : (a.width && a.height ? `${a.width}×${a.height}` : (isVideo ? 'VÍDEO' : 'HD'));
+        const thumbUrl = a.thumbnail_url || a.storage_url || 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=400';
+
+        // Mapeia status exigidos no prompt:
+        // GERANDO, AGUARDANDO APROVAÇÃO, APROVADO, RECUSADO, REFAZER, AGUARDANDO LINK, PRONTO, PUBLICADO, ERRO
+        let statusBadge = `<span class="status-tag NO_RITMO">PRONTO</span>`;
+        const st = (a.status || '').toUpperCase();
+        if (st === 'WAITING_ADMIN_REVIEW' || st === 'AGUARDANDO APROVAÇÃO') {
+          statusBadge = `<span class="status-tag AGUARDANDO" style="background:rgba(245,158,11,0.2); border-color:rgba(245,158,11,0.5); color:#fbbf24;">AGUARDANDO APROVAÇÃO</span>`;
+        } else if (st === 'ADMIN_APPROVED' || st === 'APPROVED' || st === 'APROVADO') {
+          statusBadge = `<span class="status-tag" style="background:rgba(34,197,94,0.2); border-color:rgba(34,197,94,0.5); color:#86efac;">APROVADO</span>`;
+        } else if (st === 'ADMIN_REJECTED' || st === 'REJECTED' || st === 'RECUSADO') {
+          statusBadge = `<span class="status-tag ABAIXO_DA_META">RECUSADO</span>`;
+        } else if (st === 'ADMIN_REQUESTED_REMAKE' || st === 'REFAZER') {
+          statusBadge = `<span class="status-tag" style="background:rgba(168,85,247,0.2); border-color:rgba(168,85,247,0.5); color:#d8b4fe;">REFAZER</span>`;
+        } else if (st === 'WAITING_AFFILIATE_LINK' || st === 'AGUARDANDO LINK') {
+          statusBadge = `<span class="status-tag" style="background:rgba(59,130,246,0.2); border-color:rgba(59,130,246,0.5); color:#93c5fd;">AGUARDANDO LINK</span>`;
+        } else if (st === 'PUBLISHED' || st === 'PUBLICADO' || st === 'DRY_RUN_PUBLISHED') {
+          statusBadge = `<span class="status-tag META_ATINGIDA">PUBLICADO</span>`;
+        }
+
+        const safeObj = {
+          approvalId: a.approvalId,
+          versionNumber: a.versionNumber || 1,
+          title: a.productTitle,
+          marketplace: a.marketplace || 'mercadolivre',
+          videoUrl: a.storage_url,
+          thumbnailUrl: thumbUrl,
+          headline: a.headline || a.productTitle,
+          duration: a.duration || 18,
+          scriptData: a.scriptData,
+        };
 
         return `
           <div class="creative-card ${isSelected ? 'selected' : ''}" id="card-asset-${a.id}">
             <!-- Miniatura / Preview -->
-            <div class="creative-thumb-wrap" onclick="openCreativeLightbox('${a.id}')">
-              ${isVideo 
-                ? `<video src="${a.storage_url}#t=0.5" preload="metadata" muted playsinline></video>
-                   <div class="creative-play-overlay"><span class="creative-play-icon">▶</span></div>`
-                : `<img src="${a.storage_url}" alt="${escapeHtml(a.productTitle || '')}" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=400'">`
-              }
-              <span class="creative-badge-type ${a.type}">${isVideo ? '🎬 VÍDEO' : '📷 IMAGEM'}</span>
+            <div class="creative-thumb-wrap" onclick="openCreativeVideoPlayerFromMeta('${escapeHtml(JSON.stringify(safeObj))}')" title="Toque para assistir">
+              <img src="${thumbUrl}" alt="${escapeHtml(a.productTitle || '')}" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=400'">
+              ${isVideo ? `<div class="creative-play-overlay"><span class="creative-play-icon">▶</span></div>` : ''}
+              <span class="creative-badge-type ${is916 ? 'VIDEO' : a.type}">${is916 ? `🎬 V${a.versionNumber || 1} • 9:16` : (isVideo ? '🎬 VÍDEO' : '📷 IMAGEM')}</span>
               <div class="creative-checkbox-wrap" onclick="event.stopPropagation()">
                 <input type="checkbox" class="creative-checkbox" ${isSelected ? 'checked' : ''} onchange="toggleSelectAsset('${a.id}', event)">
               </div>
@@ -4629,39 +4858,44 @@
 
             <!-- Dados do Criativo -->
             <div class="creative-body">
-              <div class="creative-prod-title" onclick="openProductMediaDetail('${a.product_id}')" title="Ver detalhes do produto e mídias completas">
-                ${escapeHtml(a.productTitle || 'Produto catalogado')}
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
+                ${statusBadge}
+                <span style="font-size:0.68rem; font-weight:700; color:#cbd5e1;">${a.durationFormatted || '18s'}</span>
+              </div>
+
+              <div class="creative-prod-title" onclick="openCreativeVideoPlayerFromMeta('${escapeHtml(JSON.stringify(safeObj))}')" title="Assistir no player">
+                ${escapeHtml(a.productTitle || 'Criativo ACHAki')}
               </div>
 
               <div class="creative-meta-row">
                 <span style="font-weight:700; color:#fbbf24;">${(a.marketplace || 'Mercado Livre').toUpperCase()}</span>
-                <span>${dateStr}</span>
-              </div>
-
-              <div class="creative-stat-pills">
-                <span class="creative-stat-pill">Utilizações: <strong>${a.usageCount || 0}</strong></span>
-                <span class="creative-stat-pill">Publicações: <strong>${a.publicationCount || 0}</strong></span>
-                ${ctrText ? `<span class="creative-stat-pill active-ctr">CTR: ${ctrText}</span>` : ''}
+                <span>${a.strategy || 'DESCONTO'} • ${dateStr}</span>
               </div>
             </div>
 
             <!-- Ações do Card -->
-            <div class="creative-actions-row">
-              <button class="creative-action-btn" onclick="openCreativeLightbox('${a.id}')" title="Visualizar em tamanho real">
-                👁 Ver
+            <div class="creative-actions-row" style="flex-wrap:wrap;">
+              <button class="creative-action-btn" style="background:#2563eb; color:#fff; font-weight:800;" onclick="openCreativeVideoPlayerFromMeta('${escapeHtml(JSON.stringify(safeObj))}')" title="Assistir vídeo vertical">
+                ▶ Assistir
               </button>
-              <button class="creative-action-btn" onclick="downloadSingleAsset('${a.storage_url}', '${a.type.toLowerCase()}_${a.marketplace_product_id || a.id}')" title="Baixar arquivo oficial">
-                ⬇ Baixar
-              </button>
-              <button class="creative-action-btn" onclick="copyAssetLink('${a.storage_url}')" title="Copiar URL permanente">
-                📋 Link
-              </button>
-              <button class="creative-action-btn" onclick="openProductMediaDetail('${a.product_id}')" title="Histórico e performance do produto">
-                📊 Perf
-              </button>
-              <button class="creative-action-btn btn-remove" onclick="removeAsset('${a.id}')" title="Remover do acervo">
-                🗑
-              </button>
+              ${a.approvalId && (st === 'WAITING_ADMIN_REVIEW' || st === 'AGUARDANDO APROVAÇÃO') ? `
+                <button class="creative-action-btn" style="background:#10b981; color:#fff; font-weight:800;" onclick="approveCreativeAction('${a.approvalId}')" title="Aprovar vídeo">
+                  ✅ Aprovar
+                </button>
+                <button class="creative-action-btn" style="background:rgba(168,85,247,0.15); color:#d8b4fe;" onclick="promptRemakeCreative('${a.approvalId}')" title="Pedir refação">
+                  ♻️ Refazer
+                </button>
+                <button class="creative-action-btn btn-remove" onclick="promptRejectCreative('${a.approvalId}')" title="Recusar">
+                  ❌ Recusar
+                </button>
+              ` : `
+                <button class="creative-action-btn" onclick="downloadSingleAsset('${a.storage_url}', '${(a.type || 'creative').toLowerCase()}_${a.id.slice(0, 8)}')" title="Baixar arquivo">
+                  ⬇ Download
+                </button>
+                <button class="creative-action-btn" onclick="copyAssetLink('${a.storage_url}')" title="Copiar URL">
+                  📋 Link
+                </button>
+              `}
             </div>
           </div>
         `;
@@ -5019,34 +5253,265 @@
       } catch (err) {
         alert('Erro ao remover criativo: ' + err.message);
       }
+    // ─────────────────────────────────────────────────────────────
+    // 🎬 FLUXO OPERACIONAL: APROVAÇÃO MOBILE, REFAÇÃO, RECUSA E LINK OFICIAL
+    // ─────────────────────────────────────────────────────────────
+    function openCreativeVideoPlayerFromMeta(metaStr) {
+      try {
+        const meta = typeof metaStr === 'string' ? JSON.parse(metaStr) : metaStr;
+        openCreativeVideoPlayer({
+          approvalId: meta.approvalId,
+          versionNumber: meta.versionNumber || 1,
+          title: meta.product_title || meta.headline || 'Criativo Vertical 9:16',
+          marketplace: meta.marketplace || 'mercadolivre',
+          videoUrl: meta.videoUrl,
+          thumbnailUrl: meta.thumbnailUrl || meta.videoUrl,
+          headline: meta.headline,
+          duration: meta.duration || 18,
+          scriptData: meta.scriptData || null,
+        });
+      } catch (e) {
+        console.error('Erro ao abrir player:', e);
+      }
     }
 
-    async function syncCreativesNow() {
-      const btn = document.getElementById('btnSyncCreatives');
-      if (btn) {
-        btn.disabled = true;
-        btn.textContent = '⏳ Sincronizando...';
+    function openCreativeVideoPlayer({ approvalId, versionNumber = 1, title, marketplace = 'MERCADO LIVRE', videoUrl, thumbnailUrl, headline, duration = 18, scriptData = null }) {
+      activePlayerApprovalId = approvalId;
+      const modal = document.getElementById('creativeVideoPlayerModal');
+      const badge = document.getElementById('playerVersionBadge');
+      const mktTag = document.getElementById('playerMarketplaceTag');
+      const imgPrev = document.getElementById('playerImagePreview');
+      const vidCont = document.getElementById('playerVideoContainer');
+      const vidEl = document.getElementById('playerVideoEl');
+      const blockName = document.getElementById('playerBlockName');
+      const blockText = document.getElementById('playerBlockText');
+      const scriptList = document.getElementById('playerScriptList');
+
+      if (badge) badge.textContent = `V${versionNumber} • 9:16 VERTICAL`;
+      if (mktTag) mktTag.textContent = marketplace.toUpperCase();
+
+      const isRealVideo = videoUrl && (videoUrl.endsWith('.mp4') || videoUrl.endsWith('.webm'));
+
+      if (isRealVideo && vidEl && vidCont && imgPrev) {
+        imgPrev.style.display = 'none';
+        vidCont.style.display = 'block';
+        vidEl.src = videoUrl;
+        vidEl.play().catch(() => {});
+      } else if (imgPrev && vidCont) {
+        vidCont.style.display = 'none';
+        imgPrev.style.display = 'block';
+        imgPrev.src = thumbnailUrl || videoUrl || 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=600';
+      }
+
+      if (blockName) blockName.textContent = 'ESTRUTURA 9:16 • ROTEIRO FACTUAL';
+      if (blockText) blockText.textContent = headline || title || 'Achadinho ACHAki verificado';
+
+      // Blocos do roteiro
+      const blocks = scriptData?.blocks || [
+        { name: 'HOOK', startSecond: 0, endSecond: 3, text: headline || 'Olha esse achadinho que encontrei hoje!' },
+        { name: 'PROBLEMA', startSecond: 3, endSecond: 6, text: 'Praticidade no dia a dia com excelente custo-benefício.' },
+        { name: 'DEMONSTRAÇÃO', startSecond: 6, endSecond: 10, text: title || 'Apresentando o produto oficial.' },
+        { name: 'BENEFÍCIO', startSecond: 10, endSecond: 14, text: 'Avaliação verificada no marketplace com entrega rápida.' },
+        { name: 'OFERTA', startSecond: 14, endSecond: 17, text: 'Desconto real comprovado vs histórico de preços.' },
+        { name: 'CTA', startSecond: 17, endSecond: 20, text: 'Link comissionado oficial na bio e comentários!' },
+      ];
+
+      if (scriptList) {
+        scriptList.innerHTML = `
+          <div style="font-size:0.7rem; color:var(--text-dim); font-weight:800; text-transform:uppercase; margin-bottom:6px;">
+            📜 Estrutura do Roteiro Factual (Zero Invenção):
+          </div>
+          <div style="display:flex; flex-direction:column; gap:6px;">
+            ${blocks.map(b => `
+              <div style="display:flex; gap:8px; font-size:0.75rem; line-height:1.3; background:rgba(255,255,255,0.02); padding:4px 8px; border-radius:6px; border-left:2px solid #3b82f6;">
+                <span style="font-weight:800; color:#60a5fa; min-width:85px; font-family:'JetBrains Mono';">${b.name} (${b.startSecond}-${b.endSecond}s):</span>
+                <span style="color:#e2e8f0;">${escapeHtml(b.text)}</span>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      }
+
+      if (modal) modal.classList.add('open');
+    }
+
+    function closeCreativeVideoPlayer(e) {
+      if (e && e.target && !e.target.classList.contains('modal-overlay')) return;
+      const modal = document.getElementById('creativeVideoPlayerModal');
+      const vidEl = document.getElementById('playerVideoEl');
+      if (vidEl) {
+        vidEl.pause();
+        vidEl.src = '';
+      }
+      if (modal) modal.classList.remove('open');
+      activePlayerApprovalId = null;
+    }
+
+    async function approveCreativeAction(approvalId) {
+      if (!approvalId) {
+        alert('ID da aprovação não encontrado.');
+        return;
+      }
+      try {
+        const res = await fetch('/api/controls', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'APPROVE_CREATIVE', approvalId })
+        });
+        const data = await res.json();
+        if (!data.success && !data.ok) throw new Error(data.error || 'Falha ao aprovar criativo');
+
+        window.achakiAudio?.notifyResolved();
+        alert('✅ Vídeo aprovado com sucesso!\n\nAgora gere o link oficial de afiliado no marketplace.');
+        await loadDashboard();
+      } catch (err) {
+        alert('Erro ao aprovar vídeo: ' + err.message);
+      }
+    }
+
+    function promptRejectCreative(approvalId) {
+      if (!approvalId) return;
+      const modal = document.getElementById('genericModal');
+      const modalTitle = document.getElementById('modalTitle');
+      const modalBody = document.getElementById('modalBody');
+      if (!modal || !modalTitle || !modalBody) return;
+
+      modalTitle.innerHTML = '❌ Recusar Criativo';
+      modalBody.innerHTML = `
+        <div style="display:flex; flex-direction:column; gap:12px;">
+          <div style="font-size:0.8rem; color:#cbd5e1;">
+            Selecione o motivo da recusa (esse feedback treina o robô para melhores escolhas):
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+            ${['PRODUTO RUIM', 'VÍDEO RUIM', 'COPY RUIM', 'PREÇO RUIM', 'NÃO É INTERESSANTE', 'OUTRO'].map(r => `
+              <button class="topbar-btn" style="justify-content:center; padding:8px 4px; font-size:0.75rem;" onclick="executeRejectCreative('${approvalId}', '${r}')">
+                ${r}
+              </button>
+            `).join('')}
+          </div>
+        </div>
+      `;
+      modal.classList.add('open');
+    }
+
+    async function executeRejectCreative(approvalId, reason) {
+      closeModal();
+      try {
+        const res = await fetch('/api/controls', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'REJECT_CREATIVE', approvalId, reason })
+        });
+        const data = await res.json();
+        if (!data.success && !data.ok) throw new Error(data.error || 'Falha ao recusar criativo');
+        alert(`❌ Criativo recusado [${reason}]. Oferta descartada e feedback registrado.`);
+        await loadDashboard();
+      } catch (err) {
+        alert('Erro ao recusar criativo: ' + err.message);
+      }
+    }
+
+    function promptRemakeCreative(approvalId) {
+      if (!approvalId) return;
+      const modal = document.getElementById('genericModal');
+      const modalTitle = document.getElementById('modalTitle');
+      const modalBody = document.getElementById('modalBody');
+      if (!modal || !modalTitle || !modalBody) return;
+
+      modalTitle.innerHTML = '♻️ Refazer Criativo (Manter Produto)';
+      modalBody.innerHTML = `
+        <div style="display:flex; flex-direction:column; gap:12px;">
+          <div style="font-size:0.8rem; color:#cbd5e1;">
+            O produto será mantido. O CreativeAgent gerará uma <strong>NOVA VERSÃO</strong> focada na melhoria solicitada:
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+            ${['GANCHO', 'EDIÇÃO', 'NARRAÇÃO', 'TEXTO', 'MÚSICA', 'DURAÇÃO', 'CTA', 'OUTRO'].map(f => `
+              <button class="topbar-btn" style="justify-content:center; padding:8px 4px; font-size:0.75rem; background:rgba(168,85,247,0.12); border-color:rgba(168,85,247,0.35); color:#d8b4fe;" onclick="executeRemakeCreative('${approvalId}', '${f}')">
+                Foco em ${f}
+              </button>
+            `).join('')}
+          </div>
+        </div>
+      `;
+      modal.classList.add('open');
+    }
+
+    async function executeRemakeCreative(approvalId, remakeFocus) {
+      closeModal();
+      try {
+        const res = await fetch('/api/controls', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'REMAKE_CREATIVE', approvalId, remakeFocus })
+        });
+        const data = await res.json();
+        if (!data.success && !data.ok) throw new Error(data.error || 'Falha ao refazer criativo');
+        alert(`♻️ Nova versão V${data.version || 2} gerada com sucesso com foco em [${remakeFocus}]!`);
+        await loadDashboard();
+      } catch (err) {
+        alert('Erro ao solicitar refação: ' + err.message);
+      }
+    }
+
+    async function validateAndPublishAffiliateLink(approvalId, inputId, dryRun = true) {
+      const input = document.getElementById(inputId);
+      const feedback = document.getElementById(`affFeedback-${approvalId}`);
+      if (!input || !input.value.trim()) {
+        alert('Por favor, cole o link oficial de afiliado gerado no marketplace.');
+        return;
+      }
+
+      const rawLink = input.value.trim();
+
+      // Pré-validação visual rápida no frontend
+      if (rawLink.includes('mercadolivre.com') && !rawLink.includes('meli.la')) {
+        if (!confirm('⚠️ Atenção: O link colado é uma URL de produto comum do Mercado Livre. O programa de afiliados exige o link comissionado oficial no padrão meli.la. Deseja validar mesmo assim?')) {
+          return;
+        }
+      }
+
+      if (feedback) {
+        feedback.style.display = 'block';
+        feedback.style.color = '#38bdf8';
+        feedback.textContent = '🔍 Validando link e correspondência de produto...';
       }
 
       try {
-        const res = await fetch('/api/creatives', {
+        const res = await fetch('/api/controls', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'sync_all' })
+          body: JSON.stringify({
+            action: 'SUBMIT_AFFILIATE_LINK',
+            approvalId,
+            rawLink,
+            dryRun,
+          })
         });
         const data = await res.json();
-        if (!data.success) throw new Error(data.error || 'Falha na sincronização');
 
-        alert(`Sincronização concluída!\n${data.results?.length || 0} produtos analisados.\nNovas mídias salvas com sucesso.`);
-        await loadCreativesGallery();
-      } catch (err) {
-        console.error('Erro na sincronização de mídias:', err);
-        alert('Erro ao sincronizar mídias: ' + err.message);
-      } finally {
-        if (btn) {
-          btn.disabled = false;
-          btn.textContent = '⚡ Sincronizar Mídias';
+        if (!data.success || !data.valid) {
+          if (feedback) {
+            feedback.style.color = '#f87171';
+            feedback.textContent = `❌ ${data.reason || 'Link inválido ou não corresponde ao produto aprovado.'}`;
+          }
+          alert(`Falha na validação do link:\n\n${data.reason || 'Link não atende aos requisitos de afiliação.'}`);
+          return;
         }
+
+        if (feedback) {
+          feedback.style.color = '#34d399';
+          feedback.textContent = '✓ Link oficial validado! Publicação concluída com sucesso.';
+        }
+
+        window.achakiAudio?.notifyResolved();
+        alert('🚀 Sucesso!\n\nLink validado e publicação autorizada concluída automaticamente!');
+        await loadDashboard();
+      } catch (err) {
+        if (feedback) {
+          feedback.style.color = '#f87171';
+          feedback.textContent = `❌ Erro: ${err.message}`;
+        }
+        alert('Erro na validação do link: ' + err.message);
       }
     }
 

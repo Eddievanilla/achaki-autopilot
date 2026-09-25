@@ -42,14 +42,19 @@ class InterventionManager {
 
       // Verifica se já existe uma intervenção PENDING idêntica aberta recentemente (últimos 15 min)
       const fifteenMinAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString();
-      const { data: existing } = await supabase
+      let query = supabase
         .from('operator_interventions')
         .select('id')
         .eq('status', 'PENDING')
         .eq('type', type)
         .eq('marketplace', marketplace)
-        .gte('created_at', fifteenMinAgo)
-        .maybeSingle();
+        .gte('created_at', fifteenMinAgo);
+
+      if (metadata?.approvalId) {
+        query = query.filter('metadata->>approvalId', 'eq', metadata.approvalId);
+      }
+
+      const { data: existing } = await query.maybeSingle();
 
       let recordId = existing?.id;
 
@@ -64,6 +69,8 @@ class InterventionManager {
             target_url: targetUrl,
             action_label: actionLabel,
             status: 'PENDING',
+            creative_id: metadata?.creativeId || null,
+            product_id: metadata?.productId || null,
             metadata: {
               ...metadata,
               requestedAt: new Date().toISOString(),

@@ -7,6 +7,10 @@ const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: { persistSession: false },
 });
 
+import PublicationOrchestrator from '../src/services/publication-orchestrator.js';
+
+const orchestrator = new PublicationOrchestrator({ supabaseClient: supabase });
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -21,7 +25,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { action, publicationId, interventionId } = req.body || {};
+    const { action, publicationId, interventionId, approvalId, reason, remakeFocus, note, rawLink, dryRun, productId, strategy } = req.body || {};
 
     const validActions = [
       'INICIAR',
@@ -34,10 +38,54 @@ export default async function handler(req, res) {
       'CLEAR_ALL_INTERVENTIONS',
       'SET_GOAL_MODE',
       'SET_CONFIGURED_GOAL',
+      'APPROVE_CREATIVE',
+      'REJECT_CREATIVE',
+      'REMAKE_CREATIVE',
+      'SUBMIT_AFFILIATE_LINK',
+      'START_CREATIVE_PIPELINE',
     ];
 
     if (!validActions.includes(action)) {
       return res.status(400).json({ error: `Ação inválida. Use uma das seguintes: ${validActions.join(', ')}` });
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // 0. NOVO FLUXO: APROVAÇÃO, REFAÇÃO E RECUSA DE CRIATIVO 9:16
+    // ─────────────────────────────────────────────────────────────
+    if (action === 'APPROVE_CREATIVE') {
+      if (!approvalId) return res.status(400).json({ error: 'approvalId é obrigatório para aprovação de criativo.' });
+      const result = await orchestrator.adminApproveCreative({ approvalId, approvedBy: 'admin_mobile' });
+      return res.status(200).json(result);
+    }
+
+    if (action === 'REJECT_CREATIVE') {
+      if (!approvalId) return res.status(400).json({ error: 'approvalId é obrigatório para recusa de criativo.' });
+      const result = await orchestrator.adminRejectCreative({ approvalId, reason: reason || 'OUTRO', note: note || '' });
+      return res.status(200).json(result);
+    }
+
+    if (action === 'REMAKE_CREATIVE') {
+      if (!approvalId) return res.status(400).json({ error: 'approvalId é obrigatório para solicitação de refação.' });
+      const result = await orchestrator.adminRequestRemake({ approvalId, remakeFocus: remakeFocus || 'GANCHO', note: note || '' });
+      return res.status(200).json(result);
+    }
+
+    if (action === 'SUBMIT_AFFILIATE_LINK') {
+      if (!approvalId || !rawLink) return res.status(400).json({ error: 'approvalId e rawLink são obrigatórios.' });
+      const result = await orchestrator.submitAndValidateAffiliateLink({
+        approvalId,
+        rawLink,
+        dryRun: dryRun !== undefined ? Boolean(dryRun) : true, // padrão seguro DRY_RUN
+      });
+      return res.status(200).json(result);
+    }
+
+    if (action === 'START_CREATIVE_PIPELINE') {
+      if (!productId) return res.status(400).json({ error: 'productId é obrigatório para iniciar pipeline de criativo.' });
+      const { data: prod } = await supabase.from('products').select('*').eq('id', productId).single();
+      if (!prod) return res.status(404).json({ error: 'Produto não encontrado.' });
+      const result = await orchestrator.startPipelineForProduct({ product: prod, strategy: strategy || 'DESCONTO' });
+      return res.status(200).json(result);
     }
 
     // ─────────────────────────────────────────────────────────────

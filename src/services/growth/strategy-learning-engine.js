@@ -203,6 +203,46 @@ export class StrategyLearningEngine {
   }
 
   /**
+   * Registra um sinal explícito de feedback humano ou evento de desempenho.
+   */
+  async recordSignal(params) {
+    return StrategyLearningEngine.recordSignal(params);
+  }
+
+  static async recordSignal({
+    source = 'ADMIN_FEEDBACK',
+    entityId = null,
+    signalType = 'NEUTRAL',
+    reason = '',
+    confidence = 'MEDIUM',
+    metadata = {},
+  }) {
+    try {
+      const { error } = await supabase
+        .from('strategy_learning')
+        .insert({
+          strategy_key: `signal_${source.toLowerCase()}_${Date.now()}`,
+          dimension: 'human_feedback',
+          dimension_value: reason || source,
+          confidence,
+          sample_size: 1,
+          success_rate: signalType === 'POSITIVE' ? 1 : 0,
+          evidence_summary: `Feedback [${source}]: ${signalType} (${reason || 'N/A'}). ${JSON.stringify(metadata)}`,
+          weight: signalType === 'POSITIVE' ? 1.2 : 0.8,
+          last_evaluated_at: new Date().toISOString(),
+        });
+
+      if (error) {
+        logger.warn(`[StrategyLearning] Erro ao gravar sinal no banco: ${error.message}`);
+      }
+      return { success: true };
+    } catch (e) {
+      logger.warn(`[StrategyLearning] Falha ao registrar sinal: ${e.message}`);
+      return { success: false };
+    }
+  }
+
+  /**
    * Formata uma entrada para o Diário de Decisões com as tags padronizadas.
    */
   static formatDiaryEntry({

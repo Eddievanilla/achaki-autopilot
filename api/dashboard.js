@@ -300,8 +300,55 @@ export default async function handler(req, res) {
     const preparedPub = allPubs.find(p => p.status === 'ASSISTED_READY');
     const todayPubs = publishedPubs.filter(p => (p.published_at || p.created_at) >= todayStartIso);
 
-    // Se houver publicação preparada aguardando aprovação humana, atualiza o status do robô
-    if (preparedPub && robotStatus !== 'TRABALHANDO') {
+    // 7.15 Criativos 9:16 e Aprovações Mobile
+    const { data: creativeVersionsData } = await supabase
+      .from('creative_versions')
+      .select(`
+        *,
+        products (
+          id,
+          title,
+          marketplace,
+          category,
+          product_url,
+          image_url,
+          marketplace_product_id
+        )
+      `)
+      .order('created_at', { ascending: false })
+      .limit(30);
+
+    const { data: approvalsData } = await supabase
+      .from('publication_approvals')
+      .select(`
+        *,
+        products (
+          id,
+          title,
+          marketplace,
+          category,
+          product_url,
+          image_url,
+          marketplace_product_id
+        )
+      `)
+      .order('created_at', { ascending: false })
+      .limit(30);
+
+    const activeApproval = (approvalsData || []).find(a =>
+      a.status === 'WAITING_ADMIN_REVIEW' || a.status === 'WAITING_AFFILIATE_LINK'
+    );
+
+    // Se houver aprovação de criativo aguardando admin, atualiza o status do robô
+    if (activeApproval && robotStatus !== 'TRABALHANDO') {
+      if (activeApproval.status === 'WAITING_ADMIN_REVIEW') {
+        robotStatus = 'AGUARDANDO APROVAÇÃO';
+        robotStep = `Vídeo 9:16 V${activeApproval.metadata?.version_number || 1} pronto. Aguardando revisão do administrador mobile.`;
+      } else if (activeApproval.status === 'WAITING_AFFILIATE_LINK') {
+        robotStatus = 'AGUARDANDO LINK AFILIADO';
+        robotStep = 'Vídeo 9:16 aprovado. Aguardando geração do link oficial de afiliado no marketplace.';
+      }
+    } else if (preparedPub && robotStatus !== 'TRABALHANDO') {
       robotStatus = 'AGUARDANDO APROVAÇÃO';
       robotStep = 'Publicação preparada. Aguardando revisão e aprovação humana.';
     }
@@ -1132,6 +1179,54 @@ export default async function handler(req, res) {
         createdAt: i.created_at,
         time: new Date(i.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
       })),
+      // 14. Galeria de Criativos 9:16 e Aprovações Mobile
+      creatives: (creativeVersionsData || []).map((cv) => {
+        const prod = cv.products || {};
+        const approval = (approvalsData || []).find((a) => a.creative_id === cv.id);
+        const dt = new Date(cv.created_at);
+        return {
+          id: cv.id,
+          versionNumber: cv.version_number || 1,
+          productId: cv.product_id,
+          title: prod.title || cv.metadata?.product_title || 'Criativo Vertical 9:16',
+          marketplace: prod.marketplace || cv.metadata?.marketplace || 'mercadolivre',
+          category: prod.category || 'Geral',
+          duration: cv.duration || 18,
+          durationFormatted: `${cv.duration || 18}s`,
+          aspectRatio: cv.aspect_ratio || '9:16',
+          status: cv.status || 'PRONTO',
+          strategy: cv.metadata?.strategy || 'DESCONTO',
+          thumbnailUrl: cv.thumbnail_url || prod.image_url || 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=400',
+          videoUrl: cv.video_url || prod.image_url,
+          headline: cv.headline || 'Achadinho ACHAki',
+          scriptData: cv.script_data || {},
+          approvalId: approval?.id || null,
+          approvalStatus: approval?.status || null,
+          affiliateUrl: approval?.affiliate_url || null,
+          affiliateLinkStatus: approval?.affiliate_link_status || null,
+          date: dt.toLocaleDateString('pt-BR'),
+          time: dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+          createdAt: cv.created_at,
+        };
+      }),
+      activeApproval: activeApproval ? {
+        id: activeApproval.id,
+        creativeId: activeApproval.creative_id,
+        productId: activeApproval.product_id,
+        status: activeApproval.status,
+        versionNumber: activeApproval.metadata?.version_number || 1,
+        title: activeApproval.products?.title || activeApproval.metadata?.product_title || 'Produto Selecionado',
+        marketplace: activeApproval.products?.marketplace || activeApproval.metadata?.marketplace || 'mercadolivre',
+        productUrl: activeApproval.products?.product_url || activeApproval.metadata?.product_url,
+        videoUrl: activeApproval.metadata?.video_url,
+        thumbnailUrl: activeApproval.products?.image_url,
+        price: activeApproval.metadata?.price,
+        discountPercent: activeApproval.metadata?.discount_percent,
+        strategy: activeApproval.metadata?.strategy || 'DESCONTO',
+        headline: activeApproval.metadata?.headline || activeApproval.products?.title,
+        notes: activeApproval.notes,
+        createdAt: activeApproval.created_at,
+      } : null,
       timestamp: new Date().toISOString(),
     };
 
