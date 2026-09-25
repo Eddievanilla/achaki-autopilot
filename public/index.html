@@ -3227,6 +3227,27 @@
                 if (typeof window.renderAffiliateLinkCard === 'function') {
                   return window.renderAffiliateLinkCard(item);
                 }
+                const mktUpper = (item.marketplace || 'mercadolivre').toUpperCase();
+                const mktLabel = mktUpper === 'MERCADOLIVRE' ? 'MERCADO LIVRE' : mktUpper;
+                return `
+                  <div class="intervention-banner" id="interventionCard-${item.id}" style="margin-bottom:14px; border-color:rgba(59,130,246,0.5); background:linear-gradient(180deg, rgba(14,20,32,0.95) 0%, rgba(10,15,26,0.98) 100%);">
+                    <div class="intervention-header">
+                      <strong style="color:#60a5fa; font-size:0.95rem;">🛒 Produto selecionado</strong>
+                      <span style="font-size:0.75rem; color:var(--text-dim);">${item.time || ''}</span>
+                    </div>
+                    <div style="font-size:1.05rem; font-weight:800; color:#fff; margin-top:4px;">${item.title || meta.productTitle}</div>
+                    <div style="font-size:0.82rem; color:#cbd5e1; margin-top:4px;">
+                      <span style="text-transform:uppercase; font-weight:700; color:#f59e0b;">${mktLabel}</span> • 
+                      Preço: <strong style="color:#34d399; font-family:'JetBrains Mono';">${meta.price ? 'R$ ' + Number(meta.price).toFixed(2).replace('.', ',') : 'Não informado'}</strong> • 
+                      Score: <strong style="color:#60a5fa;">${meta.score || 94}</strong>
+                    </div>
+                    <div style="margin-top:12px;">
+                      <a href="${item.targetUrl || 'https://www.mercadolivre.com.br/afiliados/linkbuilder#hub'}" target="_blank" rel="noopener noreferrer" class="topbar-btn topbar-btn-primary" onclick="if ('${targetProductUrl}') copySynchronously('${targetProductUrl}');" style="display:flex; width:100%; justify-content:center; padding:14px; font-size:0.95rem; font-weight:800; background:#2563eb; border-color:#3b82f6; color:#fff; box-shadow:0 0 18px rgba(37,99,235,0.45); text-decoration:none;">
+                        🔗 GERAR LINK NO ${mktLabel}
+                      </a>
+                    </div>
+                  </div>
+                `;
               }
 
               // ══════════════════════════════════════════════════════════
