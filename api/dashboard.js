@@ -161,13 +161,29 @@ export default async function handler(req, res) {
       }
     }
 
-    // Intervenções operacionais pendentes (Desafios, CAPTCHAs, Sessões)
-    const { data: interventionsData } = await supabase
+    // Intervenções operacionais pendentes (Desafios, CAPTCHAs, Sessões, Revisões)
+    const { data: rawInterventionsData } = await supabase
       .from('operator_interventions')
       .select('*')
       .eq('status', 'PENDING')
       .order('created_at', { ascending: false })
-      .limit(5);
+      .limit(30);
+
+    // Deduplicação estrita: consolida repetições do mesmo produto ou desafio em um único registro ativo
+    const dedupMap = new Map();
+    for (const item of (rawInterventionsData || [])) {
+      const key = `${item.type}_${item.marketplace || ''}_${item.metadata?.productId || item.metadata?.approvalId || item.metadata?.marketplaceProductId || item.title}`;
+      if (!dedupMap.has(key)) {
+        dedupMap.set(key, { ...item, totalAttempts: item.attempt_count || 1 });
+      } else {
+        const existing = dedupMap.get(key);
+        existing.totalAttempts = (existing.totalAttempts || 1) + (item.attempt_count || 1);
+        if (new Date(item.created_at) < new Date(existing.first_detected_at || existing.created_at)) {
+          existing.first_detected_at = item.created_at;
+        }
+      }
+    }
+    const interventionsData = Array.from(dedupMap.values()).slice(0, 10);
 
     // 5. Totais Históricos do Banco (para separar de "Hoje")
     const { count: totalProductsCount } = await supabase
@@ -1164,7 +1180,7 @@ export default async function handler(req, res) {
         activeDemands: demandMetadata.activeDemands || [],
         bestOpportunity: demandMetadata.bestOpportunity || null,
       },
-      // 13. Intervenções Operacionais Pendentes (Desafios, CAPTCHAs, Sessões)
+      // 13. Intervenções Operacionais Pendentes (Desafios, CAPTCHAs, Sessões, Revisões)
       interventions: (interventionsData || []).map((i) => ({
         id: i.id,
         type: i.type,
@@ -1172,10 +1188,10 @@ export default async function handler(req, res) {
         title: i.title,
         message: i.message,
         targetUrl: i.target_url,
-        actionLabel: i.action_label || 'Intervir Agora ↗',
+        actionLabel: i.action_label || (i.type === 'CREATIVE_REVIEW' ? 'Revisar Criativo 9:16' : 'Intervir Agora ↗'),
         productUrl: i.metadata?.productUrl || i.metadata?.product_url || null,
         productId: i.metadata?.productId || i.metadata?.product_id || null,
-        attemptCount: i.attempt_count || i.metadata?.totalAttempts || 1,
+        attemptCount: i.totalAttempts || i.attempt_count || i.metadata?.totalAttempts || 1,
         firstDetectedAt: i.first_detected_at || i.created_at,
         lastDetectedAt: i.last_detected_at || i.created_at,
         metadata: i.metadata || {},

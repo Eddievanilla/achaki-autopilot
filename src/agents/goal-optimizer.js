@@ -35,6 +35,13 @@ export class GoalOptimizer {
   }
 
   /**
+   * Alias de retrocompatibilidade para chamadas do ProductSearchService.
+   */
+  async evaluateAndOptimize(context = {}) {
+    return await this.evaluateAsync(context);
+  }
+
+  /**
    * Avaliação síncrona/adaptativa para o worker e dashboard.
    */
   evaluate({

@@ -3246,8 +3246,6 @@
               // ══════════════════════════════════════════════════════════
               // CASO C: INTERVENÇÃO PADRÃO (CAPTCHA, LOGIN, DESAFIO)
               // ══════════════════════════════════════════════════════════
-              const isCreativeReviewInC = item.type === 'CREATIVE_REVIEW' || item.actionLabel === 'Revisar Criativo 9:16' || item.action_label === 'Revisar Criativo 9:16';
-
               return `
                 <div class="intervention-banner" id="interventionCard-${item.id}" style="margin-bottom:12px;">
                   <div class="intervention-header">
@@ -3267,15 +3265,9 @@
                     </div>
                   </div>
                   <div class="intervention-actions" style="margin-top:10px;">
-                    ${isCreativeReviewInC ? `
-                      <button type="button" class="btn-intervention-direct" style="background:#2563eb; border-color:#3b82f6; cursor:pointer;" onclick="openCreativeReviewModal('${item.id}')">
-                        🎬 Revisar Criativo 9:16
-                      </button>
-                    ` : `
-                      <a href="${item.targetUrl || '#'}" target="_blank" rel="noopener noreferrer" class="btn-intervention-direct">
-                        ${item.actionLabel || 'Resolver Desafio ↗'}
-                      </a>
-                    `}
+                    <a href="${item.targetUrl || '#'}" target="_blank" rel="noopener noreferrer" class="btn-intervention-direct">
+                      ${item.actionLabel || 'Resolver Desafio ↗'}
+                    </a>
                     <button class="btn-intervention-resolve" onclick="resolveIntervention('${item.id}')">
                       ✓ Desafio Resolvido
                     </button>
