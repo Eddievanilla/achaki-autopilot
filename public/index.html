@@ -522,6 +522,38 @@
     }
 
     /* INTERVENTION BANNER (ALERTA NO TOPO) */
+    /* FLOATING TOAST NOTIFICATION */
+    .toast-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 999999;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      pointer-events: none;
+    }
+    .toast-card {
+      pointer-events: auto;
+      background: #0f172a;
+      border: 1px solid rgba(16, 185, 129, 0.5);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.8), 0 0 20px rgba(16, 185, 129, 0.25);
+      border-radius: var(--radius-md);
+      padding: 12px 18px;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 280px;
+      max-width: 440px;
+      animation: slideInDown 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      transition: all 0.3s ease;
+    }
+    @keyframes slideInDown {
+      from { transform: translateY(-20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
     .intervention-banner {
       background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(15, 23, 42, 0.95));
       border: 1px solid rgba(239, 68, 68, 0.45);
@@ -1731,6 +1763,9 @@
         </div>
       </header>
 
+      <!-- NOTIFICAÇÕES TOAST FLUTUANTES -->
+      <div id="toastContainer" class="toast-container"></div>
+
       <!-- CONTENT SCROLLER INDEPENDENTE -->
       <main class="app-content-scroll" id="contentScroll">
         <!-- 🚨 CENTRAL DE INTERVENÇÃO OPERACIONAL (SEMPRE VISÍVEL NO TOPO SE HOUVER DESAFIO) -->
@@ -2443,68 +2478,79 @@
           intContainer.style.display = 'block';
           // Dispara alerta de áudio e voz do robô
           window.achakiAudio?.notifyIntervention(data.interventions[0]);
-          intContainer.innerHTML = data.interventions.map(item => `
-            <div class="intervention-banner">
-              <div class="intervention-header">
-                <span class="intervention-tag">
-                  <span class="pulse-dot" style="background:#f87171;"></span>
-                  ${item.marketplace ? item.marketplace.toUpperCase() : 'SISTEMA'} • ${item.type}
-                </span>
-                <span style="font-size:0.75rem; color:var(--text-dim);">Detectado às ${item.time || ''}</span>
+          intContainer.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; padding:0 2px;">
+              <div style="font-size:0.75rem; font-weight:800; color:#cbd5e1; text-transform:uppercase; letter-spacing:0.05em; display:flex; align-items:center; gap:6px;">
+                <span>🎯 Curadoria & Intervenções Pendentes</span>
+                <span style="background:rgba(239,68,68,0.2); border:1px solid rgba(239,68,68,0.4); color:#f87171; font-size:0.65rem; padding:1px 6px; border-radius:99px;">${data.interventions.length}</span>
               </div>
-              <div>
-                <div style="font-size:0.92rem; font-weight:700; color:#fff; margin-bottom:4px;">${item.title}</div>
-                <div style="font-size:0.8rem; color:#cbd5e1; line-height:1.4;">${item.message}</div>
-              </div>
-
-              ${item.productUrl ? `
-                <div style="background:rgba(0,0,0,0.35); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:12px; margin-top:4px;">
-                  <div style="font-size:0.72rem; color:#94a3b8; text-transform:uppercase; font-weight:700; margin-bottom:4px;">
-                    1. Produto Escolhido pelo Robô:
-                  </div>
-                  <div style="font-size:0.78rem; color:#60a5fa; word-break:break-all; font-family:'JetBrains Mono', monospace; margin-bottom:8px;">
-                    ${escapeHtml(item.productUrl)}
-                  </div>
-                  <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                    <button class="topbar-btn topbar-btn-primary" onclick="copyProductLink('${escapeHtml(item.productUrl)}')">
-                      📋 Copiar Link do Produto
-                    </button>
-                    <a href="${item.targetUrl}" target="_blank" rel="noopener noreferrer" class="btn-intervention-direct">
-                      ${item.actionLabel || 'Abrir Gerador Mercado Livre ↗'}
-                    </a>
-                  </div>
-                </div>
-
-                <div style="background:rgba(34,197,94,0.08); border:1px solid rgba(34,197,94,0.3); border-radius:8px; padding:12px;">
-                  <div style="font-size:0.72rem; color:#86efac; text-transform:uppercase; font-weight:700; margin-bottom:6px;">
-                    2. Gerou o link no seu celular? Cole o meli.la abaixo:
-                  </div>
-                  <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                    <input type="url" id="manualAffInput-${item.id}" placeholder="Cole o link encurtado (ex: https://meli.la/...)" 
-                      style="flex:1; min-width:240px; background:#0b1120; border:1px solid rgba(255,255,255,0.2); border-radius:6px; padding:8px 12px; font-size:0.82rem; color:#fff;" />
-                    <button class="topbar-btn" style="background:#10b981; color:#fff; border-color:#059669; font-weight:700;" onclick="submitManualAffiliateLink('${item.id}', '${item.productId || ''}')">
-                      🚀 Salvar e Continuar Postagem
-                    </button>
-                  </div>
-                </div>
-
-                <div style="display:flex; justify-content:flex-end;">
-                  <button class="btn-intervention-resolve" style="font-size:0.72rem; padding:4px 8px;" onclick="resolveIntervention('${item.id}')">
-                    ✓ Já resolvi o desafio no PC
-                  </button>
-                </div>
-              ` : `
-                <div class="intervention-actions">
-                  <a href="${item.targetUrl}" target="_blank" rel="noopener noreferrer" class="btn-intervention-direct">
-                    ${item.actionLabel || 'Intervir Agora ↗'}
-                  </a>
-                  <button class="btn-intervention-resolve" onclick="resolveIntervention('${item.id}')">
-                    ✓ Desafio Resolvido
-                  </button>
-                </div>
-              `}
+              <button class="topbar-btn" style="background:rgba(255,255,255,0.06); font-size:0.68rem; padding:4px 10px;" onclick="clearAllInterventions()" title="Limpa e arquiva todas as notificações pendentes">
+                🗑️ Limpar Todas Anteriores
+              </button>
             </div>
-          `).join('');
+            ${data.interventions.map(item => `
+              <div class="intervention-banner" id="interventionCard-${item.id}" style="margin-bottom:12px;">
+                <div class="intervention-header">
+                  <span class="intervention-tag">
+                    <span class="pulse-dot" style="background:#f87171;"></span>
+                    ${item.marketplace ? item.marketplace.toUpperCase() : 'SISTEMA'} • ${item.type}
+                  </span>
+                  <span style="font-size:0.75rem; color:var(--text-dim);">Detectado às ${item.time || ''}</span>
+                </div>
+                <div>
+                  <div style="font-size:0.92rem; font-weight:700; color:#fff; margin-bottom:4px;">${item.title}</div>
+                  <div style="font-size:0.8rem; color:#cbd5e1; line-height:1.4;">${item.message}</div>
+                </div>
+
+                ${item.productUrl ? `
+                  <div style="background:rgba(0,0,0,0.35); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:12px; margin-top:4px;">
+                    <div style="font-size:0.72rem; color:#94a3b8; text-transform:uppercase; font-weight:700; margin-bottom:4px;">
+                      1. Produto Escolhido pelo Robô:
+                    </div>
+                    <div style="font-size:0.78rem; color:#60a5fa; word-break:break-all; font-family:'JetBrains Mono', monospace; margin-bottom:8px;">
+                      ${escapeHtml(item.productUrl)}
+                    </div>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                      <button class="topbar-btn topbar-btn-primary" onclick="copyProductLink('${escapeHtml(item.productUrl)}')">
+                        📋 Copiar Link do Produto
+                      </button>
+                      <a href="${item.targetUrl}" target="_blank" rel="noopener noreferrer" class="btn-intervention-direct">
+                        ${item.actionLabel || 'Abrir Gerador Mercado Livre ↗'}
+                      </a>
+                    </div>
+                  </div>
+
+                  <div style="background:rgba(34,197,94,0.08); border:1px solid rgba(34,197,94,0.3); border-radius:8px; padding:12px;">
+                    <div style="font-size:0.72rem; color:#86efac; text-transform:uppercase; font-weight:700; margin-bottom:6px;">
+                      2. Gerou o link no seu celular? Cole o meli.la abaixo:
+                    </div>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                      <input type="url" id="manualAffInput-${item.id}" placeholder="Cole o link encurtado (ex: https://meli.la/...)" 
+                        style="flex:1; min-width:240px; background:#0b1120; border:1px solid rgba(255,255,255,0.2); border-radius:6px; padding:8px 12px; font-size:0.82rem; color:#fff;" />
+                      <button class="topbar-btn" style="background:#10b981; color:#fff; border-color:#059669; font-weight:700;" onclick="submitManualAffiliateLink('${item.id}', '${item.productId || ''}')">
+                        🚀 Salvar e Continuar Postagem
+                      </button>
+                    </div>
+                  </div>
+
+                  <div style="display:flex; justify-content:flex-end;">
+                    <button class="btn-intervention-resolve" style="font-size:0.72rem; padding:4px 8px;" onclick="resolveIntervention('${item.id}')">
+                      ✓ Já resolvi o desafio no PC
+                    </button>
+                  </div>
+                ` : `
+                  <div class="intervention-actions">
+                    <a href="${item.targetUrl}" target="_blank" rel="noopener noreferrer" class="btn-intervention-direct">
+                      ${item.actionLabel || 'Intervir Agora ↗'}
+                    </a>
+                    <button class="btn-intervention-resolve" onclick="resolveIntervention('${item.id}')">
+                      ✓ Desafio Resolvido
+                    </button>
+                  </div>
+                `}
+              </div>
+            `).join('')}
+          `;
         } else {
           intContainer.style.display = 'none';
           intContainer.innerHTML = '';
@@ -2869,6 +2915,53 @@
       }
     }
 
+    function showToast(title, message, isSuccess = true) {
+      const container = document.getElementById('toastContainer');
+      if (!container) return;
+      const toast = document.createElement('div');
+      toast.className = 'toast-card';
+      toast.style.borderColor = isSuccess ? 'rgba(16,185,129,0.5)' : 'rgba(239,68,68,0.5)';
+      toast.innerHTML = `
+        <div style="font-size:1.4rem;">${isSuccess ? '🎉' : '⚠️'}</div>
+        <div style="flex:1;">
+          <div style="font-size:0.85rem; font-weight:800; color:${isSuccess ? '#34d399' : '#f87171'};">${escapeHtml(title)}</div>
+          <div style="font-size:0.75rem; color:#cbd5e1; margin-top:2px;">${escapeHtml(message)}</div>
+        </div>
+      `;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(-10px)';
+        setTimeout(() => toast.remove(), 300);
+      }, 5000);
+    }
+
+    async function clearAllInterventions() {
+      if (!confirm('Deseja realmente arquivar todas as notificações pendentes e limpar a tela?')) return;
+      const intContainer = document.getElementById('interventionContainer');
+      if (intContainer) {
+        intContainer.style.opacity = '0';
+        setTimeout(() => {
+          intContainer.style.display = 'none';
+          intContainer.innerHTML = '';
+          intContainer.style.opacity = '1';
+        }, 200);
+      }
+
+      showToast('Notificações Limpas', 'Todas as notificações anteriores foram arquivadas com sucesso.');
+
+      try {
+        await fetch('/api/controls', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'CLEAR_ALL_INTERVENTIONS' })
+        });
+        setTimeout(loadDashboard, 800);
+      } catch (e) {
+        console.warn('Erro ao limpar intervenções:', e.message);
+      }
+    }
+
     async function submitManualAffiliateLink(interventionId, productId) {
       const input = document.getElementById('manualAffInput-' + interventionId);
       const url = input ? input.value.trim() : '';
@@ -2883,6 +2976,27 @@
         }
       }
 
+      // 1. Otimismo instantâneo: remove o card da tela imediatamente sem travar
+      const card = document.getElementById('interventionCard-' + interventionId);
+      if (card) {
+        card.style.transition = 'all 0.25s ease';
+        card.style.opacity = '0';
+        card.style.transform = 'scale(0.96)';
+        setTimeout(() => {
+          card.remove();
+          const intContainer = document.getElementById('interventionContainer');
+          const remaining = intContainer?.querySelectorAll('.intervention-banner');
+          if (!remaining || remaining.length === 0) {
+            if (intContainer) intContainer.style.display = 'none';
+          }
+        }, 250);
+      }
+
+      // 2. Feedback sonoro e visual imediato
+      window.achakiAudio?.notifyResolved();
+      showToast('Link Recebido com Sucesso!', 'O link comissionado foi confirmado. O robô está finalizando a postagem.');
+
+      // 3. Envia para o backend salvar e prosseguir
       try {
         const res = await fetch('/api/controls', {
           method: 'POST',
@@ -2895,16 +3009,13 @@
           })
         });
 
-        if (res.ok) {
-          window.achakiAudio?.notifyResolved();
-          alert('✔ Link comissionado salvo com sucesso!\nO robô continuará a publicação imediatamente.');
-          loadDashboard();
-        } else {
+        if (!res.ok) {
           const err = await res.json();
-          alert('Erro ao salvar: ' + (err.error || 'Erro desconhecido'));
+          console.warn('Erro ao salvar:', err.error);
         }
+        setTimeout(loadDashboard, 1500);
       } catch (e) {
-        alert('Erro de conexão: ' + e.message);
+        console.warn('Erro ao enviar link manual:', e.message);
       }
     }
 

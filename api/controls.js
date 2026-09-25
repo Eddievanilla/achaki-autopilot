@@ -31,6 +31,7 @@ export default async function handler(req, res) {
       'REJECT_PUBLICATION',
       'CHOOSE_ANOTHER_OFFER',
       'RESOLVE_INTERVENTION',
+      'CLEAR_ALL_INTERVENTIONS',
     ];
 
     if (!validActions.includes(action)) {
@@ -38,7 +39,18 @@ export default async function handler(req, res) {
     }
 
     // ─────────────────────────────────────────────────────────────
-    // 0. RESOLVER INTERVENÇÃO DO OPERADOR
+    // 0. LIMPAR TODAS AS INTERVENÇÕES ANTIGAS
+    // ─────────────────────────────────────────────────────────────
+    if (action === 'CLEAR_ALL_INTERVENTIONS') {
+      await supabase
+        .from('operator_interventions')
+        .update({ status: 'RESOLVED', resolved_at: new Date().toISOString() })
+        .eq('status', 'PENDING');
+      return res.status(200).json({ ok: true, message: 'Todas as notificações antigas foram limpas com sucesso.' });
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // 0.1 RESOLVER INTERVENÇÃO DO OPERADOR
     // ─────────────────────────────────────────────────────────────
     if (action === 'RESOLVE_INTERVENTION') {
       const { affiliateUrl, productId } = req.body || {};
