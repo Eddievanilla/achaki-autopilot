@@ -47,29 +47,26 @@
     return false;
   }
 
-  async function copyToClipboard(text) {
+  function copySynchronously(text) {
     if (!text) return false;
-    try {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(text);
-        return true;
-      }
-    } catch (_) {}
+    let ok = false;
     try {
       const ta = document.createElement('textarea');
       ta.value = text;
+      ta.setAttribute('readonly', '');
       ta.style.position = 'fixed';
       ta.style.left = '-9999px';
       ta.style.top = '-9999px';
       document.body.appendChild(ta);
       ta.focus();
       ta.select();
-      const ok = document.execCommand('copy');
+      ok = document.execCommand('copy');
       document.body.removeChild(ta);
-      return ok;
-    } catch (_) {
-      return false;
+    } catch (_) {}
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).catch(() => {});
     }
+    return ok;
   }
 
   async function checkClipboard(interventionId) {
@@ -138,8 +135,8 @@
           </div>
 
           <div style="margin-top:10px;">
-            <label style="font-size:0.7rem; color:var(--text-dim); display:block; margin-bottom:2px;">URL original do produto selecionado:</label>
-            <input type="text" readonly value="${prodUrl}" style="width:100%; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); border-radius:6px; padding:6px 10px; font-size:0.75rem; color:#94a3b8; font-family:'JetBrains Mono';" aria-label="URL original do produto">
+            <label style="font-size:0.7rem; color:var(--text-dim); display:block; margin-bottom:2px;">URL original do produto selecionado (toque para copiar):</label>
+            <input type="text" readonly value="${prodUrl}" onclick="this.select(); copySynchronously(this.value); const fb = document.querySelector('[data-affiliate-feedback=\'${id}\']'); if (fb) fb.textContent = '📋 URL copiada com sucesso!';" title="Toque para copiar a URL do produto" style="width:100%; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); border-radius:6px; padding:6px 10px; font-size:0.75rem; color:#94a3b8; font-family:'JetBrains Mono'; cursor:pointer;" aria-label="URL original do produto">
           </div>
 
           <div style="margin-top:10px; padding-top:8px; border-top:1px dashed rgba(255,255,255,0.1);">
@@ -167,7 +164,7 @@
     if (copyProdBtn) {
       const url = copyProdBtn.dataset.copyProdUrl;
       if (url) {
-        await copyToClipboard(url);
+        copySynchronously(url);
         const prevText = copyProdBtn.textContent;
         copyProdBtn.textContent = '✅ Copiado!';
         setTimeout(() => { copyProdBtn.textContent = prevText; }, 2000);
@@ -194,15 +191,16 @@
     const id = button.dataset.affiliateOpen;
     const prodUrl = button.dataset.productUrl;
     const feedback = button.parentElement.parentElement.querySelector(`[data-affiliate-feedback="${id}"]`) || document.querySelector(`[data-affiliate-feedback="${id}"]`);
+
+    // Cópia síncrona imediata no gesto do usuário (antes do fetch)
+    if (prodUrl) {
+      copySynchronously(prodUrl);
+    }
+
     button.disabled = true;
 
     try {
       if (feedback) feedback.textContent = 'Preparando link do produto e gerador oficial...';
-
-      // Copia previamente a URL do produto para o clipboard
-      if (prodUrl) {
-        await copyToClipboard(prodUrl);
-      }
 
       const response = await fetch('/api/controls', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -213,7 +211,7 @@
 
       // Se a API retornou productUrl mais atualizada, copia também
       if (data.productUrl) {
-        await copyToClipboard(data.productUrl);
+        copySynchronously(data.productUrl);
       }
 
       // Abre a aba do gerador oficial para o operador
