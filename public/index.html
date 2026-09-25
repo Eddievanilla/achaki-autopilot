@@ -2563,7 +2563,7 @@
             </div>
             <div class="grid-3" style="gap:12px;">
               <!-- FACEBOOK PAGE -->
-              <div class="channel-card" onclick="openChannelAnalytics('FACEBOOK')" style="padding:16px; background:rgba(24,119,242,0.06); border-radius:10px; border:1px solid rgba(24,119,242,0.25); cursor:pointer;" title="Clique para abrir o Analytics do Facebook">
+              <div class="channel-card" onclick="openChannelModal('FACEBOOK')" style="padding:16px; background:rgba(24,119,242,0.06); border-radius:10px; border:1px solid rgba(24,119,242,0.25); cursor:pointer;" title="Clique para abrir opções e analytics do Facebook">
                 <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                   <div style="font-weight:700; color:#fff; font-size:0.9rem;">📘 Facebook Page</div>
                   <span class="status-tag NO_RITMO" style="font-size:0.65rem;">● ATIVA</span>
@@ -2571,12 +2571,12 @@
                 <div style="font-size:0.75rem; color:#34d399; margin-top:4px;">Conectada (ACHAki Ofertas)</div>
                 <div style="font-size:0.7rem; color:var(--text-dim); margin-top:2px;">Token permanente ativo</div>
                 <div style="margin-top:10px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.06); display:flex; justify-content:space-between; align-items:center;">
-                  <span style="font-size:0.72rem; color:#60a5fa; font-weight:700;">📊 Abrir Analytics da Página ↗</span>
+                  <span style="font-size:0.72rem; color:#60a5fa; font-weight:700;">⚙️ Abrir Opções & Analytics ↗</span>
                 </div>
               </div>
 
               <!-- INSTAGRAM -->
-              <div class="channel-card" onclick="openChannelAnalytics('INSTAGRAM')" style="padding:16px; background:rgba(225,48,108,0.04); border-radius:10px; border:1px solid rgba(225,48,108,0.2); cursor:pointer;" title="Clique para abrir o Analytics do Instagram">
+              <div class="channel-card" onclick="openChannelModal('INSTAGRAM')" style="padding:16px; background:rgba(225,48,108,0.04); border-radius:10px; border:1px solid rgba(225,48,108,0.2); cursor:pointer;" title="Clique para abrir opções do Instagram">
                 <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                   <div style="font-weight:700; color:#fff; font-size:0.9rem;">📸 Instagram</div>
                   <span class="status-tag SEM_DADOS" style="font-size:0.65rem;">○ PENDENTE</span>
@@ -2584,12 +2584,12 @@
                 <div style="font-size:0.75rem; color:#f472b6; margin-top:4px;">Conta Profissional</div>
                 <div style="font-size:0.7rem; color:var(--text-dim); margin-top:2px;">Aguardando vinculação Meta</div>
                 <div style="margin-top:10px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.06); display:flex; justify-content:space-between; align-items:center;">
-                  <span style="font-size:0.72rem; color:#f472b6; font-weight:700;">📊 Abrir Analytics do Canal ↗</span>
+                  <span style="font-size:0.72rem; color:#f472b6; font-weight:700;">⚙️ Abrir Opções & Status ↗</span>
                 </div>
               </div>
 
               <!-- TIKTOK -->
-              <div class="channel-card" onclick="openChannelAnalytics('TIKTOK')" style="padding:16px; background:rgba(254,44,85,0.04); border-radius:10px; border:1px solid rgba(254,44,85,0.2); cursor:pointer;" title="Clique para abrir o Analytics do TikTok">
+              <div class="channel-card" onclick="openChannelModal('TIKTOK')" style="padding:16px; background:rgba(254,44,85,0.04); border-radius:10px; border:1px solid rgba(254,44,85,0.2); cursor:pointer;" title="Clique para abrir opções do TikTok">
                 <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                   <div style="font-weight:700; color:#fff; font-size:0.9rem;">🎵 TikTok</div>
                   <span class="status-tag SEM_DADOS" style="font-size:0.65rem;">○ PENDENTE</span>
@@ -2597,12 +2597,12 @@
                 <div style="font-size:0.75rem; color:#fda4af; margin-top:4px;">Vídeos & Achadinhos</div>
                 <div style="font-size:0.7rem; color:var(--text-dim); margin-top:2px;">Aguardando credenciais oficiais</div>
                 <div style="margin-top:10px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.06); display:flex; justify-content:space-between; align-items:center;">
-                  <span style="font-size:0.72rem; color:#fda4af; font-weight:700;">📊 Abrir Analytics do Canal ↗</span>
+                  <span style="font-size:0.72rem; color:#fda4af; font-weight:700;">⚙️ Abrir Opções & Status ↗</span>
                 </div>
               </div>
 
               <!-- MERCADO LIVRE -->
-              <div class="channel-card" onclick="switchTab('tab-offers', 'Radar & Ofertas')" style="padding:16px; background:rgba(255,230,0,0.04); border-radius:10px; border:1px solid rgba(255,230,0,0.2); cursor:pointer;" title="Clique para ver o catálogo coletado do Mercado Livre">
+              <div class="channel-card" onclick="openChannelModal('MERCADOLIVRE')" style="padding:16px; background:rgba(255,230,0,0.04); border-radius:10px; border:1px solid rgba(255,230,0,0.2); cursor:pointer;" title="Clique para abrir opções do Mercado Livre">
                 <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                   <div style="font-weight:700; color:#fff; font-size:0.9rem;">🛒 Mercado Livre</div>
                   <span class="status-tag NO_RITMO" style="font-size:0.65rem;">● ATIVO</span>
@@ -2610,12 +2610,12 @@
                 <div style="font-size:0.75rem; color:#fbbf24; margin-top:4px;">Afiliados & Coleta</div>
                 <div style="font-size:0.7rem; color:var(--text-dim); margin-top:2px;">Links meli.la comissionados</div>
                 <div style="margin-top:10px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.06); display:flex; justify-content:space-between; align-items:center;">
-                  <span style="font-size:0.72rem; color:#fbbf24; font-weight:700;">📦 Ver Radar de Ofertas ↗</span>
+                  <span style="font-size:0.72rem; color:#fbbf24; font-weight:700;">⚙️ Abrir Opções do Catálogo ↗</span>
                 </div>
               </div>
 
               <!-- SHOPEE -->
-              <div class="channel-card" onclick="switchTab('tab-offers', 'Radar & Ofertas')" style="padding:16px; background:rgba(238,77,45,0.04); border-radius:10px; border:1px solid rgba(238,77,45,0.2); cursor:pointer;" title="Clique para ver status da Shopee">
+              <div class="channel-card" onclick="openChannelModal('SHOPEE')" style="padding:16px; background:rgba(238,77,45,0.04); border-radius:10px; border:1px solid rgba(238,77,45,0.2); cursor:pointer;" title="Clique para abrir opções da Shopee">
                 <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                   <div style="font-weight:700; color:#fff; font-size:0.9rem;">🛍️ Shopee</div>
                   <span class="status-tag SEM_DADOS" style="font-size:0.65rem;">○ EM INTEGRAÇÃO</span>
@@ -2623,12 +2623,12 @@
                 <div style="font-size:0.75rem; color:#94a3b8; margin-top:4px;">Programa de Afiliados</div>
                 <div style="font-size:0.7rem; color:var(--text-dim); margin-top:2px;">Parceria em homologação</div>
                 <div style="margin-top:10px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.06); display:flex; justify-content:space-between; align-items:center;">
-                  <span style="font-size:0.72rem; color:#94a3b8; font-weight:700;">📦 Ver Produtos Shopee ↗</span>
+                  <span style="font-size:0.72rem; color:#94a3b8; font-weight:700;">⚙️ Abrir Opções & Status ↗</span>
                 </div>
               </div>
 
               <!-- YOUTUBE -->
-              <div class="channel-card" onclick="openChannelAnalytics('YOUTUBE')" style="padding:16px; background:rgba(255,0,0,0.04); border-radius:10px; border:1px solid rgba(255,0,0,0.2); cursor:pointer;" title="Clique para abrir o Analytics do YouTube">
+              <div class="channel-card" onclick="openChannelModal('YOUTUBE')" style="padding:16px; background:rgba(255,0,0,0.04); border-radius:10px; border:1px solid rgba(255,0,0,0.2); cursor:pointer;" title="Clique para abrir opções do YouTube">
                 <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                   <div style="font-weight:700; color:#fff; font-size:0.9rem;">▶️ YouTube</div>
                   <span class="status-tag SEM_DADOS" style="font-size:0.65rem;">○ PENDENTE</span>
@@ -2636,7 +2636,7 @@
                 <div style="font-size:0.75rem; color:#f87171; margin-top:4px;">Shorts & Vídeos</div>
                 <div style="font-size:0.7rem; color:var(--text-dim); margin-top:2px;">Aguardando credenciais oficiais</div>
                 <div style="margin-top:10px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.06); display:flex; justify-content:space-between; align-items:center;">
-                  <span style="font-size:0.72rem; color:#f87171; font-weight:700;">📊 Abrir Analytics do Canal ↗</span>
+                  <span style="font-size:0.72rem; color:#f87171; font-weight:700;">⚙️ Abrir Opções & Status ↗</span>
                 </div>
               </div>
             </div>
@@ -3509,6 +3509,109 @@
           target.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
       }, 100);
+    }
+
+    function openChannelModal(channelKey) {
+      const modal = document.getElementById('genericModal');
+      const modalTitle = document.getElementById('modalTitle');
+      const modalBody = document.getElementById('modalBody');
+      if (!modal || !modalTitle || !modalBody) return;
+
+      if (channelKey === 'FACEBOOK') {
+        const mn = dashboardState?.multinetwork?.facebook || dashboardState?.multinetwork?.networks?.facebook || {};
+        const m = mn.metrics || mn || {};
+
+        modalTitle.innerHTML = '📘 Opções do Canal — Facebook Page';
+        modalBody.innerHTML = `
+          <div style="display:flex; flex-direction:column; gap:14px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(24,119,242,0.08); border:1px solid rgba(24,119,242,0.25); border-radius:8px; padding:12px 14px;">
+              <div>
+                <div style="font-size:0.95rem; font-weight:700; color:#fff;">ACHAki Ofertas</div>
+                <div style="font-size:0.75rem; color:#34d399; margin-top:2px;">● Conexão Ativa (Token Permanente Graph API)</div>
+              </div>
+              <span class="status-tag NO_RITMO">CONECTADO</span>
+            </div>
+
+            <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:12px;">
+              <div style="font-size:0.72rem; color:var(--text-dim); text-transform:uppercase; font-weight:700; margin-bottom:8px;">📊 Resumo de Desempenho Oficial</div>
+              <div class="grid-4" style="gap:8px;">
+                <div>
+                  <span style="font-size:0.65rem; color:var(--text-dim);">Seguidores:</span>
+                  <div style="font-size:1rem; font-weight:700; color:#fff;">${m.followers ?? 'N/D'}</div>
+                </div>
+                <div>
+                  <span style="font-size:0.65rem; color:var(--text-dim);">Alcance:</span>
+                  <div style="font-size:1rem; font-weight:700; color:#60a5fa;">${m.reach ?? 'N/D'}</div>
+                </div>
+                <div>
+                  <span style="font-size:0.65rem; color:var(--text-dim);">Cliques:</span>
+                  <div style="font-size:1rem; font-weight:700; color:#34d399;">${m.clicks ?? 0}</div>
+                </div>
+                <div>
+                  <span style="font-size:0.65rem; color:var(--text-dim);">Posts Hoje:</span>
+                  <div style="font-size:1rem; font-weight:700; color:#cbd5e1;">${m.postsToday ?? 0}</div>
+                </div>
+              </div>
+            </div>
+
+            <div style="display:flex; flex-direction:column; gap:8px;">
+              <button class="topbar-btn topbar-btn-primary" onclick="closeModal(); openChannelAnalytics('FACEBOOK');" style="padding:10px; font-size:0.8rem; justify-content:center; text-align:center;">
+                📊 Abrir Analytics Multirrede Detalhado
+              </button>
+              <a href="https://www.facebook.com" target="_blank" rel="noopener noreferrer" class="topbar-btn" style="padding:10px; font-size:0.8rem; text-decoration:none; justify-content:center; text-align:center;">
+                🔗 Abrir Página no Facebook ↗
+              </a>
+              <a href="/achaki/oauth/callback" target="_blank" class="topbar-btn" style="padding:8px; font-size:0.75rem; text-decoration:none; color:var(--text-dim); justify-content:center; text-align:center;">
+                🔑 Renovar / Reconectar Token OAuth
+              </a>
+            </div>
+          </div>
+        `;
+      } else if (channelKey === 'MERCADOLIVRE') {
+        modalTitle.innerHTML = '🛒 Opções de Marketplace — Mercado Livre';
+        modalBody.innerHTML = `
+          <div style="display:flex; flex-direction:column; gap:14px;">
+            <div style="background:rgba(255,230,0,0.06); border:1px solid rgba(255,230,0,0.25); border-radius:8px; padding:12px 14px;">
+              <div style="font-size:0.95rem; font-weight:700; color:#fff;">Mercado Livre Afiliados</div>
+              <div style="font-size:0.75rem; color:#fbbf24; margin-top:2px;">● Coleta Ativa • Sessão do Gerador de Links</div>
+            </div>
+            <div style="font-size:0.78rem; color:var(--text-muted); line-height:1.4;">
+              O robô realiza a varredura automática de ofertas com alto desconto real e intenção de compra, gerando links comissionados no padrão <strong>meli.la</strong>.
+            </div>
+            <div style="display:flex; flex-direction:column; gap:8px;">
+              <button class="topbar-btn topbar-btn-primary" onclick="closeModal(); switchTab('tab-offers', 'Radar & Ofertas');" style="padding:10px; font-size:0.8rem; justify-content:center;">
+                📦 Ver Catálogo do Radar de Ofertas
+              </button>
+            </div>
+          </div>
+        `;
+      } else {
+        const names = {
+          INSTAGRAM: '📸 Instagram',
+          TIKTOK: '🎵 TikTok',
+          SHOPEE: '🛍️ Shopee',
+          YOUTUBE: '▶️ YouTube',
+        };
+        modalTitle.innerHTML = `${names[channelKey] || channelKey} — Opções de Conexão`;
+        modalBody.innerHTML = `
+          <div style="display:flex; flex-direction:column; gap:14px; text-align:center; padding:10px 0;">
+            <div style="font-size:0.9rem; color:#fff; font-weight:700;">Canal em Homologação</div>
+            <p style="font-size:0.78rem; color:var(--text-dim); line-height:1.4;">
+              A integração oficial deste canal aguarda credenciais ou vinculação legítima. O sistema opera com <strong>Zero Dados Artificiais</strong>.
+            </p>
+            <div style="display:flex; gap:8px; justify-content:center;">
+              <button class="topbar-btn topbar-btn-primary" onclick="closeModal(); openChannelAnalytics('${channelKey}');">
+                📊 Ver Status no Analytics
+              </button>
+              <button class="topbar-btn" onclick="closeModal();">
+                Fechar
+              </button>
+            </div>
+          </div>
+        `;
+      }
+
+      modal.classList.add('open');
     }
 
     function selectNetworkTab(networkName) {
