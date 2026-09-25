@@ -169,9 +169,14 @@ export default async function handler(req, res) {
       .order('created_at', { ascending: false })
       .limit(30);
 
-    // Deduplicação estrita: consolida repetições do mesmo produto ou desafio em um único registro ativo
+    // Deduplicação e priorização estrita: se houver produto selecionado, oculta intervenções genéricas de LOGIN
+    const hasAffiliateRequired = (rawInterventionsData || []).some(i => i.type === 'AFFILIATE_LINK_REQUIRED' || i.metadata?.step === 'WAITING_AFFILIATE_LINK');
+    const filteredInterventions = hasAffiliateRequired
+      ? (rawInterventionsData || []).filter(i => i.type === 'AFFILIATE_LINK_REQUIRED' || i.metadata?.step === 'WAITING_AFFILIATE_LINK' || i.type === 'CREATIVE_REVIEW')
+      : (rawInterventionsData || []);
+
     const dedupMap = new Map();
-    for (const item of (rawInterventionsData || [])) {
+    for (const item of filteredInterventions) {
       const key = `${item.type}_${item.marketplace || ''}_${item.metadata?.productId || item.metadata?.approvalId || item.metadata?.marketplaceProductId || item.title}`;
       if (!dedupMap.has(key)) {
         dedupMap.set(key, { ...item, totalAttempts: item.attempt_count || 1 });

@@ -2950,6 +2950,29 @@
        4. SCRIPTS DE CONTROLE, APIS E REALTIME
        ══════════════════════════════════════════════════════════ -->
   <script>
+    function copySynchronously(text) {
+      if (!text) return false;
+      let ok = false;
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.setAttribute('readonly', '');
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        ta.style.top = '-9999px';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+      } catch (_) {}
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).catch(() => {});
+      }
+      return ok;
+    }
+    window.copySynchronously = copySynchronously;
+
     let dashboardState = null;
     let currentPerfTab = 'today';
     let currentTabId = 'tab-cockpit';
@@ -3201,7 +3224,9 @@
               // CASO B: GERAÇÃO HUMANA DO LINK OFICIAL (WAITING_AFFILIATE_LINK)
               // ══════════════════════════════════════════════════════════
               if (item.type === 'AFFILIATE_LINK_REQUIRED' || meta.step === 'WAITING_AFFILIATE_LINK' || meta.step === 'AFFILIATE_LINK_READY') {
-                return window.renderAffiliateLinkCard(item);
+                if (typeof window.renderAffiliateLinkCard === 'function') {
+                  return window.renderAffiliateLinkCard(item);
+                }
               }
 
               // ══════════════════════════════════════════════════════════
@@ -3219,6 +3244,12 @@
                   <div>
                     <div style="font-size:0.92rem; font-weight:700; color:#fff; margin-bottom:4px;">${item.title}</div>
                     <div style="font-size:0.8rem; color:#cbd5e1; line-height:1.4;">${item.message}</div>
+                    ${targetProductUrl ? `
+                      <div style="margin-top:8px;">
+                        <label style="font-size:0.7rem; color:var(--text-dim); display:block;">URL do Produto (toque para copiar):</label>
+                        <input type="text" readonly value="${targetProductUrl}" onclick="this.select(); copySynchronously(this.value); alert('URL copiada!');" style="width:100%; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); border-radius:6px; padding:6px 10px; font-size:0.75rem; color:#94a3b8; font-family:'JetBrains Mono'; cursor:pointer;">
+                      </div>
+                    ` : ''}
                     <div style="font-size:0.72rem; color:#94a3b8; margin-top:6px; display:flex; gap:12px; flex-wrap:wrap; background:rgba(0,0,0,0.25); padding:4px 8px; border-radius:6px;">
                       <span>🕒 Detectado: <strong>${item.firstDetectedAt ? new Date(item.firstDetectedAt).toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' }) : item.time}</strong></span>
                       <span>⏱️ Última: <strong>${item.lastDetectedAt ? new Date(item.lastDetectedAt).toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' }) : item.time}</strong></span>
@@ -3226,7 +3257,7 @@
                     </div>
                   </div>
                   <div class="intervention-actions" style="margin-top:10px;">
-                    <a href="${item.targetUrl || '#'}" target="_blank" rel="noopener noreferrer" class="btn-intervention-direct">
+                    <a href="${item.targetUrl || '#'}" target="_blank" rel="noopener noreferrer" class="btn-intervention-direct" onclick="if ('${targetProductUrl}') { copySynchronously('${targetProductUrl}'); }">
                       ${item.actionLabel || 'Resolver Desafio ↗'}
                     </a>
                     <button class="btn-intervention-resolve" onclick="resolveIntervention('${item.id}')">
