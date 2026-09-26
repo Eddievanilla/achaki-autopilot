@@ -2922,6 +2922,10 @@
       <!-- [ PLAYER VERTICAL 9:16 ] -->
       <div style="position:relative; width:100%; aspect-ratio:9/16; max-height:56vh; background:#000; display:flex; align-items:center; justify-content:center; overflow:hidden;" id="playerViewport">
         <video id="playerVideoEl" controls autoplay playsinline style="width:100%; height:100%; object-fit:contain; background:#000;"></video>
+        <div id="playerVideoRenderingBadge" style="display:none; position:absolute; bottom:16px; background:rgba(0,0,0,0.85); border:1px solid rgba(59,130,246,0.5); padding:8px 14px; border-radius:20px; font-size:0.75rem; color:#60a5fa; font-weight:700; backdrop-filter:blur(8px); align-items:center; gap:6px; z-index:10; box-shadow:0 4px 15px rgba(0,0,0,0.6);">
+          <span class="pulse-dot" style="background:#60a5fa;"></span>
+          <span id="playerVideoBadgeText">Renderizando vídeo 9:16 na fábrica local...</span>
+        </div>
       </div>
 
       <!-- Nome do produto -->
@@ -5498,27 +5502,85 @@
         titleEl.textContent = productTitle;
       }
 
+      const badge = document.getElementById('playerVideoRenderingBadge');
+      const badgeText = document.getElementById('playerVideoBadgeText');
+      const isVideoFormat = Boolean(videoUrl && (videoUrl.includes('.mp4') || videoUrl.includes('.webm') || videoUrl.startsWith('blob:')));
+
       if (vidEl) {
-        if (videoUrl && (videoUrl.includes('.mp4') || videoUrl.includes('.webm') || videoUrl.startsWith('blob:'))) {
+        if (isVideoFormat) {
+          if (badge) badge.style.display = 'none';
           vidEl.style.display = 'block';
           vidEl.src = videoUrl;
           vidEl.load();
           vidEl.play().catch(err => {
             console.warn('[openCreativeReviewModal] Autoplay prevenido pelo browser:', err);
           });
-        } else if (videoUrl) {
-          vidEl.style.display = 'block';
-          vidEl.poster = videoUrl;
-          vidEl.removeAttribute('src');
         } else {
-          vidEl.removeAttribute('src');
-          vidEl.load();
+          // É imagem ou preview: ativa badge e enfileira na fábrica local de vídeo 9:16
+          if (videoUrl) {
+            vidEl.style.display = 'block';
+            vidEl.poster = videoUrl;
+            vidEl.removeAttribute('src');
+          }
+          if (badge) {
+            badge.style.display = 'flex';
+            if (badgeText) badgeText.textContent = '⏳ Renderizando vídeo 9:16 na fábrica local...';
+          }
+
+          // Dispara enfileiramento na fábrica local
+          fetch('/api/controls', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'ENQUEUE_CREATIVE_JOB',
+              interventionId: itemId,
+              productId: currentReviewProductId
+            })
+          }).then(r => r.json()).then(resData => {
+            console.log('🎬 [openCreativeReviewModal] Job enfileirado na fábrica local:', resData);
+            pollForReadyVideo(currentReviewProductId);
+          }).catch(e => console.warn('Erro ao disparar job:', e));
         }
       }
 
       if (modal) {
         modal.classList.add('open');
       }
+    }
+
+    let videoPollTimer = null;
+    function pollForReadyVideo(productId) {
+      if (!productId) return;
+      if (videoPollTimer) clearInterval(videoPollTimer);
+
+      let attempts = 0;
+      videoPollTimer = setInterval(async () => {
+        attempts++;
+        if (attempts > 30) {
+          clearInterval(videoPollTimer);
+          return;
+        }
+
+        try {
+          const res = await fetch(`/api/dashboard?t=${Date.now()}`);
+          if (!res.ok) return;
+          const data = await res.json();
+          const found = (data.creatives || []).find(c => c.productId === productId && c.videoUrl && (c.videoUrl.includes('.mp4') || c.videoUrl.includes('.webm')));
+          if (found && found.videoUrl) {
+            clearInterval(videoPollTimer);
+            videoPollTimer = null;
+            const vidEl = document.getElementById('playerVideoEl');
+            const badge = document.getElementById('playerVideoRenderingBadge');
+            if (badge) badge.style.display = 'none';
+            if (vidEl) {
+              vidEl.src = found.videoUrl;
+              vidEl.load();
+              vidEl.play().catch(() => {});
+            }
+            if (window.loadCreativesGallery) window.loadCreativesGallery();
+          }
+        } catch (_) {}
+      }, 3000);
     }
 
     async function handleModalPublishNow() {
@@ -5591,6 +5653,10 @@
 
     function closeCreativeVideoPlayer(e) {
       if (e && e.target && !e.target.classList.contains('modal-overlay') && !e.target.closest('button')) return;
+      if (videoPollTimer) {
+        clearInterval(videoPollTimer);
+        videoPollTimer = null;
+      }
       const modal = document.getElementById('creativeVideoPlayerModal');
       const vidEl = document.getElementById('playerVideoEl');
       if (vidEl) {

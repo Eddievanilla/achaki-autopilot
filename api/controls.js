@@ -43,6 +43,7 @@ export default async function handler(req, res) {
       'REJECT_CREATIVE',
       'REMAKE_CREATIVE',
       'APPROVE_AND_PUBLISH',
+      'ENQUEUE_CREATIVE_JOB',
       'SUBMIT_AFFILIATE_LINK',
       'OPEN_AFFILIATE_GENERATOR',
       'START_CREATIVE_PIPELINE',
@@ -413,12 +414,71 @@ export default async function handler(req, res) {
       return res.status(200).json(result);
     }
 
-    if (action === 'START_CREATIVE_PIPELINE') {
-      if (!productId) return res.status(400).json({ error: 'productId é obrigatório para iniciar pipeline de criativo.' });
-      const { data: prod } = await supabase.from('products').select('*').eq('id', productId).single();
+    if (action === 'ENQUEUE_CREATIVE_JOB' || action === 'START_CREATIVE_PIPELINE') {
+      let resolvedProdId = productId;
+      if (!resolvedProdId && interventionId) {
+        const { data: intRow } = await supabase.from('operator_interventions').select('product_id, metadata').eq('id', interventionId).maybeSingle();
+        resolvedProdId = intRow?.product_id || intRow?.metadata?.productId;
+      }
+      if (!resolvedProdId) {
+        // Pega o produto da intervenção pendente mais recente
+        const { data: lastInt } = await supabase.from('operator_interventions').select('product_id, metadata').eq('status', 'PENDING').order('created_at', { ascending: false }).limit(1).maybeSingle();
+        resolvedProdId = lastInt?.product_id || lastInt?.metadata?.productId;
+      }
+
+      if (!resolvedProdId) return res.status(400).json({ error: 'productId ou interventionId é obrigatório para enfileirar job criativo.' });
+
+      const { data: prod } = await supabase.from('products').select('*').eq('id', resolvedProdId).single();
       if (!prod) return res.status(404).json({ error: 'Produto não encontrado.' });
-      const result = await orchestrator.startPipelineForProduct({ product: prod, strategy: strategy || 'DESCONTO' });
-      return res.status(200).json(result);
+
+      const nowIso = new Date().toISOString();
+      const jobKey = `job_${prod.id}_v1_${Date.now()}`;
+
+      const { data: job, error: jobErr } = await supabase
+        .from('creative_jobs')
+        .insert({
+          product_id: prod.id,
+          creative_version: 1,
+          job_type: 'VIDEO_9_16',
+          priority: 'HIGH',
+          status: 'PENDING',
+          prompt: prod.title,
+          aspect_ratio: '9:16',
+          duration_target: 15,
+          idempotency_key: jobKey,
+          metadata: {
+            productTitle: prod.title,
+            marketplace: prod.marketplace,
+            affiliateUrl: prod.affiliate_url,
+            imageUrl: prod.image_url,
+            enqueuedBy: 'operator_request',
+            enqueuedAt: nowIso,
+          }
+        })
+        .select('*')
+        .single();
+
+      if (jobErr) {
+        return res.status(500).json({ error: 'Falha ao enfileirar na tabela creative_jobs: ' + jobErr.message });
+      }
+
+      await supabase.from('system_events').insert({
+        level: 'INFO',
+        category: 'CREATIVE',
+        source: 'Fabrica-Local',
+        action: 'CREATIVE_JOB_ENQUEUED',
+        status: 'PENDING',
+        message: `Job de vídeo 9:16 enfileirado para o worker local [${prod.title}].`,
+        product_id: prod.id,
+        metadata: { jobId: job.id, priority: 'HIGH' }
+      });
+
+      return res.status(200).json({
+        success: true,
+        ok: true,
+        jobId: job.id,
+        message: 'Job de vídeo 9:16 enfileirado com sucesso para a fábrica local!',
+      });
     }
 
     // ─────────────────────────────────────────────────────────────

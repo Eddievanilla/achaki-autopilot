@@ -113,14 +113,38 @@ export default class ManualAffiliateFlow {
     const saved = checked(await this.db.from('products').update({ affiliate_url: validation.validatedUrl })
       .eq('id', product.id).select('id, affiliate_url').single());
     if (saved?.affiliate_url !== validation.validatedUrl) throw new Error('Gravação do link não confirmada.');
-    const now = new Date().toISOString();
-    // This state is written only after products.affiliate_url was acknowledged by the database.
     checked(await this.db.from('operator_interventions').update({
       metadata: { ...record.metadata, step: LINK_READY, affiliateUrl: saved.affiliate_url,
         affiliateLinkStatus: 'VERIFIED', validatedAt: now, savedAt: now, captureStatus: 'COMPLETE',
         interventionRequired: null, captureError: null },
       message: 'Link afiliado validado e salvo.',
     }).eq('id', id));
+
+    // Enfileira produção do vídeo vertical 9:16 na fábrica local (creative_jobs)
+    try {
+      const jobKey = `job_${product.id}_v1`;
+      await this.db.from('creative_jobs').upsert({
+        product_id: product.id,
+        creative_version: 1,
+        job_type: 'VIDEO_9_16',
+        priority: 'HIGH',
+        status: 'PENDING',
+        prompt: product.title,
+        aspect_ratio: '9:16',
+        duration_target: 15,
+        idempotency_key: jobKey,
+        metadata: {
+          productTitle: product.title,
+          marketplace: product.marketplace,
+          affiliateUrl: saved.affiliate_url,
+          trigger: 'AFFILIATE_LINK_READY',
+          enqueuedAt: now,
+        }
+      }, { onConflict: 'idempotency_key' });
+    } catch (_) {
+      // Ignora erro de duplicação
+    }
+
     return { success: true, status: LINK_READY, affiliateUrl: saved.affiliate_url };
   }
 
