@@ -42,6 +42,7 @@ export default async function handler(req, res) {
       'APPROVE_CREATIVE',
       'REJECT_CREATIVE',
       'REMAKE_CREATIVE',
+      'APPROVE_AND_PUBLISH',
       'SUBMIT_AFFILIATE_LINK',
       'OPEN_AFFILIATE_GENERATOR',
       'START_CREATIVE_PIPELINE',
@@ -85,9 +86,292 @@ export default async function handler(req, res) {
     }
 
     if (action === 'REMAKE_CREATIVE') {
-      if (!approvalId) return res.status(400).json({ error: 'approvalId é obrigatório para solicitação de refação.' });
-      const result = await orchestrator.adminRequestRemake({ approvalId, remakeFocus: remakeFocus || 'GANCHO', note: note || '' });
+      let realApprovalId = approvalId;
+      if (!realApprovalId && interventionId) {
+        const { data: intRow } = await supabase
+          .from('operator_interventions')
+          .select('*')
+          .eq('id', interventionId)
+          .maybeSingle();
+        realApprovalId = intRow?.metadata?.approvalId;
+        if (!realApprovalId && intRow?.product_id) {
+          const { data: appr } = await supabase
+            .from('publication_approvals')
+            .select('id')
+            .eq('product_id', intRow.product_id)
+            .maybeSingle();
+          realApprovalId = appr?.id;
+        }
+      }
+      if (!realApprovalId) {
+        let prodId = productId;
+        if (!prodId && interventionId) {
+          const { data: intRow } = await supabase
+            .from('operator_interventions')
+            .select('product_id')
+            .eq('id', interventionId)
+            .maybeSingle();
+          prodId = intRow?.product_id;
+        }
+        if (prodId) {
+          const { data: newAppr } = await supabase
+            .from('publication_approvals')
+            .insert({
+              product_id: prodId,
+              status: 'WAITING_ADMIN_REVIEW',
+              metadata: { version_number: 1, remake_focus: remakeFocus || 'GANCHO' }
+            })
+            .select('id')
+            .single();
+          realApprovalId = newAppr?.id;
+        }
+      }
+      if (!realApprovalId) return res.status(400).json({ error: 'approvalId ou interventionId é obrigatório para solicitação de refação.' });
+      const result = await orchestrator.adminRequestRemake({ approvalId: realApprovalId, remakeFocus: remakeFocus || 'GANCHO', note: note || '' });
       return res.status(200).json(result);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // 0.1 APROVAR E PUBLICAR OFERTA COM VÍDEO SALVO NA GALERIA
+    // ─────────────────────────────────────────────────────────────
+    if (action === 'APPROVE_AND_PUBLISH') {
+      let resolvedProdId = productId;
+      let resolvedInterventionId = interventionId;
+      let resolvedApprovalId = approvalId;
+
+      if (resolvedInterventionId) {
+        const { data: intRow } = await supabase
+          .from('operator_interventions')
+          .select('*')
+          .eq('id', resolvedInterventionId)
+          .maybeSingle();
+        if (intRow) {
+          resolvedProdId = resolvedProdId || intRow.product_id || intRow.metadata?.productId;
+          resolvedApprovalId = resolvedApprovalId || intRow.metadata?.approvalId;
+        }
+      }
+
+      if (!resolvedProdId && resolvedApprovalId) {
+        const { data: apprRow } = await supabase
+          .from('publication_approvals')
+          .select('*')
+          .eq('id', resolvedApprovalId)
+          .maybeSingle();
+        if (apprRow) {
+          resolvedProdId = apprRow.product_id;
+        }
+      }
+
+      if (!resolvedProdId) {
+        const { data: lastInt } = await supabase
+          .from('operator_interventions')
+          .select('*')
+          .eq('status', 'PENDING')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (lastInt) {
+          resolvedProdId = lastInt.product_id || lastInt.metadata?.productId;
+          resolvedInterventionId = resolvedInterventionId || lastInt.id;
+        }
+      }
+
+      if (!resolvedProdId) {
+        return res.status(400).json({ error: 'Produto não identificado para aprovação e publicação.' });
+      }
+
+      const { data: product } = await supabase
+        .from('products')
+        .select('*')
+        .eq('id', resolvedProdId)
+        .single();
+
+      if (!product) {
+        return res.status(404).json({ error: 'Produto não encontrado.' });
+      }
+
+      const nowIso = new Date().toISOString();
+      const affiliateUrl = product.affiliate_url;
+
+      // Salva / marca o criativo como APPROVED na tabela de criativos (creative_versions)
+      let creativeId = null;
+      let videoUrl = null;
+      const { data: existingCreative } = await supabase
+        .from('creative_versions')
+        .select('*')
+        .eq('product_id', resolvedProdId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (existingCreative) {
+        creativeId = existingCreative.id;
+        videoUrl = existingCreative.video_url || existingCreative.storage_url;
+        await supabase
+          .from('creative_versions')
+          .update({
+            status: 'APPROVED',
+            updated_at: nowIso,
+          })
+          .eq('id', existingCreative.id);
+      } else {
+        const { data: newCv } = await supabase
+          .from('creative_versions')
+          .insert({
+            product_id: resolvedProdId,
+            version_number: 1,
+            aspect_ratio: '9:16',
+            duration: 18,
+            status: 'APPROVED',
+            video_url: product.image_url,
+            thumbnail_url: product.image_url,
+            headline: product.title,
+            metadata: {
+              product_title: product.title,
+              marketplace: product.marketplace,
+              affiliate_url: affiliateUrl,
+              approved_by: 'admin_modal',
+            },
+          })
+          .select('id, video_url')
+          .maybeSingle();
+        if (newCv) {
+          creativeId = newCv.id;
+          videoUrl = newCv.video_url;
+        }
+      }
+
+      // Atualiza aprovação se existir
+      if (resolvedApprovalId) {
+        await supabase
+          .from('publication_approvals')
+          .update({
+            status: 'ADMIN_APPROVED',
+            affiliate_url: affiliateUrl,
+            affiliate_link_status: 'VERIFIED',
+            approved_by: 'admin_modal',
+            approved_at: nowIso,
+            updated_at: nowIso,
+          })
+          .eq('id', resolvedApprovalId);
+      }
+
+      // Resolve a intervenção associada
+      if (resolvedInterventionId) {
+        await supabase
+          .from('operator_interventions')
+          .update({
+            status: 'RESOLVED',
+            resolved_at: nowIso,
+          })
+          .eq('id', resolvedInterventionId);
+      } else {
+        await supabase
+          .from('operator_interventions')
+          .update({
+            status: 'RESOLVED',
+            resolved_at: nowIso,
+          })
+          .eq('product_id', resolvedProdId)
+          .eq('status', 'PENDING');
+      }
+
+      // Cria ou atualiza publicação em 'publications'
+      let pubRecord = null;
+      const { data: existingPub } = await supabase
+        .from('publications')
+        .select('*')
+        .eq('product_id', resolvedProdId)
+        .eq('status', 'PREPARED')
+        .maybeSingle();
+
+      if (existingPub) {
+        const { data: updatedPub } = await supabase
+          .from('publications')
+          .update({
+            affiliate_url: affiliateUrl,
+            status: 'READY',
+            media_url: videoUrl || existingPub.media_url || product.image_url,
+            updated_at: nowIso,
+          })
+          .eq('id', existingPub.id)
+          .select('*')
+          .single();
+        pubRecord = updatedPub;
+      } else {
+        const { data: newPub } = await supabase
+          .from('publications')
+          .insert({
+            product_id: resolvedProdId,
+            channel: 'Facebook',
+            social_network: 'Facebook',
+            status: 'READY',
+            affiliate_url: affiliateUrl,
+            media_url: videoUrl || product.image_url,
+            metadata: {
+              productTitle: product.title,
+              marketplace: product.marketplace,
+              source: 'modal_publish_now',
+              creative_id: creativeId,
+            },
+            created_at: nowIso,
+          })
+          .select('*')
+          .single();
+        pubRecord = newPub;
+      }
+
+      // Enfileira comando APPROVE_PUBLICATION para o robô
+      await supabase
+        .from('robot_commands')
+        .insert({
+          command: 'APPROVE_PUBLICATION',
+          status: 'PENDING',
+          metadata: {
+            publicationId: pubRecord?.id,
+            productId: resolvedProdId,
+            affiliateUrl,
+            requested_by: 'admin_modal_publish',
+            requested_at: nowIso,
+          },
+        });
+
+      // Registra telemetria imediata
+      await supabase.from('system_events').insert({
+        level: 'INFO',
+        category: 'DASHBOARD',
+        source: 'Modal-Criativo-9:16',
+        action: 'CREATIVE_APPROVED_AND_PUBLISHED',
+        status: 'SUCCESS',
+        message: `Criativo aprovado e salvo na galeria. Publicação disparada para [${product.title}] com link oficial.`,
+        product_id: resolvedProdId,
+        publication_id: pubRecord?.id || null,
+        metadata: {
+          productId: resolvedProdId,
+          affiliateUrl,
+          creativeId,
+          approved_at: nowIso,
+        },
+      });
+
+      // Atualiza estado do robô para TRABALHANDO
+      await supabase
+        .from('system_state')
+        .upsert({
+          id: 'autopilot',
+          status: 'TRABALHANDO',
+          current_step: 'Oferta aprovada pelo operador. Publicando no canal com link de afiliado oficial...',
+          updated_at: nowIso,
+        }, { onConflict: 'id' });
+
+      return res.status(200).json({
+        success: true,
+        ok: true,
+        message: 'Vídeo aprovado e salvo na galeria! Publicação enviada com sucesso.',
+        productId: resolvedProdId,
+        publicationId: pubRecord?.id,
+        creativeId,
+      });
     }
 
     if (action === 'OPEN_AFFILIATE_GENERATOR') {

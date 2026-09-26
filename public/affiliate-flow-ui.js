@@ -35,8 +35,21 @@
           clearInterval(activeWatcher);
           activeWatcher = null;
         }
-        if (feedback) feedback.textContent = '✅ Link validado e salvo com sucesso!';
+        if (feedback) feedback.textContent = '✅ Link validado e salvo com sucesso! Abrindo criativo...';
+        
+        // Toca notificação de confirmação
+        if (window.achakiAudio?.notifyResolved) window.achakiAudio.notifyResolved();
+
         if (window.loadDashboard) window.loadDashboard();
+        if (window.loadCreativesGallery) window.loadCreativesGallery();
+
+        // Abre automaticamente o modal de revisão do criativo 9:16
+        setTimeout(() => {
+          if (typeof window.openCreativeReviewModal === 'function') {
+            window.openCreativeReviewModal(interventionId);
+          }
+        }, 400);
+
         return true;
       } else if (feedback && result.reason) {
         feedback.textContent = `Atenção: ${result.reason}`;
@@ -120,12 +133,13 @@
       </div>
 
       ${ready ? `
-        <div style="margin-top:12px; padding:10px; background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.3); border-radius:8px;">
-          <p style="color:#34d399; font-weight:700; font-size:0.85rem; margin:0 0 8px 0;">✅ Link de afiliado validado e salvo!</p>
-          <div style="font-size:0.75rem; color:#94a3b8; font-family:'JetBrains Mono'; word-break:break-all; margin-bottom:10px;">${escape(meta.affiliateUrl)}</div>
+        <div style="margin-top:12px; padding:12px; background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.35); border-radius:10px;">
+          <p style="color:#34d399; font-weight:700; font-size:0.88rem; margin:0 0 6px 0;">✅ Link de afiliado oficial validado e salvo!</p>
+          <div style="font-size:0.75rem; color:#94a3b8; font-family:'JetBrains Mono'; word-break:break-all; margin-bottom:12px;">${escape(meta.affiliateUrl)}</div>
           <div style="display:flex; gap:8px; flex-wrap:wrap;">
-            <button type="button" class="topbar-btn" style="opacity:0.9; cursor:default; background:rgba(255,255,255,0.08); border-color:rgba(255,255,255,0.2); color:#fff; font-weight:800; font-size:0.82rem; padding:8px 14px;" disabled>🎬 GERAR CRIATIVO</button>
-            <button type="button" class="topbar-btn topbar-btn-primary" style="opacity:0.9; cursor:default; background:#2563eb; border-color:#3b82f6; color:#fff; font-weight:800; font-size:0.82rem; padding:8px 14px;" disabled>🚀 PUBLICAR AGORA</button>
+            <button type="button" class="topbar-btn" onclick="openCreativeReviewModal('${id}')" style="background:#2563eb; border-color:#3b82f6; color:#fff; font-weight:800; font-size:0.82rem; padding:10px 14px; cursor:pointer;" title="Abrir player do vídeo vertical 9:16">🎬 REVISAR CRIATIVO 9:16</button>
+            <button type="button" class="topbar-btn" onclick="promptRemakeCreative('${id}')" style="background:rgba(168,85,247,0.15); border-color:rgba(168,85,247,0.4); color:#d8b4fe; font-weight:800; font-size:0.82rem; padding:10px 14px; cursor:pointer;" title="Refazer vídeo mantendo produto e link oficial">♻️ REFAZER</button>
+            <button type="button" class="topbar-btn topbar-btn-primary" onclick="publishFromAffiliateCard('${id}')" style="background:linear-gradient(135deg, #10b981 0%, #059669 100%); border-color:#34d399; color:#fff; font-weight:800; font-size:0.84rem; padding:10px 16px; box-shadow:0 0 16px rgba(16,185,129,0.35); cursor:pointer;" title="Publicar agora oferta com link oficial validado">🚀 PUBLICAR AGORA</button>
           </div>
         </div>
       ` : `
@@ -167,4 +181,32 @@
     // 3. Inicia a escuta ativa da cópia no clipboard
     startClipboardWatcher(id);
   });
+
+  window.publishFromAffiliateCard = async function (interventionId) {
+    if (!confirm('Deseja aprovar o vídeo e publicar esta oferta agora com o link oficial de afiliado?')) return;
+    try {
+      const res = await fetch('/api/controls', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'APPROVE_AND_PUBLISH', interventionId })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        if (window.achakiAudio?.notifyResolved) window.achakiAudio.notifyResolved();
+        alert('🚀 Oferta publicada com sucesso e vídeo salvo na galeria de criativos!');
+        if (window.loadDashboard) window.loadDashboard();
+        if (window.loadCreativesGallery) window.loadCreativesGallery();
+      } else {
+        alert('Falha na publicação: ' + (data.error || data.message || 'Erro desconhecido'));
+      }
+    } catch (e) {
+      alert('Erro ao publicar: ' + e.message);
+    }
+  };
+
+  window.remakeFromAffiliateCard = function (interventionId) {
+    if (typeof window.promptRemakeCreative === 'function') {
+      window.promptRemakeCreative(interventionId);
+    }
+  };
 })();

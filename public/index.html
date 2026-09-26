@@ -2931,16 +2931,13 @@
         </div>
       </div>
 
-      <!-- [ ❌ RECUSAR ] [ ♻️ REFAZER ] [ ✅ APROVAR ] (Interface visual na Etapa 1 sem função operacional) -->
-      <div style="padding:12px 18px 18px; background:rgba(6,9,16,1); display:flex; gap:8px;" id="playerActionButtons">
-        <button type="button" class="topbar-btn" style="flex:1; justify-content:center; background:rgba(239,68,68,0.15); border-color:rgba(239,68,68,0.4); color:#f87171; font-weight:800; font-size:0.8rem; padding:11px 4px; border-radius:8px; cursor:default;" title="Recusar">
-          ❌ RECUSAR
-        </button>
-        <button type="button" class="topbar-btn" style="flex:1; justify-content:center; background:rgba(168,85,247,0.15); border-color:rgba(168,85,247,0.4); color:#d8b4fe; font-weight:800; font-size:0.8rem; padding:11px 4px; border-radius:8px; cursor:default;" title="Refazer">
+      <!-- [ ♻️ REFAZER ] [ 🚀 PUBLICAR AGORA ] -->
+      <div style="padding:14px 18px 20px; background:rgba(6,9,16,1); display:flex; gap:10px; align-items:center;" id="playerActionButtons">
+        <button type="button" class="topbar-btn" onclick="handleModalRemakeCreative()" style="flex:1; justify-content:center; background:rgba(168,85,247,0.15); border:1px solid rgba(168,85,247,0.4); color:#d8b4fe; font-weight:800; font-size:0.85rem; padding:12px 8px; border-radius:10px; cursor:pointer;" title="Refazer vídeo mantendo produto e link oficial">
           ♻️ REFAZER
         </button>
-        <button type="button" class="topbar-btn topbar-btn-primary" style="flex:1.2; justify-content:center; background:#10b981; border-color:#059669; color:#fff; font-weight:800; font-size:0.82rem; padding:11px 4px; border-radius:8px; box-shadow:0 0 16px rgba(16,185,129,0.35); cursor:default;" title="Aprovar">
-          ✅ APROVAR
+        <button type="button" class="topbar-btn topbar-btn-primary" onclick="handleModalPublishNow()" id="btnModalPublishNow" style="flex:1.4; justify-content:center; background:linear-gradient(135deg, #10b981 0%, #059669 100%); border:1px solid #34d399; color:#fff; font-weight:800; font-size:0.92rem; padding:12px 14px; border-radius:10px; box-shadow:0 0 20px rgba(16,185,129,0.45); cursor:pointer;" title="Publicar agora oferta com link oficial validado">
+          🚀 PUBLICAR AGORA
         </button>
       </div>
     </div>
@@ -5414,7 +5411,13 @@
     // ─────────────────────────────────────────────────────────────
     // 🎬 ETAPA 1: REVISÃO VISUAL DO CRIATIVO 9:16 NO MODAL LOCAL
     // ─────────────────────────────────────────────────────────────
+    let currentReviewInterventionId = null;
+    let currentReviewProductId = null;
+    let currentReviewApprovalId = null;
+
     function openCreativeReviewModal(itemId) {
+      currentReviewInterventionId = itemId;
+
       // 1. Localiza item pelo mapa de intervenções, lista ou activeApproval
       let item = window.achakiInterventionsMap?.get(String(itemId)) 
         || (window.achakiInterventionsList || []).find(i => String(i.id) === String(itemId))
@@ -5438,6 +5441,8 @@
       }
 
       const meta = item?.metadata || {};
+      currentReviewProductId = item?.productId || meta.productId || meta.product_id;
+      currentReviewApprovalId = meta.approvalId || item?.approvalId;
 
       // 2. Extrai nome real do produto
       let productTitle = meta.productTitle || meta.product_title;
@@ -5474,6 +5479,11 @@
         videoUrl = window.lastDashboardData.activeApproval.videoUrl;
       }
 
+      // Fallback para thumbnail ou imagem do produto
+      if (!videoUrl) {
+        videoUrl = meta.thumbnailUrl || meta.image_url || item?.imageUrl || meta.imageUrl;
+      }
+
       console.log('🎬 [openCreativeReviewModal] Abrindo revisão do criativo 9:16:', {
         itemId,
         productTitle,
@@ -5489,12 +5499,17 @@
       }
 
       if (vidEl) {
-        if (videoUrl) {
+        if (videoUrl && (videoUrl.includes('.mp4') || videoUrl.includes('.webm') || videoUrl.startsWith('blob:'))) {
+          vidEl.style.display = 'block';
           vidEl.src = videoUrl;
           vidEl.load();
           vidEl.play().catch(err => {
             console.warn('[openCreativeReviewModal] Autoplay prevenido pelo browser:', err);
           });
+        } else if (videoUrl) {
+          vidEl.style.display = 'block';
+          vidEl.poster = videoUrl;
+          vidEl.removeAttribute('src');
         } else {
           vidEl.removeAttribute('src');
           vidEl.load();
@@ -5505,6 +5520,63 @@
         modal.classList.add('open');
       }
     }
+
+    async function handleModalPublishNow() {
+      const btn = document.getElementById('btnModalPublishNow');
+      const origText = btn ? btn.innerHTML : '🚀 PUBLICAR AGORA';
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '⏳ Publicando...';
+      }
+
+      try {
+        const res = await fetch('/api/controls', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'APPROVE_AND_PUBLISH',
+            interventionId: currentReviewInterventionId,
+            approvalId: currentReviewApprovalId,
+            productId: currentReviewProductId
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || data.message || 'Falha ao publicar criativo');
+        }
+
+        if (window.achakiAudio?.notifyResolved) window.achakiAudio.notifyResolved();
+        showToast('Sucesso!', 'Oferta publicada e vídeo salvo na Galeria de Criativos!');
+        closeCreativeVideoPlayer();
+
+        await loadDashboard();
+        if (typeof loadCreativesGallery === 'function') {
+          loadCreativesGallery();
+        }
+      } catch (err) {
+        alert('Erro ao publicar criativo: ' + err.message);
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = origText;
+        }
+      }
+    }
+
+    function handleModalRemakeCreative() {
+      const targetId = currentReviewApprovalId || currentReviewInterventionId;
+      if (targetId) {
+        closeCreativeVideoPlayer();
+        promptRemakeCreative(targetId);
+      } else {
+        alert('Identificador da oferta não encontrado para refação.');
+      }
+    }
+
+    window.openCreativeReviewModal = openCreativeReviewModal;
+    window.handleModalPublishNow = handleModalPublishNow;
+    window.handleModalRemakeCreative = handleModalRemakeCreative;
 
     function openCreativeVideoPlayerFromMeta(metaStr) {
       try {
