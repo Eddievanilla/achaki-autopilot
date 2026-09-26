@@ -1,3 +1,4 @@
+globalThis.WebSocket = globalThis.WebSocket || class DummyWebSocket {};
 import { createClient } from '@supabase/supabase-js';
 import CategoryClassifier from '../src/services/category-classifier.js';
 import AutonomousGoalManager from '../src/services/growth/autonomous-goal-manager.js';

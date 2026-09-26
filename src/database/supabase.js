@@ -9,6 +9,7 @@
  *  - NUNCA expor esta chave ao frontend, logs, terminal, OpenRouter ou versionamento.
  */
 
+globalThis.WebSocket = globalThis.WebSocket || class DummyWebSocket {};
 import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import logger from '../utils/logger.js';

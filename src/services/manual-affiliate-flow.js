@@ -100,6 +100,7 @@ export default class ManualAffiliateFlow {
   }
 
   async saveDetectedLink(id, rawLink, captureEvidence = null) {
+    const now = new Date().toISOString();
     const record = await this.getRequest(id);
     const product = await this.getProduct(record);
     if (record.metadata.step === LINK_READY && record.metadata.affiliateLinkStatus === 'VERIFIED' &&

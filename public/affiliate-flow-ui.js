@@ -7,8 +7,12 @@
   let lastCheckedText = '';
 
   async function submitAffiliateLink(interventionId, rawLink) {
-    const text = (rawLink || '').trim();
+    let text = (rawLink || '').trim();
     if (!text) return false;
+
+    // Extrai URL limpa caso o usuário copie junto com texto de compartilhamento
+    const urlMatch = text.match(/(https?:\/\/[^\s]+)/i);
+    if (urlMatch) text = urlMatch[1];
 
     const isAffiliate = /meli\.la\/[a-zA-Z0-9_-]+/i.test(text) ||
                         /(?:s\.shopee\.com\.br|shope\.ee)\/[a-zA-Z0-9_-]+/i.test(text) ||
@@ -17,7 +21,7 @@
     if (!isAffiliate) return false;
 
     const feedback = document.querySelector(`[data-affiliate-feedback="${interventionId}"]`);
-    if (feedback) feedback.textContent = '⚡ Link detectado! Validando e associando ao produto...';
+    if (feedback) feedback.innerHTML = '⚡ <strong>Link detectado!</strong> Validando e associando ao produto...';
 
     try {
       const res = await fetch('/api/controls', {
@@ -30,12 +34,12 @@
         })
       });
       const result = await res.json();
-      if (res.ok && result.success && result.status === 'AFFILIATE_LINK_READY') {
+      if (res.ok && result.success && (result.status === 'AFFILIATE_LINK_READY' || result.status === 'VERIFIED')) {
         if (activeWatcher) {
           clearInterval(activeWatcher);
           activeWatcher = null;
         }
-        if (feedback) feedback.textContent = '✅ Link validado e salvo com sucesso! Abrindo criativo...';
+        if (feedback) feedback.innerHTML = '✅ <strong>Link validado e salvo com sucesso!</strong> Abrindo criativo...';
         
         // Toca notificação de confirmação
         if (window.achakiAudio?.notifyResolved) window.achakiAudio.notifyResolved();
@@ -52,13 +56,29 @@
 
         return true;
       } else if (feedback && result.reason) {
-        feedback.textContent = `Atenção: ${result.reason}`;
+        feedback.innerHTML = `⚠️ <span style="color:#f87171;">${escape(result.reason)}</span>`;
       }
     } catch (e) {
-      if (feedback) feedback.textContent = `Erro ao salvar: ${e.message}`;
+      if (feedback) feedback.innerHTML = `❌ <span style="color:#f87171;">Erro ao salvar: ${escape(e.message)}</span>`;
     }
     return false;
   }
+
+  window.submitManualAffiliateLink = async function (interventionId) {
+    const input = document.getElementById(`manualAffiliateInput-${interventionId}`);
+    const text = input ? input.value.trim() : '';
+    if (!text) {
+      alert('Por favor, cole o link oficial de afiliado gerado (ex: https://meli.la/...).');
+      return;
+    }
+    const ok = await submitAffiliateLink(interventionId, text);
+    if (!ok) {
+      const feedback = document.querySelector(`[data-affiliate-feedback="${interventionId}"]`);
+      if (feedback && !feedback.textContent) {
+        feedback.innerHTML = '⚠️ Link não reconhecido como oficial meli.la. Verifique e tente novamente.';
+      }
+    }
+  };
 
   function copySynchronously(text) {
     if (!text) return false;
@@ -147,6 +167,10 @@
           <a href="${escape(genUrl)}" target="_blank" rel="noopener noreferrer" class="topbar-btn topbar-btn-primary" data-affiliate-open="${id}" data-product-url="${prodUrl}" style="display:flex; width:100%; justify-content:center; text-decoration:none; padding:14px; font-size:0.95rem; font-weight:800; background:#2563eb; border-color:#3b82f6; color:#fff; box-shadow:0 0 18px rgba(37,99,235,0.45); cursor:pointer;">
             🔗 GERAR LINK NO ${escape(mktName)}
           </a>
+          <div style="margin-top:10px; display:flex; gap:8px;">
+            <input type="text" id="manualAffiliateInput-${id}" placeholder="Ou cole aqui o link meli.la gerado..." style="flex:1; background:rgba(15,23,42,0.9); border:1px solid rgba(255,255,255,0.25); border-radius:8px; padding:10px 12px; color:#fff; font-size:0.85rem; font-family:'JetBrains Mono',monospace;" onkeydown="if(event.key==='Enter') window.submitManualAffiliateLink('${id}')" />
+            <button type="button" class="topbar-btn" onclick="window.submitManualAffiliateLink('${id}')" style="background:#10b981; border-color:#34d399; color:#fff; font-weight:800; font-size:0.82rem; padding:10px 16px; cursor:pointer;" title="Salvar link e avançar">Salvar</button>
+          </div>
           ${meta.interventionRequired ? `<p style="color:#fbbf24; font-size:0.75rem; margin-top:6px;">⚠️ ${escape(meta.interventionRequired)}: conclua a verificação solicitada pelo marketplace nessa janela.</p>` : ''}
           ${meta.captureStatus === 'TIMED_OUT' ? `<p style="color:#f87171; font-size:0.75rem; margin-top:6px;">Link ainda não confirmado. Clique em GERAR LINK NO ${escape(mktName)} para retomar a captura.</p>` : ''}
         </div>

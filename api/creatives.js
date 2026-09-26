@@ -1,3 +1,4 @@
+globalThis.WebSocket = globalThis.WebSocket || class DummyWebSocket {};
 import { createClient } from '@supabase/supabase-js';
 import MediaAssetService from '../src/services/media-asset-service.js';
 

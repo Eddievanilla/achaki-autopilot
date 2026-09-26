@@ -1,3 +1,4 @@
+globalThis.WebSocket = globalThis.WebSocket || class DummyWebSocket {};
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.SUPABASE_URL || 'https://fobehbttydmqupfpioux.supabase.co';

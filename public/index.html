@@ -5469,7 +5469,8 @@
           (meta.creativeId && c.id === meta.creativeId) ||
           (item?.creative_id && c.id === item.creative_id) ||
           (item?.productId && c.productId === item.productId) ||
-          (meta.productId && c.productId === meta.productId)
+          (meta.productId && c.productId === meta.productId) ||
+          (currentReviewProductId && c.productId === currentReviewProductId)
         );
         if (found) {
           videoUrl = found.videoUrl || found.storage_url;
@@ -5553,22 +5554,17 @@
       if (!productId) return;
       if (videoPollTimer) clearInterval(videoPollTimer);
 
-      let attempts = 0;
-      videoPollTimer = setInterval(async () => {
-        attempts++;
-        if (attempts > 30) {
-          clearInterval(videoPollTimer);
-          return;
-        }
-
+      const check = async () => {
         try {
           const res = await fetch(`/api/dashboard?t=${Date.now()}`);
-          if (!res.ok) return;
+          if (!res.ok) return false;
           const data = await res.json();
           const found = (data.creatives || []).find(c => c.productId === productId && c.videoUrl && (c.videoUrl.includes('.mp4') || c.videoUrl.includes('.webm')));
           if (found && found.videoUrl) {
-            clearInterval(videoPollTimer);
-            videoPollTimer = null;
+            if (videoPollTimer) {
+              clearInterval(videoPollTimer);
+              videoPollTimer = null;
+            }
             const vidEl = document.getElementById('playerVideoEl');
             const badge = document.getElementById('playerVideoRenderingBadge');
             if (badge) badge.style.display = 'none';
@@ -5578,9 +5574,23 @@
               vidEl.play().catch(() => {});
             }
             if (window.loadCreativesGallery) window.loadCreativesGallery();
+            return true;
           }
         } catch (_) {}
-      }, 3000);
+        return false;
+      };
+
+      check();
+
+      let attempts = 0;
+      videoPollTimer = setInterval(async () => {
+        attempts++;
+        if (attempts > 30) {
+          clearInterval(videoPollTimer);
+          return;
+        }
+        await check();
+      }, 2500);
     }
 
     async function handleModalPublishNow() {
