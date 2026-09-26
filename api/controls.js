@@ -1076,7 +1076,57 @@ export default async function handler(req, res) {
     let logMessage = 'Comando EXECUTAR AGORA solicitado pelo painel';
     let logLevel = 'INFO';
 
-    if (action === 'PAUSAR') {
+    if (action === 'EXECUTAR_AGORA') {
+      // Busca imediatamente um produto qualificado no catálogo para iniciar o teste de fluxo na hora
+      let targetProduct = null;
+      if (productId) {
+        const { data: p } = await supabase.from('products').select('*').eq('id', productId).maybeSingle();
+        if (p) targetProduct = p;
+      }
+
+      if (!targetProduct) {
+        const { data: prods } = await supabase
+          .from('products')
+          .select('*')
+          .not('product_url', 'is', null)
+          .order('created_at', { ascending: false })
+          .limit(10);
+
+        if (prods && prods.length > 0) {
+          targetProduct = prods.find(p => p.image_url && p.title && p.product_url) || prods[0];
+        }
+      }
+
+      if (targetProduct) {
+        try {
+          const { data: priceRow } = await supabase
+            .from('product_prices')
+            .select('current_price, original_price, discount_percent')
+            .eq('product_id', targetProduct.id)
+            .order('collected_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          const currentPrice = priceRow?.current_price || targetProduct.price || targetProduct.current_price || 38.98;
+          const prodToSelect = {
+            ...targetProduct,
+            current_price: currentPrice,
+            price: currentPrice,
+            score: targetProduct.score || targetProduct.ai_score || 94,
+          };
+
+          const affiliateFlow = new ManualAffiliateFlow({ supabaseClient: supabase });
+          await affiliateFlow.selectProduct(prodToSelect, { forceNew: true });
+
+          newStatus = 'AGUARDANDO LINK AFILIADO';
+          step = `🛒 Produto selecionado: "${targetProduct.title?.slice(0, 45)}...". Aguardando link oficial do operador.`;
+          logMessage = `Ciclo iniciado com "${targetProduct.title?.slice(0, 40)}...". Notificação gerada imediatamente para teste do fluxo.`;
+          logLevel = 'SUCCESS';
+        } catch (selErr) {
+          console.warn('[Controls] Erro ao selecionar produto para intervenção imediata:', selErr.message);
+        }
+      }
+    } else if (action === 'PAUSAR') {
       commandType = 'PAUSE';
       newStatus = 'AGUARDANDO';
       step = 'Operador pausado pelo painel operacional.';

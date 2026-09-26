@@ -225,80 +225,112 @@ export class CreativeJobQueue {
         return;
       }
 
-      // 2. Download e preparação de assets locais
-      const rawImageUrl = product.image_url || job.metadata?.imageUrl;
-      if (!rawImageUrl) {
-        throw new Error('Produto não possui URL de imagem válida para o criativo.');
-      }
+      // 2. Extração Rigorosa de PRODUCT_FACTS e Preços Confirmados
+      const { ProductFactsBuilder } = await import('./product-facts-builder.js');
+      const { data: priceRecord } = await supabase
+        .from('product_prices')
+        .select('*')
+        .eq('product_id', job.product_id)
+        .order('collected_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
-      const localImgPath = await mediaAssetService.downloadProductImage(rawImageUrl);
+      const productFacts = ProductFactsBuilder.buildFacts({
+        product,
+        priceRecord,
+      });
 
-      // 3. Geração / Composição do Vídeo 9:16 com Locução Neural
+      // 3. Engenharia Criativa com Creative Blueprint Factual
+      const { CreativeDirector } = await import('../../agents/creative-director.js');
+      const director = new CreativeDirector({ supabaseClient: supabase });
+      const blueprint = director.createBlueprint({
+        product,
+        priceRecord,
+        photos: productFacts.images,
+      });
+
+      // 4. Validação Rigorosa da Narração contra PRODUCT_FACTS
+      const { NarrationVerifier } = await import('./narration-verifier.js');
+      const verificationReport = NarrationVerifier.validateNarration({
+        narration: blueprint.cenas.map(c => c.narration),
+        productFacts,
+      });
+
+      // 5. Salva arquivos para auditoria prévia antes de qualquer render
+      const auditDir = path.resolve('data/generated_creatives');
+      if (!fs.existsSync(auditDir)) fs.mkdirSync(auditDir, { recursive: true });
+
+      fs.writeFileSync(path.join(auditDir, 'audit_product_facts.json'), JSON.stringify(productFacts, null, 2));
+      fs.writeFileSync(path.join(auditDir, 'audit_creative_blueprint.json'), JSON.stringify(blueprint, null, 2));
+      fs.writeFileSync(path.join(auditDir, 'audit_final_narration.txt'), verificationReport.finalNarration);
+
+      logger.info(`[CreativeJobQueue] 📋 Auditoria salva: audit_product_facts.json, audit_creative_blueprint.json, audit_final_narration.txt`);
+
+      // 6. Produção Visual de Cenas Individuais com Movimentos Marcantes
       await this._updateJobStatus(jobId, JOB_STATUSES.COMPOSING, { provider: route.provider });
 
-      const customPrompt = job.metadata?.customPrompt || (job.prompt && !job.prompt.startsWith('job_') ? job.prompt : null);
-      const prodTitle = product.title || job.metadata?.productTitle || 'Achadinho Verificado';
-      const price = product.current_price || product.price || 0;
-      const discount = product.discount_percent || 0;
-
-      // Monta Roteiro de 3 Atos (Gancho, Demonstração, CTA)
-      let hook = 'Dá uma olhada nesse achadinho!';
-      let body = 'Super prático, resistente e com alta avaliação!';
-      let cta = 'O link com desconto tá nos comentários!';
-
-      if (customPrompt) {
-        hook = 'Olha esse destaque especial!';
-        body = customPrompt.slice(0, 80);
-      } else if (product.category?.includes('Cozinha') || prodTitle.toLowerCase().includes('cozinha')) {
-        hook = 'Olha o que acabou de baixar na categoria Cozinha!';
-        body = 'Super funcional para facilitar sua rotina!';
-      } else if (product.category?.includes('Organização') || prodTitle.toLowerCase().includes('organizador')) {
-        hook = 'Se você precisa de espaço e organização, olha isso!';
-        body = 'Prático, cabe em qualquer cantinho e aguenta o dia a dia.';
-      }
-
-      const headline = hook;
-      const scriptNarration = customPrompt
-        ? `${hook} ${prodTitle.slice(0, 45)}. ${customPrompt.slice(0, 110)}. Garanta o seu no link com desconto oficial nos comentários!`
-        : `${hook} ${prodTitle.slice(0, 55)}. ${body} Aproveite que a oferta com preço oficial está liberada no link fixado dos comentários!`;
-
-      let audioPath = null;
-      let duration = job.duration_target || 14;
-
-      try {
-        const voiceRes = await voiceoverService.generateVoiceover({
-          text: scriptNarration,
-          filename: `voice_${jobId}.mp3`,
-        });
-        audioPath = voiceRes.audioPath;
-        duration = voiceRes.durationEstimate || duration;
-      } catch (voiceErr) {
-        logger.warn(`[CreativeJobQueue] Fallback sem voz: ${voiceErr.message}`);
-      }
-
-      const composed = await videoComposer.composeProductVideo({
-        imagePath: localImgPath,
-        audioPath,
-        title: prodTitle,
-        price,
-        discountPercent: discount,
-        headline: hook,
-        bodyText: body,
-        ctaText: cta,
-        duration,
-        outputFilename: `job_${jobId}_v${job.creative_version}.mp4`,
+      const { SceneProducer } = await import('./scene-producer.js');
+      const sceneProducer = new SceneProducer({ supabaseClient: supabase });
+      const sceneProdResult = await sceneProducer.produceAllScenes({
+        creativeId: jobId,
+        creativeVersion: job.creative_version,
+        blueprint,
+        product,
       });
 
-      // 4. Upload para Supabase Storage
-      await this._updateJobStatus(jobId, JOB_STATUSES.UPLOADING);
+      // 7. Geração de Locução Neural Factual por Cena
+      const safeCreativeId = String(jobId).replace(/[^a-zA-Z0-9_-]/g, '');
+      const scenesDir = path.resolve(`data/produced_scenes/${safeCreativeId}_v${job.creative_version}`);
+      if (!fs.existsSync(scenesDir)) fs.mkdirSync(scenesDir, { recursive: true });
 
-      const storageResult = await creativeStorageService.uploadCreativePackage({
-        productId: job.product_id,
+      for (let i = 0; i < blueprint.cenas.length; i++) {
+        const scene = blueprint.cenas[i];
+        const sceneNumber = i + 1;
+        const sceneAudioName = `voice_scene_${String(sceneNumber).padStart(2, '0')}.mp3`;
+        const sceneAudioPath = path.join(scenesDir, sceneAudioName);
+
+        // Se a frase desta cena foi rejeitada, não envia ao TTS
+        const isApproved = verificationReport.approvedSentences.some(s => s.includes(scene.narration) || scene.narration.includes(s));
+        if (isApproved && scene.narration) {
+          try {
+            await voiceoverService.generateVoiceover({
+              text: scene.narration,
+              filename: sceneAudioName,
+            });
+            // Copia para pasta da cena
+            const generatedPath = path.join(auditDir, sceneAudioName);
+            if (fs.existsSync(generatedPath) && generatedPath !== sceneAudioPath) {
+              fs.copyFileSync(generatedPath, sceneAudioPath);
+            }
+          } catch (voiceErr) {
+            logger.warn(`[CreativeJobQueue] Falha ao gerar voz da cena ${sceneNumber}: ${voiceErr.message}`);
+          }
+        }
+      }
+
+      // 8. Montagem Publicitária Final Sincronizada (ProfessionalVideoEditor)
+      const { ProfessionalVideoEditor } = await import('./professional-video-editor.js');
+      const videoEditor = new ProfessionalVideoEditor({ supabaseClient: supabase });
+      const editResult = await videoEditor.editAndAssemble({
         creativeId: jobId,
         version: job.creative_version,
-        videoPath: composed.videoPath,
-        thumbnailPath: composed.thumbnailPath,
       });
+
+      const composed = {
+        videoPath: editResult.videoPath,
+        thumbnailPath: editResult.thumbnailPath,
+        duration: editResult.duration,
+        fileSize: editResult.fileSize,
+        resolution: '1080x1920',
+      };
+
+      // 9. Upload para Supabase Storage
+      await this._updateJobStatus(jobId, JOB_STATUSES.UPLOADING);
+
+      const storageResult = {
+        videoUrl: editResult.videoUrl,
+        thumbnailUrl: editResult.thumbnailUrl,
+      };
 
       // 5. Registra o asset gerado na tabela creative_assets
       const { data: assetRecord } = await supabase

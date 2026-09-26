@@ -20,7 +20,7 @@ export default class ManualAffiliateFlow {
     this.validator = validator || new AffiliateLinkValidator({ supabaseClient });
   }
 
-  async selectProduct(product) {
+  async selectProduct(product, { forceNew = false } = {}) {
     if (!product.id || !product.product_url) throw new Error('Produto persistido e URL obrigatórios.');
     const marketplace = normalizeMarketplace(product.marketplace);
     const target = generatorUrl({ ...product, marketplace });
@@ -28,8 +28,8 @@ export default class ManualAffiliateFlow {
       .eq('type', REQUEST_TYPE).or(`product_id.eq.${product.id},metadata->>productId.eq.${product.id}`)
       .order('created_at', { ascending: true }));
     const record = existing.find(row => row.status === 'PENDING') || existing[0];
-    // Preserve a validated ready card, including across selection retries.
-    if (record?.metadata?.step === LINK_READY) return record;
+    // Preserve a validated ready card only if it is currently PENDING and not forced to renew
+    if (!forceNew && record?.status === 'PENDING' && record?.metadata?.step === LINK_READY) return record;
     const id = record?.id || stableId(`affiliate-link:${product.id}`);
     const payload = {
       id, product_id: product.id, type: REQUEST_TYPE, marketplace, status: 'PENDING', resolved_at: null,

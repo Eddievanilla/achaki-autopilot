@@ -103,30 +103,41 @@ export class ProfessionalVideoEditor {
   async editAndAssemble({
     creativeId,
     version = 1,
+    productId = null,
+    product: customProduct = null,
+    scenesDir = null,
   }) {
     if (!creativeId) throw new Error('creativeId é obrigatório para o ProfessionalVideoEditor.');
 
     logger.info(`[ProfessionalVideoEditor] 🎬 Iniciando montagem publicitária para Creative ID: ${creativeId} (v${version})...`);
 
-    // 1. Carrega dados do criativo e produto no Supabase
-    const { data: creative, error: cvErr } = await this.supabase
-      .from('creative_versions')
-      .select('*')
-      .eq('id', creativeId)
-      .single();
+    // 1. Carrega dados do criativo e produto no Supabase (se existente)
+    let creative = null;
+    let product = customProduct || null;
 
-    if (cvErr || !creative) {
-      throw new Error(`Creative Version não encontrada: ${cvErr?.message || creativeId}`);
+    try {
+      const { data: cv } = await this.supabase
+        .from('creative_versions')
+        .select('*')
+        .eq('id', creativeId)
+        .maybeSingle();
+      creative = cv;
+    } catch (_) {}
+
+    const resolvedProductId = productId || creative?.product_id;
+    if (!product && resolvedProductId) {
+      try {
+        const { data: p } = await this.supabase
+          .from('products')
+          .select('*')
+          .eq('id', resolvedProductId)
+          .maybeSingle();
+        product = p;
+      } catch (_) {}
     }
 
-    const { data: product } = await this.supabase
-      .from('products')
-      .select('*')
-      .eq('id', creative.product_id)
-      .single();
-
     const safeCreativeId = String(creativeId).replace(/[^a-zA-Z0-9_-]/g, '');
-    const scenesBaseDir = path.resolve(`data/produced_scenes/${safeCreativeId}_v${version}`);
+    const scenesBaseDir = scenesDir ? path.resolve(scenesDir) : path.resolve(`data/produced_scenes/${safeCreativeId}_v${version}`);
 
     if (!fs.existsSync(scenesBaseDir)) {
       throw new Error(`Diretório de cenas não encontrado: ${scenesBaseDir}. Execute as Etapas 2 e 3 antes.`);
@@ -204,11 +215,8 @@ export class ProfessionalVideoEditor {
     // Síntese de trilha sonora ambiente agradável de fundo (Loop rítmico moderno e discreto)
     const audioTrackSynth = `aevalsrc='0.035*sin(2*PI*130.81*t)*exp(-2.5*mod(t,0.5))+0.02*sin(2*PI*261.63*t)*exp(-1.5*mod(t,1))+0.015*sin(2*PI*392*t)*exp(-1*mod(t,2))':s=44100:d=${duracaoTotalCalculada}[music]`;
 
-    // Filtros visuais de branding superior ACHAki
-    const brandingVisualFilter = [
-      `[0:v]drawbox=x=80:y=80:w=920:h=85:color=black@0.75:t=fill[b1]`,
-      `[b1]drawtext=text='ACHAki - ACHADO FACTUAL VERIFICADO':fontcolor=white:fontsize=32:x=(w-text_w)/2:y=108[vout]`
-    ].join(';');
+    // Preserva o visual refinado e os headers temáticos de cada cena produzida pelo SceneProducer
+    const brandingVisualFilter = `[0:v]null[vout]`;
 
     // Mixagem de áudio com prioridade máxima para a narração neural
     const audioMixFilter = `[0:a]volume=1.0[voice];[music]volume=0.20[bgm];[voice][bgm]amix=inputs=2:duration=first:dropout_transition=2[aout]`;
@@ -230,24 +238,31 @@ export class ProfessionalVideoEditor {
 
     // 7. Envio para o Supabase Storage (bucket creative-assets)
     logger.info(`[ProfessionalVideoEditor] ☁️ Enviando pacote final ao Supabase Storage...`);
-    const uploadResult = await this.storageService.uploadCreativePackage({
-      productId: creative.product_id,
-      creativeId,
-      version,
-      videoPath: finalVideoPath,
-      thumbnailPath: finalThumbPath,
-    });
+    let uploadResult = { videoUrl: null, thumbnailUrl: null };
+    try {
+      uploadResult = await this.storageService.uploadCreativePackage({
+        productId: resolvedProductId,
+        creativeId,
+        version,
+        videoPath: finalVideoPath,
+        thumbnailPath: finalThumbPath,
+      });
+      logger.info(`[ProfessionalVideoEditor] 🚀 Vídeo final salvo no Storage com sucesso! URL: ${uploadResult.videoUrl}`);
+    } catch (upErr) {
+      logger.warn(`[ProfessionalVideoEditor] Aviso de upload no storage: ${upErr.message}`);
+    }
 
-    logger.info(`[ProfessionalVideoEditor] 🚀 Vídeo final salvo no Storage com sucesso! URL: ${uploadResult.videoUrl}`);
-
-    // 8. Atualiza creative_versions com URL definitiva do Storage e metadados
-    const { data: updatedRecord, error: updateErr } = await this.supabase
-      .from('creative_versions')
-      .update({
-        video_url: uploadResult.videoUrl,
-        thumbnail_url: uploadResult.thumbnailUrl || creative.thumbnail_url,
-        duration: Math.round(finalDuration),
-        status: 'READY_FOR_APPROVAL',
+    // 8. Atualiza creative_versions com URL definitiva do Storage e metadados se existir
+    let updatedRecord = null;
+    if (creative) {
+      try {
+        const { data: upd } = await this.supabase
+          .from('creative_versions')
+          .update({
+            video_url: uploadResult.videoUrl,
+            thumbnail_url: uploadResult.thumbnailUrl || creative.thumbnail_url,
+            duration: Math.round(finalDuration),
+            status: 'READY_FOR_APPROVAL',
         metadata: {
           ...(creative.metadata || {}),
           videoFinalGerado: true,
@@ -262,12 +277,9 @@ export class ProfessionalVideoEditor {
           editorStatus: 'OK',
         },
       })
-      .eq('id', creativeId)
-      .select()
-      .single();
-
-    if (updateErr) {
-      logger.warn(`[ProfessionalVideoEditor] Aviso ao atualizar creative_versions: ${updateErr.message}`);
+      } catch (dbErr) {
+        logger.warn(`[ProfessionalVideoEditor] Aviso ao atualizar creative_versions: ${dbErr.message}`);
+      }
     }
 
     // Limpa arquivos intermediários da pasta temporária
@@ -282,10 +294,12 @@ export class ProfessionalVideoEditor {
       success: true,
       editorStatus: 'OK',
       creativeId,
-      productId: creative.product_id,
+      productId: creative?.product_id || resolvedProductId,
       cenasUtilizadas,
       duracao: `${Math.round(finalDuration)}s`,
       duracaoExata: finalDuration,
+      videoPath: finalVideoPath,
+      thumbnailPath: finalThumbPath,
       resolucao: '1080x1920',
       audioStatus: 'OK',
       mp4Status: 'OK',

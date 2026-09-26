@@ -125,93 +125,116 @@ export class CreativeCostController {
   }
 
   /**
-   * Constrói o prompt único para engenharia completa de 1 criativo em 1 única chamada.
+   * Constrói o prompt único para engenharia completa de 1 criativo em 1 única chamada
+   * com REGRA ABSOLUTA DE VERACIDADE baseada em PRODUCT_FACTS.
    */
-  buildSingleCallPrompt({ product, photos = [], context = {} }) {
-    const title = product.title || 'Achadinho';
-    const price = product.current_price || product.price || 0;
-    const originalPrice = product.original_price || null;
-    const discount = product.discount_percent || 0;
-    const category = product.category || 'Geral';
-    const marketplace = product.marketplace || 'Mercado Livre';
+  async buildSingleCallPrompt({ product, photos = [], context = {} }) {
+    const { ProductFactsBuilder } = await import('./product-facts-builder.js');
+    const productFacts = ProductFactsBuilder.buildFacts({ product, extraImages: photos });
 
     const systemPrompt = `Você é o Diretor Criativo e Engenheiro de Conteúdo da ACHAki.
-Sua missão é planejar em UMA ÚNICA chamada toda a engenharia criativa de um vídeo publicitário vertical 9:16 (1080x1920).
-Estritamente em PORTUGUÊS DO BRASIL (PT-BR) natural, factual, sem mentiras, sem escassez artificial e sem inventar dados.
+Sua missão é planejar em UMA ÚNICA chamada toda a engenharia criativa de um vídeo vertical 9:16 (1080x1920).
+Estritamente em PORTUGUÊS DO BRASIL (PT-BR).
+
+REGRA ABSOLUTA DE VERACIDADE:
+Você só pode escrever afirmações suportadas por PRODUCT_FACTS.
+PROIBIDO inventar:
+- benefícios não informados;
+- potência;
+- segurança;
+- certificações;
+- resistência;
+- durabilidade;
+- estoque;
+- avaliações;
+- características técnicas;
+- urgência;
+- qualquer dado ausente.
+
+Se não estiver em PRODUCT_FACTS, NÃO mencionar.
 
 Você deve responder ESTRITAMENTE com um objeto JSON válido (sem texto antes ou depois) no seguinte formato:
 {
-  "conceito": "string com a ideia central do comercial",
-  "hook": "frase de gancho inicial de alto impacto (0 a 3s)",
-  "problemaDesejo": "conexão com a dor ou desejo cotidiano do cliente",
-  "solucao": "apresentação do produto como solução factual",
-  "roteiro_pt_br": "locução completa contínua em PT-BR",
+  "conceito": "string com a ideia central do comercial baseada em fatos",
+  "hook": "frase de gancho inicial factual",
+  "problemaDesejo": "conexão natural cotidiana sem inventar benefícios",
+  "solucao": "apresentação do produto com características reais",
+  "roteiro_pt_br": "locução completa contínua em PT-BR validada contra PRODUCT_FACTS",
   "storyboard": {
     "totalCenas": 5,
     "cenas": [
       {
+        "scene_id": "scene_01",
         "cena": "CENA 1",
+        "duration": "3s",
         "duracaoSegundos": 3,
-        "objetivo": "capturar atenção imediata",
-        "visual": "close frontal em 9:16",
-        "movimento": "zoom progressivo suave com fundo desfocado",
-        "textoTela": "OLHA ESSE ACHADINHO!",
-        "locucao": "frase dita na cena 1"
+        "visual_source": "URL da foto real",
+        "crop": "FULL_PRODUCT_OVERVIEW",
+        "camera_motion": "PROGRESSIVE_ZOOM_IN",
+        "overlay": { "badge": "ACHADINHO FACTUAL", "title": "Nome do Produto" },
+        "narration": "frase factual da cena 1",
+        "facts_used": ["product_name", "brand"]
       },
       {
+        "scene_id": "scene_02",
         "cena": "CENA 2",
+        "duration": "4s",
         "duracaoSegundos": 4,
-        "objetivo": "mostrar utilidade prática",
-        "visual": "produto no contexto de uso",
-        "movimento": "pan horizontal suave com parallax",
-        "textoTela": "PRATICIDADE NO DIA A DIA",
-        "locucao": "frase dita na cena 2"
+        "visual_source": "URL da foto real",
+        "crop": "DETAIL_10_OUTLETS",
+        "camera_motion": "HORIZONTAL_LATERAL_PAN",
+        "overlay": { "badge": "10 TOMADAS + 4 USB", "title": "ESTRUTURA" },
+        "narration": "frase factual da cena 2",
+        "facts_used": ["features: 10 tomadas", "features: 4 portas USB"]
       },
       {
+        "scene_id": "scene_03",
         "cena": "CENA 3",
+        "duration": "4s",
         "duracaoSegundos": 4,
-        "objetivo": "evidenciar qualidade e diferenciais factuais",
-        "visual": "plano detalhe do acabamento",
-        "movimento": "crop animado e tilt vertical descendente",
-        "textoTela": "QUALIDADE COMPROVADA",
-        "locucao": "frase dita na cena 3"
+        "visual_source": "URL da foto real",
+        "crop": "DETAIL_CABLE_VOLTAGE",
+        "camera_motion": "VERTICAL_TILT_DESCENDING",
+        "overlay": { "badge": "CABO 2M • BIVOLT", "title": "ESPECIFICAÇÕES" },
+        "narration": "frase factual da cena 3",
+        "facts_used": ["features: cabo de 2 metros", "features: bivolt"]
       },
       {
+        "scene_id": "scene_04",
         "cena": "CENA 4",
+        "duration": "3s",
         "duracaoSegundos": 3,
-        "objetivo": "apresentar oferta e preço oficial",
-        "visual": "card de preço oficial em destaque",
-        "movimento": "respiração sutil no card de preço",
-        "textoTela": "R$ ${Number(price).toFixed(2).replace('.', ',')} (${discount}% OFF)",
-        "locucao": "frase com valor factual comprovado"
+        "visual_source": "URL da foto real",
+        "crop": "OFFER_PRICE_CARD",
+        "camera_motion": "PRICE_PULSE",
+        "overlay": { "badge": "44% OFF", "price": "R$ 38,98" },
+        "narration": "frase de preço real comprovado",
+        "facts_used": ["price", "original_price", "discount"]
       },
       {
+        "scene_id": "scene_05",
         "cena": "CENA 5",
+        "duration": "3s",
         "duracaoSegundos": 3,
-        "objetivo": "CTA direto e natural",
-        "visual": "tela de encerramento orientando o comentário fixado",
-        "movimento": "câmera estática com elemento pulsante",
-        "textoTela": "LINK COM DESCONTO NOS COMENTÁRIOS!",
-        "locucao": "O link com desconto garantido tá liberado e fixado no primeiro comentário!"
+        "visual_source": "URL da foto real",
+        "crop": "FINAL_CTA",
+        "camera_motion": "CTA_PULSE_ARROWS",
+        "overlay": { "badge": "LINK FIXADO", "cta": "CONFIRA NOS COMENTÁRIOS" },
+        "narration": "O link com desconto tá liberado e fixado no primeiro comentário!",
+        "facts_used": ["cta_location"]
       }
     ]
   },
   "movimentos": "diretrizes de câmera e enquadramento",
   "textos_tela": "diretrizes de tipografia e caixas de texto",
   "cta": "frase de fechamento e chamada para o link oficial",
-  "instrucoes_edicao": "diretrizes de montagem, ritmo publicitário, cortes na locução e safe-area 9:16"
+  "instrucoes_edicao": "diretrizes de montagem sincronizada"
 }`;
 
-    const userPrompt = `Produto Factual:
-Título: ${title}
-Preço Atual: R$ ${Number(price).toFixed(2).replace('.', ',')}
-Preço Original: ${originalPrice ? `R$ ${Number(originalPrice).toFixed(2).replace('.', ',')}` : 'Não informado'}
-Desconto: ${discount > 0 ? `${discount}%` : 'Sem desconto percentual registrado'}
-Categoria: ${category}
-Marketplace: ${marketplace}
-Fotos Disponíveis: ${photos.length}`;
+    const userPrompt = `PRODUCT_FACTS:
+${JSON.stringify(productFacts, null, 2)}`;
 
-    return { systemPrompt, userPrompt };
+    return { systemPrompt, userPrompt, productFacts };
   }
 
   /**
@@ -273,7 +296,7 @@ Fotos Disponíveis: ${photos.length}`;
     // ─────────────────────────────────────────────────────────────
     // REGRA 1 & 2: Preparação de UMA ÚNICA chamada LLM para tudo
     // ─────────────────────────────────────────────────────────────
-    const { systemPrompt, userPrompt } = this.buildSingleCallPrompt({ product, photos, context });
+    const { systemPrompt, userPrompt, productFacts } = await this.buildSingleCallPrompt({ product, photos, context });
 
     const estimatedInputTokens = this.estimateTokens(systemPrompt + userPrompt);
     const estimatedOutputTokens = 900; // Blueprint completo gira em torno de 700 a 900 tokens
@@ -377,13 +400,20 @@ Fotos Disponíveis: ${photos.length}`;
       cenas: (rawResult?.storyboard?.cenas && Array.isArray(rawResult.storyboard.cenas) && rawResult.storyboard.cenas.length === 5)
         ? rawResult.storyboard.cenas.map((c, idx) => ({
             ...localFallbackBlueprint.cenas[idx],
+            scene_id: c.scene_id || localFallbackBlueprint.cenas[idx].scene_id,
             cena: c.cena || `CENA ${idx + 1}`,
+            duration: c.duration || localFallbackBlueprint.cenas[idx].duration,
             duracaoSegundos: c.duracaoSegundos || localFallbackBlueprint.cenas[idx].duracaoSegundos,
-            objetivo: c.objetivo || localFallbackBlueprint.cenas[idx].objetivo,
-            visual: c.visual || localFallbackBlueprint.cenas[idx].visual,
-            movimento: c.movimento || localFallbackBlueprint.cenas[idx].movimento,
+            visual_source: c.visual_source || localFallbackBlueprint.cenas[idx].visual_source,
+            crop: c.crop || localFallbackBlueprint.cenas[idx].crop,
+            camera_motion: c.camera_motion || localFallbackBlueprint.cenas[idx].camera_motion,
+            overlay: c.overlay || localFallbackBlueprint.cenas[idx].overlay,
             textoTela: c.textoTela || localFallbackBlueprint.cenas[idx].textoTela,
-            locucao: c.locucao || localFallbackBlueprint.cenas[idx].locucao,
+            narration: c.narration || c.locucao || localFallbackBlueprint.cenas[idx].narration,
+            locucao: c.narration || c.locucao || localFallbackBlueprint.cenas[idx].locucao,
+            facts_used: Array.isArray(c.facts_used) && c.facts_used.length > 0
+              ? c.facts_used
+              : localFallbackBlueprint.cenas[idx].facts_used,
           }))
         : localFallbackBlueprint.cenas,
     };

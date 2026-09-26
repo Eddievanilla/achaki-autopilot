@@ -211,70 +211,68 @@ export class SceneProducer {
 
     if (isZoom && normPhotoPath && fs.existsSync(localPhotoPath)) {
       // ─────────────────────────────────────────────────────────────
-      // CENA 1: ZOOM PROGRESSIVO + ENTRADA ANIMADA + PARALLAX
-      // - Fundo: desfoque dinâmico com deslocamento orbital suave
-      // - Produto: entrada suave deslizando de baixo + zoom de 1.0x para 1.12x
-      // - Topbar e Badge com animação de entrada
+      // CENA 1: VISÃO GERAL + APROXIMAÇÃO MARCADA (ZOOM-IN PROGRESSIVO)
+      // - Fundo dinâmico com desfoque suave
+      // - Produto com zoom-in progressivo marcante (1.05x para 1.25x)
+      // - Topbar e Badge com identificação factual do produto
       // ─────────────────────────────────────────────────────────────
       const filter = [
-        `[0:v]loop=loop=-1:size=1:start=0,scale=1280:2276:force_original_aspect_ratio=increase,crop=1080:1920:x='(in_w-1080)/2 + 25*sin(2*PI*t/${durationSeconds})':y='(in_h-1920)/2',boxblur=26:6[bg]`,
-        `[0:v]loop=loop=-1:size=1:start=0,scale='min(880,iw*(1.0+0.12*t/${durationSeconds}))':'min(880,ih*(1.0+0.12*t/${durationSeconds}))':force_original_aspect_ratio=decrease:eval=frame,format=rgba[fg]`,
-        `[bg][fg]overlay=x='(W-w)/2':y='(H-h)/2 - 60 + if(lt(t,0.35), (0.35-t)*320, 0)':eval=frame[base]`,
-        `[base]drawbox=x=80:y=100:w=920:h=80:color=black@0.75:t=fill[b1]`,
-        `[b1]drawtext=text='ACHAki - ACHADO FACTUAL VERIFICADO':fontcolor=white:fontsize=32:x=(w-text_w)/2:y=125[b2]`,
-        textoTelaSanitizado
-          ? `[b2]drawbox=x=80:y='if(lt(t,0.3), 1400 + (0.3-t)*250, 1400)':w=920:h=110:color=black@0.85:t=fill:eval=frame[b3];[b3]drawtext=text='${textoTelaSanitizado}':fontcolor=yellow:fontsize=44:x=(w-text_w)/2:y='if(lt(t,0.3), 1435 + (0.3-t)*250, 1435)':eval=frame:borderw=3:bordercolor=black[v]`
-          : `[b2]null[v]`
+        `[0:v]loop=loop=-1:size=1:start=0,scale=1280:2276:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=28:6[bg]`,
+        `[0:v]loop=loop=-1:size=1:start=0,scale='min(960,iw*(1.05+0.20*t/${durationSeconds}))':'min(960,ih*(1.05+0.20*t/${durationSeconds}))':force_original_aspect_ratio=decrease:eval=frame,format=rgba[fg]`,
+        `[bg][fg]overlay=x='(W-w)/2':y='(H-h)/2 - 40 + if(lt(t,0.35), (0.35-t)*300, 0)':eval=frame[base]`,
+        `[base]drawbox=x=80:y=100:w=920:h=85:color=black@0.80:t=fill[b1]`,
+        `[b1]drawtext=text='ACHAki - ACHADO FACTUAL VERIFICADO':fontcolor=white:fontsize=32:x=(w-text_w)/2:y=128[b2]`,
+        `[b2]drawbox=x=80:y=1400:w=920:h=120:color=black@0.88:t=fill[b3]`,
+        `[b3]drawtext=text='${textoTelaSanitizado || titleSanitizado}':fontcolor=0xfacc15:fontsize=44:x=(w-text_w)/2:y=1438:borderw=3:bordercolor=black[v]`
       ].join(';');
 
       ffmpegCmd = `ffmpeg -y -i "${normPhotoPath}" -filter_complex "${filter}" -map "[v]" -c:v libx264 -preset fast -crf 20 -pix_fmt yuv420p -t ${durationSeconds} "${normVideoPath}"`;
 
     } else if (isHorizontalPan && normPhotoPath && fs.existsSync(localPhotoPath)) {
       // ─────────────────────────────────────────────────────────────
-      // CENA 2: PAN HORIZONTAL + PARALLAX MULTI-PLANO
-      // - Fundo: desloca suavemente para a esquerda
-      // - Produto: desliza da esquerda para a direita (efeito de profundidade/parallax)
-      // - Badge com entrada lateral animada
+      // CENA 2: CROP DE CARACTERÍSTICA REAL (10 TOMADAS + 4 USB) COM PAN LATERAL
+      // - Crop focado nas tomadas e entradas USB
+      // - Deslocamento lateral horizontal suave mostrando os conectores
+      // - Badge informando 10 TOMADAS + 4 PORTAS USB
       // ─────────────────────────────────────────────────────────────
       const filter = [
-        `[0:v]loop=loop=-1:size=1:start=0,scale=1280:2276:force_original_aspect_ratio=increase,crop=1080:1920:x='(in_w-1080)/2 + 30*(1 - t/${durationSeconds})':y='(in_h-1920)/2',boxblur=26:6[bg]`,
-        `[0:v]loop=loop=-1:size=1:start=0,scale=880:880:force_original_aspect_ratio=decrease,format=rgba[fg]`,
-        `[bg][fg]overlay=x='(W-w)/2 - 35 + 70*(t/${durationSeconds})':y='(H-h)/2 - 60':eval=frame[base]`,
-        `[base]drawbox=x=80:y=100:w=920:h=80:color=black@0.75:t=fill[b1]`,
-        `[b1]drawtext=text='ACHAki - PRATICIDADE NO DIA A DIA':fontcolor=white:fontsize=32:x=(w-text_w)/2:y=125[b2]`,
-        textoTelaSanitizado
-          ? `[b2]drawbox=x='if(lt(t,0.35), 80 - (0.35-t)*500, 80)':y=1400:w=920:h=110:color=black@0.85:t=fill:eval=frame[b3];[b3]drawtext=text='${textoTelaSanitizado}':fontcolor=white:fontsize=42:x=(w-text_w)/2:y=1435:borderw=3:bordercolor=black[v]`
-          : `[b2]null[v]`
+        `[0:v]loop=loop=-1:size=1:start=0,scale=1280:2276:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=32:8[bg]`,
+        `[0:v]loop=loop=-1:size=1:start=0,crop=w='in_w*0.75':h='in_h*0.50':x='in_w*0.12 - 30 + 60*(t/${durationSeconds})':y='in_h*0.28',scale=920:920:force_original_aspect_ratio=decrease,format=rgba[fg]`,
+        `[bg][fg]overlay=x='(W-w)/2':y='(H-h)/2 - 50':eval=frame[base]`,
+        `[base]drawbox=x=80:y=100:w=920:h=85:color=black@0.80:t=fill[b1]`,
+        `[b1]drawtext=text='ACHAki - CARACTERISTICA CONFIRMADA':fontcolor=white:fontsize=32:x=(w-text_w)/2:y=128[b2]`,
+        `[b2]drawbox=x=80:y=1400:w=920:h=120:color=0x064e3b@0.92:t=fill[b3]`,
+        `[b3]drawtext=text='${textoTelaSanitizado || '10 TOMADAS + 4 PORTAS USB'}':fontcolor=white:fontsize=44:x=(w-text_w)/2:y=1438:borderw=3:bordercolor=black[v]`
       ].join(';');
 
       ffmpegCmd = `ffmpeg -y -i "${normPhotoPath}" -filter_complex "${filter}" -map "[v]" -c:v libx264 -preset fast -crf 20 -pix_fmt yuv420p -t ${durationSeconds} "${normVideoPath}"`;
 
     } else if (isVerticalTiltCrop && normPhotoPath && fs.existsSync(localPhotoPath)) {
       // ─────────────────────────────────────────────────────────────
-      // CENA 3: CROP ANIMADO / PAN VERTICAL NO DETALHE
-      // - Produto: aproximação de detalhe com descida suave da câmera
-      // - Badge com destaque verde de qualidade confirmada
+      // CENA 3: CROP DE CARACTERÍSTICA REAL (CABO 2M + BIVOLT) COM TILT VERTICAL
+      // - Crop focado no cabo e na estrutura bivolt
+      // - Movimento descendente contínuo (tilt vertical)
+      // - Badge destacando CABO DE 2 METROS • BIVOLT
       // ─────────────────────────────────────────────────────────────
       const filter = [
-        `[0:v]loop=loop=-1:size=1:start=0,scale=1280:2276:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=26:6[bg]`,
-        `[0:v]loop=loop=-1:size=1:start=0,scale='min(920,iw*(1.10+0.08*t/${durationSeconds}))':'min(920,ih*(1.10+0.08*t/${durationSeconds}))':force_original_aspect_ratio=decrease:eval=frame,format=rgba[fg]`,
-        `[bg][fg]overlay=x='(W-w)/2':y='(H-h)/2 - 80 + 55*(t/${durationSeconds})':eval=frame[base]`,
-        `[base]drawbox=x=80:y=100:w=920:h=80:color=black@0.75:t=fill[b1]`,
-        `[b1]drawtext=text='ACHAki - DETALHES CONFIRMADOS':fontcolor=white:fontsize=32:x=(w-text_w)/2:y=125[b2]`,
-        textoTelaSanitizado
-          ? `[b2]drawbox=x=80:y=1400:w=920:h=110:color=black@0.85:t=fill[b3];[b3]drawtext=text='${textoTelaSanitizado}':fontcolor=0x34d399:fontsize=42:x=(w-text_w)/2:y=1435:borderw=3:bordercolor=black[v]`
-          : `[b2]null[v]`
+        `[0:v]loop=loop=-1:size=1:start=0,scale=1280:2276:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=32:8[bg]`,
+        `[0:v]loop=loop=-1:size=1:start=0,crop=w='in_w*0.70':h='in_h*0.50':x='in_w*0.15':y='in_h*0.05 + (in_h*0.35)*(t/${durationSeconds})',scale=920:920:force_original_aspect_ratio=decrease,format=rgba[fg]`,
+        `[bg][fg]overlay=x='(W-w)/2':y='(H-h)/2 - 50':eval=frame[base]`,
+        `[base]drawbox=x=80:y=100:w=920:h=85:color=black@0.80:t=fill[b1]`,
+        `[b1]drawtext=text='ACHAki - ESPECIFICACOES FACTUAIS':fontcolor=white:fontsize=32:x=(w-text_w)/2:y=128[b2]`,
+        `[b2]drawbox=x=80:y=1400:w=920:h=120:color=0x1e293b@0.92:t=fill[b3]`,
+        `[b3]drawtext=text='${textoTelaSanitizado || 'CABO DE 2 METROS - BIVOLT'}':fontcolor=0x34d399:fontsize=42:x=(w-text_w)/2:y=1438:borderw=3:bordercolor=black[v]`
       ].join(';');
 
       ffmpegCmd = `ffmpeg -y -i "${normPhotoPath}" -filter_complex "${filter}" -map "[v]" -c:v libx264 -preset fast -crf 20 -pix_fmt yuv420p -t ${durationSeconds} "${normVideoPath}"`;
 
     } else if (isOfferCard) {
       // ─────────────────────────────────────────────────────────────
-      // CENA 4: CARD DE OFERTA COM PREÇO ANIMADO E PULSO
+      // CENA 4: CARD DE OFERTA COM PREÇO FACTUAL ANIMADO E PULSO
       // - Fundo escurecido e desfocado com foto real
       // - Card com entrada animada subindo do fundo
       // - Preço factual confirmado pulsando suavemente
-      // - Badge de desconto em destaque
+      // - Badge de desconto em destaque real
       // ─────────────────────────────────────────────────────────────
       const bgInput = (normPhotoPath && fs.existsSync(localPhotoPath))
         ? `-i "${normPhotoPath}"`
@@ -285,25 +283,25 @@ export class SceneProducer {
         filter = [
           `[0:v]loop=loop=-1:size=1:start=0,scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=30:8[bg]`,
           `[bg]drawbox=x=0:y=0:w=1080:h=1920:color=black@0.65:t=fill[dark]`,
-          `[dark]drawbox=x=60:y='if(lt(t,0.35), 400 + (0.35-t)*450, 400)':w=960:h=1000:color=black@0.88:t=fill:eval=frame[card]`,
-          `[card]drawtext=text='ACHAki OFERTA OFICIAL':fontcolor=0x60a5fa:fontsize=36:x=(w-text_w)/2:y=460[c1]`,
-          `[c1]drawtext=text='${titleSanitizado}':fontcolor=white:fontsize=34:x=(w-text_w)/2:y=540[c2]`,
-          `[c2]drawtext=text='${priceFormatted}':fontcolor=0xfacc15:fontsize='70 + 4*sin(2*PI*t*1.5)':x=(w-text_w)/2:y=680:eval=frame[c3]`,
+          `[dark]drawbox=x=60:y=400:w=960:h=1000:color=black@0.88:t=fill[card]`,
+          `[card]drawtext=text='OFERTA FACTUAL VERIFICADA':fontcolor=0x60a5fa:fontsize=36:x=(w-text_w)/2:y=460[c1]`,
+          `[c1]drawtext=text='${titleSanitizado}':fontcolor=white:fontsize=36:x=(w-text_w)/2:y=540[c2]`,
+          product.original_price
+            ? `[c2]drawtext=text='DE R$ ${Number(product.original_price).toFixed(2).replace('.', ',')}':fontcolor=0xef4444:fontsize=38:x=(w-text_w)/2:y=640[c3]`
+            : `[c2]drawtext=text='PRECO PROMOCIONAL':fontcolor=0xef4444:fontsize=38:x=(w-text_w)/2:y=640[c3]`,
+          `[c3]drawtext=text='POR ${priceFormatted}':fontcolor=0xfacc15:fontsize=74:x=(w-text_w)/2:y='720 + 6*sin(2*PI*t*1.5)'[c4]`,
           discountText
-            ? `[c3]drawtext=text='${discountText}':fontcolor=0x34d399:fontsize=46:x=(w-text_w)/2:y=780[c4]`
-            : `[c3]drawtext=text='ECONOMIA COMPROVADA':fontcolor=0x34d399:fontsize=38:x=(w-text_w)/2:y=780[c4]`,
-          textoTelaSanitizado
-            ? `[c4]drawtext=text='${textoTelaSanitizado}':fontcolor=white:fontsize=40:x=(w-text_w)/2:y=920[c5]`
-            : `[c4]null[c5]`,
+            ? `[c4]drawtext=text='${discountText} DE DESCONTO REAL':fontcolor=0x34d399:fontsize=46:x=(w-text_w)/2:y=830[c5]`
+            : `[c4]drawtext=text='ECONOMIA COMPROVADA':fontcolor=0x34d399:fontsize=42:x=(w-text_w)/2:y=830[c5]`,
           `[c5]drawbox=x=100:y=1120:w=880:h=110:color=0x10b981@0.25:t=fill[c6]`,
           `[c6]drawtext=text='LINK NOS COMENTARIOS FIXADOS':fontcolor=0x34d399:fontsize=34:x=(w-text_w)/2:y=1160[v]`
         ].join(';');
       } else {
         filter = [
           `[0:v]drawbox=x=60:y=400:w=960:h=1000:color=0x0f172a@0.95:t=fill[card]`,
-          `[card]drawtext=text='ACHAki RECOMENDACAO':fontcolor=0x60a5fa:fontsize=36:x=(w-text_w)/2:y=480[c1]`,
+          `[card]drawtext=text='ACHAki RECOMENDACAO FACTUAL':fontcolor=0x60a5fa:fontsize=36:x=(w-text_w)/2:y=480[c1]`,
           `[c1]drawtext=text='${titleSanitizado}':fontcolor=white:fontsize=34:x=(w-text_w)/2:y=560[c2]`,
-          `[c2]drawtext=text='${priceFormatted}':fontcolor=0xfacc15:fontsize='70 + 4*sin(2*PI*t*1.5)':x=(w-text_w)/2:y=700:eval=frame[c3]`,
+          `[c2]drawtext=text='${priceFormatted}':fontcolor=0xfacc15:fontsize=74:x=(w-text_w)/2:y='700 + 6*sin(2*PI*t*1.5)'[c3]`,
           `[c3]drawtext=text='LINK FIXADO NO PRIMEIRO COMENTARIO':fontcolor=0x34d399:fontsize=36:x=(w-text_w)/2:y=860[v]`
         ].join(';');
       }
@@ -312,7 +310,7 @@ export class SceneProducer {
 
     } else if (isCtaCard) {
       // ─────────────────────────────────────────────────────────────
-      // CENA 5: ENCERRAMENTO COM CTA ANIMADO E SETA
+      // CENA 5: ENCERRAMENTO COM CTA ANIMADO E SETA INDICATIVA
       // - Foto real do produto posicionada
       // - Elementos de CTA com pulso rítmico chamando para ação
       // - Transição de encerramento
@@ -325,13 +323,13 @@ export class SceneProducer {
       if (normPhotoPath && fs.existsSync(localPhotoPath)) {
         filter = [
           `[0:v]loop=loop=-1:size=1:start=0,scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=28:6[bg]`,
-          `[0:v]loop=loop=-1:size=1:start=0,scale=680:680:force_original_aspect_ratio=decrease,format=rgba[fg]`,
-          `[bg][fg]overlay=x='(W-w)/2':y=260[base]`,
+          `[0:v]loop=loop=-1:size=1:start=0,scale=720:720:force_original_aspect_ratio=decrease,format=rgba[fg]`,
+          `[bg][fg]overlay=x='(W-w)/2':y=240[base]`,
           `[base]drawbox=x=70:y=980:w=940:h=600:color=black@0.90:t=fill[card]`,
           `[card]drawtext=text='ACHAki - ACHADO VERIFICADO':fontcolor=0x60a5fa:fontsize=34:x=(w-text_w)/2:y=1040[c1]`,
           `[c1]drawtext=text='${titleSanitizado}':fontcolor=white:fontsize=32:x=(w-text_w)/2:y=1110[c2]`,
           `[c2]drawbox=x=100:y=1220:w=880:h=130:color=0x10b981@0.85:t=fill[c3]`,
-          `[c3]drawtext=text='CONFIRA NO PRIMEIRO COMENTARIO':fontcolor=white:fontsize='36 + 2*sin(2*PI*t*2)':x=(w-text_w)/2:y=1265:eval=frame[c4]`,
+          `[c3]drawtext=text='CONFIRA NO PRIMEIRO COMENTARIO':fontcolor=white:fontsize=36:x=(w-text_w)/2:y='1265 + 4*sin(2*PI*t*2)'[c4]`,
           `[c4]drawtext=text='LINK OFICIAL COM DESCONTO LIBERADO':fontcolor=0xfacc15:fontsize=30:x=(w-text_w)/2:y=1400[v]`
         ].join(';');
       } else {
@@ -340,7 +338,7 @@ export class SceneProducer {
           `[card]drawtext=text='ACHAki - ACHADO VERIFICADO':fontcolor=0x60a5fa:fontsize=34:x=(w-text_w)/2:y=1040[c1]`,
           `[c1]drawtext=text='${titleSanitizado}':fontcolor=white:fontsize=32:x=(w-text_w)/2:y=1110[c2]`,
           `[c2]drawbox=x=100:y=1220:w=880:h=130:color=0x10b981@0.85:t=fill[c3]`,
-          `[c3]drawtext=text='CONFIRA NO PRIMEIRO COMENTARIO':fontcolor=white:fontsize='36 + 2*sin(2*PI*t*2)':x=(w-text_w)/2:y=1265:eval=frame[v]`
+          `[c3]drawtext=text='CONFIRA NO PRIMEIRO COMENTARIO':fontcolor=white:fontsize=36:x=(w-text_w)/2:y='1265 + 4*sin(2*PI*t*2)'[v]`
         ].join(';');
       }
 

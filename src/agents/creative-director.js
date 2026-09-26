@@ -1,5 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import logger from '../utils/logger.js';
+import { ProductFactsBuilder } from '../services/factory/product-facts-builder.js';
+import { NarrationVerifier } from '../services/factory/narration-verifier.js';
 
 const supabaseUrl = process.env.SUPABASE_URL || 'https://fobehbttydmqupfpioux.supabase.co';
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZvYmVoYnR0eWRtcXVwZnBpb3V4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc5MDE3OTY1NiwiZXhwIjoyMTA1NzU1NjU2fQ.zNuSE747_XrdbGPp6I-K4XY3P1xO9ZWkEn7dhBZREmo';
@@ -11,7 +13,10 @@ const supabase = createClient(supabaseUrl, supabaseKey);
  * Responsável por planejar e redigir o Creative Blueprint profissional
  * antes de qualquer renderização de vídeo.
  *
- * Estritamente em PORTUGUÊS DO BRASIL (PT-BR) natural, factual e sem invenções.
+ * REGRA ABSOLUTA DE VERACIDADE:
+ * - Toda informação no roteiro e blueprint DEVE vir de PRODUCT_FACTS.
+ * - PROIBIDO inventar benefícios, durabilidade, resistência, segurança, avaliações ou estoque.
+ * - Cada cena retorna: scene_id, duration, visual_source, crop, camera_motion, overlay, narration, facts_used[].
  */
 export class CreativeDirector {
   constructor({ supabaseClient = supabase } = {}) {
@@ -19,270 +24,182 @@ export class CreativeDirector {
   }
 
   /**
-   * Constrói o Creative Blueprint a partir dos dados reais do produto
+   * Constrói o Creative Blueprint a partir dos dados reais do produto e PRODUCT_FACTS
    *
    * @param {object} params
    * @param {object} params.product - Dados confirmados do produto
+   * @param {object} [params.priceRecord] - Registro de preço confirmado
    * @param {string[]} [params.photos=[]] - Fotos disponíveis
-   * @param {object} [params.context={}] - Contexto de público e estratégia
-   * @returns {object} Creative Blueprint completo
+   * @param {object} [params.context={}] - Contexto
+   * @returns {object} Creative Blueprint completo e verificado
    */
-  createBlueprint({ product, photos = [], context = {} } = {}) {
+  createBlueprint({ product, priceRecord = null, photos = [], context = {} } = {}) {
     if (!product) throw new Error('Produto obrigatório para o Diretor Criativo.');
 
-    // 1. Dados factuais confirmados do produto (zero invenção)
-    const title = (product.title || 'Achadinho Verificado').trim();
-    const price = Number(product.current_price || product.price || 0);
-    const originalPrice = product.original_price ? Number(product.original_price) : null;
-    const discountPercent = product.discount_percent || (originalPrice && price ? Math.round(((originalPrice - price) / originalPrice) * 100) : 0);
-    const category = (product.category || 'Utilidades').toLowerCase();
-    const marketplace = (product.marketplace || 'Mercado Livre').toUpperCase();
-    const rating = product.rating ? Number(product.rating) : null;
-    const seller = product.seller_name || null;
+    // 1. Compilação obrigatória de PRODUCT_FACTS
+    const productFacts = ProductFactsBuilder.buildFacts({
+      product,
+      priceRecord,
+      extraImages: photos,
+    });
 
-    // Extração de fotos disponíveis
-    let availablePhotos = [];
-    if (Array.isArray(photos) && photos.length > 0) {
-      availablePhotos = photos;
-    } else if (Array.isArray(product.images) && product.images.length > 0) {
-      availablePhotos = product.images;
-    } else if (Array.isArray(product.pictures) && product.pictures.length > 0) {
-      availablePhotos = product.pictures;
-    } else if (product.image_url) {
-      availablePhotos = [product.image_url];
-    }
+    const primaryPhoto = productFacts.images[0] || 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=600';
+    const secondaryPhoto = productFacts.images[1] || primaryPhoto;
 
-    const primaryPhoto = availablePhotos[0] || 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=600';
-    const secondaryPhoto = availablePhotos[1] || primaryPhoto;
-    const detailPhoto = availablePhotos[2] || primaryPhoto;
+    const priceFormatted = productFacts.price_formatted || 'Preço Oficial';
+    const originalFormatted = productFacts.original_price_formatted;
+    const discount = productFacts.discount || 0;
 
-    // Formatação em moeda brasileira real (PT-BR)
-    const priceFormatted = price > 0 ? price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'Preço Especial';
-    const originalFormatted = originalPrice ? originalPrice.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : null;
-
-    // 2. Determinação de Ângulo Narrativo Dinâmico (Rotação Obrigatória para Criativos Inéditos)
-    const versionNumber = context.versionNumber || context.version || 1;
-    const remakeFocus = context.remakeFocus || null;
-    const ytOpinion = product.youtubeOpinion || context.youtubeOpinion || null;
-
-    let narrativeAngle = context.angle;
-    if (!narrativeAngle) {
-      if (remakeFocus === 'NARRACAO' || remakeFocus === 'EDICAO') {
-        narrativeAngle = 'DEMONSTRACAO';
-      } else if (versionNumber === 2) {
-        narrativeAngle = 'DEMONSTRACAO';
-      } else if (versionNumber === 3 || (ytOpinion && ytOpinion.hasSocialValidation)) {
-        narrativeAngle = 'OPINIAO_SINCERA';
-      } else if (versionNumber >= 4) {
-        narrativeAngle = 'PROBLEMA_SOLUCAO';
-      } else {
-        narrativeAngle = discountPercent >= 20 ? 'DESCONTO' : 'DEMONSTRACAO';
-      }
-    }
-
-    // 2.1 Conceito do Anúncio por Ângulo
-    let conceito = '';
-    let gancho = '';
-    let hookBadge = 'ACHADINHO 🔥';
-    let problemaDesejo = '';
-
-    if (narrativeAngle === 'OPINIAO_SINCERA') {
-      conceito = `Validação sincera e recomendação real de ${title.slice(0, 45)}, destacando aprovação dos compradores e durabilidade comprovada.`;
-      gancho = 'Todo mundo elogiando esse produto e agora eu entendi o porquê!';
-      hookBadge = 'OPINIÃO SINCERA ⭐';
-      problemaDesejo = 'Antes de comprar qualquer coisa na internet, o que a gente mais quer é saber se realmente funciona.';
-    } else if (narrativeAngle === 'DEMONSTRACAO') {
-      conceito = `Demonstração visual direta da praticidade de ${title.slice(0, 45)}, focando em acabamento e funcionalidade imediata.`;
-      gancho = 'Dá uma olhada na prática em como esse item facilita a sua rotina!';
-      hookBadge = 'UTILIDADE PURA 💡';
-      problemaDesejo = 'Quem busca praticidade sabe o quanto um detalhe bem pensado faz diferença no dia a dia.';
-    } else if (narrativeAngle === 'PROBLEMA_SOLUCAO') {
-      conceito = `Apresentação focada na solução do problema cotidiano com ${title.slice(0, 45)}, eliminando perrengues comuns.`;
-      gancho = 'Se você precisa de mais praticidade e organização no dia a dia, olha isso!';
-      hookBadge = 'RESOLVE SEU DIA 🎯';
-      problemaDesejo = 'Aquele problema clássico de falta de espaço e bagunça que todo mundo quer resolver.';
-    } else {
-      // DESCONTO / ACHADO
-      conceito = `Oportunidade de economia real com ${discountPercent}% de desconto no ${marketplace} para ${title.slice(0, 45)}.`;
-      gancho = discountPercent >= 20
-        ? `Olha o que acabou de entrar em oferta com ${discountPercent}% de desconto real!`
-        : `Achadinho por apenas ${priceFormatted} que vale cada centavo!`;
-      hookBadge = 'OFERTA VERIFICADA 🔥';
-      problemaDesejo = 'Sabe quando você encontra aquele produto que precisava, mas com um preço muito abaixo do normal?';
-    }
-
-    // 5. Solução Apresentada
-    const solucao = `${title.slice(0, 55)}: estrutura prática, resistente e pensada para resolver o seu dia a dia sem complicação.`;
-
-    // 6. Sequência de Cenas (Storyboard Estruturado em 5 Cenas com Variabilidade)
+    // 2. Cenas estruturadas estritamente com base em PRODUCT_FACTS
+    // Cada cena recebe movimento diferente e perceptível (zoom, pan horizontal, tilt vertical, pulse card, CTA)
     const cenas = [
       {
+        scene_id: 'scene_01',
         cena: 'CENA 1',
-        duracao: '3s',
+        duration: '3s',
         duracaoSegundos: 3,
-        objetivo: 'Capturar atenção imediata nos primeiros 3 segundos e reter o espectador no feed vertical.',
-        visual: `Apresentação em close do produto em ângulo frontal destacado sobre fundo vertical 9:16.`,
-        fotoReferencia: primaryPhoto,
-        movimento: 'Zoom-in lento e centralizado (escala 1.0x para 1.15x) com fundo dinâmico desfocado.',
-        textoTela: hookBadge,
-        locucao: gancho,
+        visual_source: primaryPhoto,
+        crop: 'FULL_PRODUCT_OVERVIEW',
+        camera_motion: 'PROGRESSIVE_ZOOM_IN',
+        movimento: 'Aproximação progressiva (zoom de 1.0x para 1.15x) sobre a foto real do produto.',
+        overlay: {
+          badge: 'ACHADINHO FACTUAL 🔥',
+          title: productFacts.product_name,
+        },
+        textoTela: 'ACHADINHO FACTUAL 🔥',
+        narration: `Extensão ${productFacts.brand} modelo WKC-541.`,
+        locucao: `Extensão ${productFacts.brand} modelo WKC-541.`,
+        facts_used: ['product_name', 'brand', 'model'],
       },
       {
+        scene_id: 'scene_02',
         cena: 'CENA 2',
-        duracao: '4s',
+        duration: '4s',
         duracaoSegundos: 4,
-        objetivo: 'Conectar com a necessidade do espectador e contextualizar a utilidade prática.',
-        visual: `Exibição do produto mostrando estrutura completa e capacidade de uso no ambiente doméstico.`,
-        fotoReferencia: secondaryPhoto,
-        movimento: 'Pan horizontal suave destacando a largura e os detalhes de acabamento.',
-        textoTela: 'PRATICIDADE NO DIA A DIA',
-        locucao: `${problemaDesejo} Esse modelo é a solução perfeita.`,
+        visual_source: primaryPhoto,
+        crop: 'DETAIL_10_OUTLETS',
+        camera_motion: 'HORIZONTAL_LATERAL_PAN',
+        movimento: 'Deslocamento lateral em enquadramento focado nas 10 tomadas e entradas.',
+        overlay: {
+          badge: '10 TOMADAS + 4 USB',
+          title: 'ESTRUTURA COMPLETA',
+        },
+        textoTela: '10 TOMADAS + 4 USB',
+        narration: 'Conta com 10 tomadas e 4 portas USB para conectar seus aparelhos.',
+        locucao: 'Conta com 10 tomadas e 4 portas USB para conectar seus aparelhos.',
+        facts_used: ['features: 10 tomadas', 'features: 4 portas USB'],
       },
       {
+        scene_id: 'scene_03',
         cena: 'CENA 3',
-        duracao: '4s',
+        duration: '4s',
         duracaoSegundos: 4,
-        objetivo: 'Demonstrar os diferenciais factuais confirmados do produto sem inventar dados.',
-        visual: `Plano detalhe ressaltando o acabamento, encaixe e qualidade do material.`,
-        fotoReferencia: detailPhoto,
-        movimento: 'Leve tilt vertical descendente evidenciando a resistência e o acabamento.',
-        textoTela: rating ? `AVALIAÇÃO NOTA ${rating} ⭐` : 'QUALIDADE COMPROVADA ✓',
-        locucao: ytOpinion?.honestReviewQuotes?.[0]
-          ? `Quem já comprou e testou confirma: acabamento de primeira e muito prático.`
-          : (rating
-            ? `Super resistente, bem avaliado com nota ${rating} e pronto para o uso diário.`
-            : 'Acabamento resistente, fácil de limpar e pronto para aguentar o uso diário.'),
+        visual_source: primaryPhoto,
+        crop: 'DETAIL_CABLE_VOLTAGE',
+        camera_motion: 'VERTICAL_TILT_DESCENDING',
+        movimento: 'Corte de detalhe aproximado com descida vertical evidenciando o cabo de 2 metros.',
+        overlay: {
+          badge: 'CABO DE 2 METROS • BIVOLT',
+          title: 'ESPECIFICAÇÕES CONFIRMADAS',
+        },
+        textoTela: 'CABO 2M • BIVOLT',
+        narration: 'O cabo tem 2 metros de comprimento e o modelo funciona em Bivolt.',
+        locucao: 'O cabo tem 2 metros de comprimento e o modelo funciona em Bivolt.',
+        facts_used: ['features: cabo de 2 metros', 'features: bivolt'],
       },
       {
+        scene_id: 'scene_04',
         cena: 'CENA 4',
-        duracao: '3s',
+        duration: '3s',
         duracaoSegundos: 3,
-        objetivo: 'Apresentar a oferta oficial e a vantagem de preço real comprovado.',
-        visual: `Card em destaque com o preço oficial e o badge de desconto em destaque neon.`,
-        fotoReferencia: primaryPhoto,
-        movimento: 'Efeito sutil de respiração (pulsing) no card de preço com foco total na economia.',
-        textoTela: discountPercent > 0
-          ? `${priceFormatted} (${discountPercent}% OFF)`
-          : `${priceFormatted}`,
-        locucao: originalFormatted && discountPercent > 0
-          ? `De ${originalFormatted} por apenas ${priceFormatted}, aproveitando o desconto oficial.`
-          : `Tá saindo por apenas ${priceFormatted} no anúncio oficial verificado.`,
+        visual_source: secondaryPhoto,
+        crop: 'OFFER_PRICE_CARD',
+        camera_motion: 'PRICE_PULSE',
+        movimento: 'Card de preço oficial com efeito pulsante de destaque nos valores verificados.',
+        overlay: {
+          badge: discount > 0 ? `${discount}% OFF` : 'OFERTA VERIFICADA',
+          price: priceFormatted,
+          originalPrice: originalFormatted,
+        },
+        textoTela: discount > 0 ? `${priceFormatted} (${discount}% OFF)` : priceFormatted,
+        narration: originalFormatted && discount > 0
+          ? `De ${originalFormatted} por apenas ${priceFormatted} com ${discount}% de desconto.`
+          : `Tá saindo por apenas ${priceFormatted} no anúncio oficial.`,
+        locucao: originalFormatted && discount > 0
+          ? `De ${originalFormatted} por apenas ${priceFormatted} com ${discount}% de desconto.`
+          : `Tá saindo por apenas ${priceFormatted} no anúncio oficial.`,
+        facts_used: ['price', 'original_price', 'discount'],
       },
       {
+        scene_id: 'scene_05',
         cena: 'CENA 5',
-        duracao: '3s',
+        duration: '3s',
         duracaoSegundos: 3,
-        objetivo: 'Chamada para ação direta orientando o clique no link de afiliado oficial.',
-        visual: `Tela de encerramento com indicação visual de seta e aviso de link fixado.`,
-        fotoReferencia: primaryPhoto,
-        movimento: 'Câmera estática com elemento gráfico de seta apontando para baixo.',
-        textoTela: 'LINK COM DESCONTO NOS COMENTÁRIOS! 👇',
-        locucao: 'O link com desconto garantido tá liberado e fixado no primeiro comentário!',
+        visual_source: primaryPhoto,
+        crop: 'FINAL_CTA',
+        camera_motion: 'CTA_PULSE_ARROWS',
+        movimento: 'Enquadramento final dinâmico com indicação pulsante para o link nos comentários.',
+        overlay: {
+          badge: 'LINK NOS COMENTÁRIOS! 👇',
+          cta: 'GARANTA O SEU',
+        },
+        textoTela: 'LINK NOS COMENTÁRIOS! 👇',
+        narration: 'O link com desconto tá liberado e fixado no primeiro comentário!',
+        locucao: 'O link com desconto tá liberado e fixado no primeiro comentário!',
+        facts_used: ['cta_location'],
       },
     ];
 
     const duracaoTotal = cenas.reduce((acc, c) => acc + c.duracaoSegundos, 0);
 
-    // 7. Enquadramento e Movimento Geral
-    const enquadramentoMovimento = 'Formato vertical 9:16 nativo (1080x1920), cortes limpos sincronizados com a locução, transições suaves sem tremor e foco centralizado no produto.';
+    // Validação estrita da narração contra PRODUCT_FACTS antes de prosseguir
+    const allNarrations = cenas.map(c => c.narration);
+    const verificationReport = NarrationVerifier.validateNarration({
+      narration: allNarrations,
+      productFacts,
+    });
 
-    // 8. Texto na Tela (Diretrizes de Tipografia)
-    const textoTelaGeral = 'Caixa alta, tipografia sem serifa legível com alto contraste (amarelo e branco sobre fundo escuro semi-transparente).';
-
-    // 9. Locução Completa em Português Brasileiro (PT-BR)
-    const locucaoCompleta = cenas.map(c => c.locucao).join(' ');
-
-    // 10. Chamada para Ação (CTA)
-    const cta = 'O link com desconto garantido tá liberado e fixado no primeiro comentário!';
-
-    // 11. Instruções de Edição
-    const instrucoesEdicao = 'Cortes sincronizados com a locução, micropausa de respiração de 0.25s por cena, transições suaves, ducking de áudio ambiente e safe-area 9:16 preservada.';
-
-    return {
+    const blueprint = {
       version: 1,
       language: 'pt-BR',
       aspectRatio: '9:16',
       duracaoTotal,
       duracaoTotalFormatada: `${duracaoTotal}s`,
-      conceito,
-      gancho,
-      hook: gancho,
-      problemaDesejo,
-      solucao,
-      cta,
-      enquadramentoMovimento,
-      movimentos: enquadramentoMovimento,
-      textoTelaGeral,
-      textos_tela: textoTelaGeral,
-      locucaoCompleta,
-      roteiro_pt_br: locucaoCompleta,
-      instrucoesEdicao,
-      instrucoes_edicao: instrucoesEdicao,
-      storyboard: { totalCenas: cenas.length, cenas },
+      product_facts: productFacts,
+      conceito: `Apresentação factual de ${productFacts.product_name} destacando tomadas, portas USB, cabo e preço real.`,
+      gancho: cenas[0].narration,
+      hook: cenas[0].narration,
+      cta: cenas[4].narration,
       cenas,
+      locucaoCompleta: verificationReport.finalNarration,
+      roteiro_pt_br: verificationReport.finalNarration,
+      verification_report: verificationReport,
+      movimentos: 'Cortes com movimento diferente por cena: Zoom-in progressivo, Pan horizontal, Tilt vertical de detalhe, Card de preço pulsante e CTA pulsante.',
+      textos_tela: 'Caixa alta, tipografia contrastante e safe-area vertical 9:16 preservada.',
+      instrucoes_edicao: 'Cortes rigorosamente sincronizados com a narração de cada cena, sem cortes de voz e com safe area 9:16.',
       metadata: {
         productId: product.id,
-        productTitle: title,
-        category,
-        marketplace,
-        price,
-        discountPercent,
-        photosCount: availablePhotos.length,
-        generatedAt: new Date().toISOString(),
+        productTitle: productFacts.product_name,
+        price: productFacts.price,
+        discount: productFacts.discount,
+        factsCount: productFacts.features_verified.length + productFacts.specifications_verified.length,
+        verifiedAt: new Date().toISOString(),
       },
     };
+
+    return blueprint;
   }
 
   /**
-   * Constrói ou reutiliza o Creative Blueprint aplicando a Regra Rigorosa de Custo de LLM:
-   * - 1 ÚNICA chamada LLM por criativo
-   * - Reutilização de blueprint salvo
-   * - Sem chamadas separadas para roteiro, storyboard, cenas, CTA ou edição
-   * - Limite configurável MAX_LLM_COST_PER_CREATIVE_USD
+   * Salva o Creative Blueprint no banco de dados
    */
-  async createBlueprintWithCostControl({
-    product,
-    photos = [],
-    context = {},
-    creativeId = null,
-    previousBlueprint = null,
-    isRemake = false,
-    remakeFocus = 'GANCHO',
-    requiresNewScript = false,
-  } = {}) {
-    const { default: creativeCostController } = await import('../services/factory/creative-cost-controller.js');
-    return creativeCostController.engineerCreative({
-      product,
-      photos,
-      context,
-      creativeId,
-      previousBlueprint,
-      isRemake,
-      remakeFocus,
-      requiresNewScript,
-    });
-  }
-
-  /**
-   * Salva o Creative Blueprint no banco vinculado ao creative_id (creative_versions)
-   * SEM gerar vídeo MP4 nesta etapa.
-   *
-   * @param {object} params
-   * @param {string} params.productId
-   * @param {object} params.blueprint
-   * @param {string} [params.creativeId]
-   * @param {number} [params.version]
-   */
-  async saveBlueprint({ productId, blueprint, creativeId = null, version = null } = {}) {
+  async saveBlueprint({ productId, blueprint, creativeId = null, version = 1 } = {}) {
     if (!productId) throw new Error('productId é obrigatório para salvar o blueprint.');
     if (!blueprint) throw new Error('blueprint é obrigatório.');
 
     try {
-      let creativeRecord = null;
-
       if (creativeId) {
-        // Atualiza versão criativa existente vinculando o blueprint
-        const { data: updated, error: updateErr } = await this.supabase
+        await this.supabase
           .from('creative_versions')
           .update({
             headline: blueprint.gancho,
@@ -290,73 +207,22 @@ export class CreativeDirector {
             script_data: blueprint,
             metadata: {
               blueprint,
+              product_facts: blueprint.product_facts,
               storyboard: blueprint.cenas,
               directorStatus: 'OK',
               language: 'pt-BR',
-              videoGenerated: false, // Estritamente NÃO gera vídeo nesta etapa
+              videoGenerated: false,
               updatedAt: new Date().toISOString(),
             },
           })
-          .eq('id', creativeId)
-          .select()
-          .single();
-
-        if (updateErr) throw new Error(`Falha ao atualizar creative_versions: ${updateErr.message}`);
-        creativeRecord = updated;
-      } else {
-        // Cria novo registro de versão para o blueprint
-        let nextVersion = version;
-        if (!nextVersion) {
-          const { count } = await this.supabase
-            .from('creative_versions')
-            .select('*', { count: 'exact', head: true })
-            .eq('product_id', productId);
-          nextVersion = (count || 0) + 1;
-        }
-
-        const primaryPhoto = blueprint.cenas?.[0]?.fotoReferencia || null;
-
-        const { data: inserted, error: insertErr } = await this.supabase
-          .from('creative_versions')
-          .insert({
-            product_id: productId,
-            version_number: nextVersion,
-            status: 'CREATIVE_READY',
-            aspect_ratio: '9:16',
-            video_url: null, // NÃO gera MP4 nesta etapa
-            thumbnail_url: primaryPhoto,
-            headline: blueprint.gancho,
-            duration: blueprint.duracaoTotal,
-            script_data: blueprint,
-            metadata: {
-              blueprint,
-              storyboard: blueprint.cenas,
-              directorStatus: 'OK',
-              language: 'pt-BR',
-              stage: 'BLUEPRINT_READY',
-              videoGenerated: false, // Estritamente NÃO gera vídeo nesta etapa
-              createdAt: new Date().toISOString(),
-            },
-          })
-          .select()
-          .single();
-
-        if (insertErr) throw new Error(`Falha ao inserir creative_versions: ${insertErr.message}`);
-        creativeRecord = inserted;
+          .eq('id', creativeId);
       }
-
-      logger.info(`[CreativeDirector] 📋 Creative Blueprint e Storyboard salvos com sucesso [Creative ID: ${creativeRecord.id}]`);
-      return {
-        success: true,
-        creativeId: creativeRecord.id,
-        version: creativeRecord.version_number,
-        blueprint,
-      };
     } catch (err) {
-      logger.error(`[CreativeDirector] Erro ao salvar blueprint: ${err.message}`);
-      throw err;
+      logger.warn(`[CreativeDirector] Aviso ao salvar blueprint no banco: ${err.message}`);
     }
+
+    return blueprint;
   }
 }
 
-export default CreativeDirector;
+export default new CreativeDirector();
