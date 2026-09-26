@@ -14,8 +14,11 @@ import logger from '../../utils/logger.js';
 import { LocalHardwareProbe } from './local-hardware-probe.js';
 
 export const CREATIVE_PROVIDERS = {
-  LOCAL_COMFYUI: 'LOCAL_COMFYUI',
-  COMPOSITOR_ONLY: 'COMPOSITOR_ONLY',
+  LIGHTWEIGHT_FFMPEG: 'LIGHTWEIGHT_FFMPEG',
+  COMFYUI_I2V: 'COMFYUI_I2V',
+  // Aliases para retrocompatibilidade
+  LOCAL_COMFYUI: 'COMFYUI_I2V',
+  COMPOSITOR_ONLY: 'LIGHTWEIGHT_FFMPEG',
   CLOUD_VIDEO: 'CLOUD_VIDEO',
 };
 
@@ -29,11 +32,17 @@ export class CreativeProviderRouter {
   /**
    * Decide o melhor provedor para um job específico considerando hardware, custos e regras.
    *
+   * Providers disponíveis:
+   * - LIGHTWEIGHT_FFMPEG: ATIVO (usa fotos reais do produto, animações cinematográficas de câmera e FFmpeg).
+   * - COMFYUI_I2V: OFFLINE (modelo generativo indisponível).
+   *
+   * IMPORTANTE: Não fingir que LIGHTWEIGHT_FFMPEG é Image-to-Video por IA.
+   *
    * @param {object} params
    * @param {object} [params.hardwareProbe]
    * @param {'LOCAL_ONLY'|'COST_OPTIMIZED'|'QUALITY_FIRST'} [params.mode]
    * @param {string} [params.preferredProvider]
-   * @returns {Promise<{ provider: string, reason: string, hardware: object, cloudAllowed: boolean }>}
+   * @returns {Promise<{ provider: string, visual_provider: string, reason: string, hardware: object, comfyui_status: string, lightweight_status: string, is_ai_video: boolean }>}
    */
   static async routeJob({
     hardwareProbe = null,
@@ -41,83 +50,36 @@ export class CreativeProviderRouter {
     preferredProvider = null,
   } = {}) {
     const activeMode = mode || process.env.CREATIVE_PROVIDER_MODE || ROUTER_MODES.COST_OPTIMIZED;
-    const cloudVideoEnabled = process.env.CLOUD_VIDEO_ENABLED === 'true';
 
     // 1. Executa ou reutiliza sonda de hardware
     const hw = hardwareProbe || await LocalHardwareProbe.probe();
 
-    // 2. Se o operador forçou um provedor específico
-    if (preferredProvider === CREATIVE_PROVIDERS.LOCAL_COMFYUI) {
-      if (hw.comfyui?.online && hw.wanModelAvailable) {
-        return {
-          provider: CREATIVE_PROVIDERS.LOCAL_COMFYUI,
-          reason: 'ComfyUI online com modelo de vídeo local detectado.',
-          hardware: hw,
-          cloudAllowed: false,
-        };
-      }
-      if (!hw.comfyui?.online) {
-        return {
-          provider: CREATIVE_PROVIDERS.COMPOSITOR_ONLY,
-          reason: 'ComfyUI offline na porta 8188. Redirecionando para COMPOSITOR_ONLY (FFmpeg) para não travar produção.',
-          fallbackFrom: CREATIVE_PROVIDERS.LOCAL_COMFYUI,
-          hardware: hw,
-          cloudAllowed: false,
-        };
-      }
-    }
+    const comfyuiOnline = Boolean(hw.comfyui?.online && hw.wanModelAvailable);
 
-    // 3. Modo LOCAL_ONLY: nunca consulta nuvem
-    if (activeMode === ROUTER_MODES.LOCAL_ONLY) {
-      if (hw.comfyui?.online && hw.wanModelAvailable) {
-        return {
-          provider: CREATIVE_PROVIDERS.LOCAL_COMFYUI,
-          reason: 'Modo LOCAL_ONLY: ComfyUI disponível localmente.',
-          hardware: hw,
-          cloudAllowed: false,
-        };
-      }
+    // Se ComfyUI estivesse ativo (atualmente OFFLINE)
+    if (comfyuiOnline && preferredProvider === CREATIVE_PROVIDERS.COMFYUI_I2V) {
       return {
-        provider: CREATIVE_PROVIDERS.COMPOSITOR_ONLY,
-        reason: 'Modo LOCAL_ONLY: Usando composição FFmpeg de alta qualidade com imagens reais.',
+        provider: CREATIVE_PROVIDERS.COMFYUI_I2V,
+        visual_provider: CREATIVE_PROVIDERS.COMFYUI_I2V,
+        reason: 'ComfyUI I2V online com modelo local detectado.',
         hardware: hw,
+        comfyui_status: 'ONLINE',
+        lightweight_status: 'AVAILABLE',
+        is_ai_video: true,
         cloudAllowed: false,
       };
     }
 
-    // 4. Modo COST_OPTIMIZED (Padrão): Prioriza local custo zero
-    if (activeMode === ROUTER_MODES.COST_OPTIMIZED) {
-      if (hw.comfyui?.online && hw.wanModelAvailable) {
-        return {
-          provider: CREATIVE_PROVIDERS.LOCAL_COMFYUI,
-          reason: 'Modo COST_OPTIMIZED: ComfyUI local ativo com modelo de vídeo.',
-          hardware: hw,
-          cloudAllowed: false,
-        };
-      }
-      return {
-        provider: CREATIVE_PROVIDERS.COMPOSITOR_ONLY,
-        reason: 'Modo COST_OPTIMIZED: Composição FFmpeg nativa 9:16 (custo zero, rápido e sem dependência externa).',
-        hardware: hw,
-        cloudAllowed: false,
-      };
-    }
-
-    // 5. Modo QUALITY_FIRST: Pode avaliar nuvem APENAS se explicitamente autorizada
-    if (activeMode === ROUTER_MODES.QUALITY_FIRST && cloudVideoEnabled) {
-      return {
-        provider: CREATIVE_PROVIDERS.CLOUD_VIDEO,
-        reason: 'Modo QUALITY_FIRST com CLOUD_VIDEO_ENABLED ativo e autorizado.',
-        hardware: hw,
-        cloudAllowed: true,
-      };
-    }
-
-    // Fallback seguro padrão
+    // Provedor padrão ATIVO no momento: LIGHTWEIGHT_FFMPEG
+    // (ComfyUI I2V permanece OFFLINE)
     return {
-      provider: CREATIVE_PROVIDERS.COMPOSITOR_ONLY,
-      reason: 'Roteamento seguro: Composição FFmpeg nativa selecionada.',
+      provider: CREATIVE_PROVIDERS.LIGHTWEIGHT_FFMPEG,
+      visual_provider: CREATIVE_PROVIDERS.LIGHTWEIGHT_FFMPEG,
+      reason: 'LIGHTWEIGHT_FFMPEG ativo: fotos reais do produto animadas via FFmpeg com pan, zoom, parallax e motion graphics (ComfyUI I2V permanece offline; não é I2V neural).',
       hardware: hw,
+      comfyui_status: comfyuiOnline ? 'ONLINE' : 'OFFLINE',
+      lightweight_status: 'ACTIVE',
+      is_ai_video: false,
       cloudAllowed: false,
     };
   }

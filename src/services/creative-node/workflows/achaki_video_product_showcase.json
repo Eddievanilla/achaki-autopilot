@@ -1,0 +1,28 @@
+{
+  "name": "ACHAki Video Product Showcase",
+  "version": "1.0.0",
+  "description": "Workflow oficial ACHAki para showcase dinâmico com cortes e zoom pan de produto",
+  "aspect_ratio": "9:16",
+  "resolution": [1080, 1920],
+  "nodes": {
+    "1": {
+      "class_type": "LoadProductGallery",
+      "inputs": {
+        "max_images": 5
+      }
+    },
+    "2": {
+      "class_type": "DynamicZoomPanMotion",
+      "inputs": {
+        "motion_style": "cinematic_smooth"
+      }
+    },
+    "3": {
+      "class_type": "ACHAkiBurnedBadges",
+      "inputs": {
+        "show_price": true,
+        "show_discount": true
+      }
+    }
+  }
+}

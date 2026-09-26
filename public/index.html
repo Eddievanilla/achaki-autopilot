@@ -625,6 +625,43 @@
       background: rgba(16, 185, 129, 0.25);
     }
 
+    .prompt-chip {
+      background: rgba(168, 85, 247, 0.12);
+      border: 1px solid rgba(168, 85, 247, 0.35);
+      color: #d8b4fe;
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 5px 10px;
+      border-radius: 99px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      user-select: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .prompt-chip:hover {
+      background: rgba(168, 85, 247, 0.28);
+      border-color: #c084fc;
+      color: #ffffff;
+      transform: translateY(-1px);
+    }
+    .product-gallery-thumb {
+      width: 44px;
+      height: 44px;
+      border-radius: 8px;
+      object-fit: cover;
+      cursor: pointer;
+      border: 2px solid rgba(255, 255, 255, 0.15);
+      transition: all 0.2s ease;
+      background: #000;
+    }
+    .product-gallery-thumb:hover, .product-gallery-thumb.active {
+      border-color: #38bdf8;
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.6);
+      transform: scale(1.05);
+    }
+
     /* CARDS & PANELS */
     .card {
       background: var(--card-bg);
@@ -2143,6 +2180,52 @@
             </div>
           </div>
 
+          <!-- 🖥️ CREATIVE NODE -->
+          <div class="card" id="cardCreativeNode" style="margin-top: 14px; border-color: rgba(59,130,246,0.4); background: linear-gradient(180deg, rgba(14,20,32,0.98) 0%, rgba(10,15,26,0.99) 100%);">
+            <div class="card-header">
+              <span class="card-title" style="color: #60a5fa; display:flex; align-items:center; gap:8px;">
+                🖥️ CREATIVE NODE
+              </span>
+              <span class="status-tag" id="creativeNodeStateBadge" style="background:rgba(59,130,246,0.15); border:1px solid rgba(59,130,246,0.4); color:#60a5fa; font-weight:800;">
+                NÃO INSTALADO
+              </span>
+            </div>
+            
+            <div style="display:flex; flex-direction:column; gap:10px;">
+              <!-- Mensagem de Status -->
+              <div style="font-size:0.8rem; color:#cbd5e1; line-height:1.4;" id="creativeNodeStatusMsg">
+                Creative Node não instalado neste computador.
+              </div>
+
+              <!-- Detalhes de Hardware & Componentes -->
+              <div id="creativeNodeSpecsGrid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:6px; background:rgba(0,0,0,0.3); padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.06); font-size:0.72rem;">
+                <div><span style="color:var(--text-dim);">Windows:</span> <strong id="nodeSpecWin" style="color:#fff;">—</strong></div>
+                <div><span style="color:var(--text-dim);">CPU:</span> <strong id="nodeSpecCpu" style="color:#fff;">—</strong></div>
+                <div><span style="color:var(--text-dim);">GPU:</span> <strong id="nodeSpecGpu" style="color:#34d399;">—</strong></div>
+                <div><span style="color:var(--text-dim);">VRAM:</span> <strong id="nodeSpecVram" style="color:#60a5fa;">—</strong></div>
+                <div><span style="color:var(--text-dim);">RAM:</span> <strong id="nodeSpecRam" style="color:#fff;">—</strong></div>
+                <div><span style="color:var(--text-dim);">Disco Livre:</span> <strong id="nodeSpecDisk" style="color:#f59e0b;">—</strong></div>
+                <div><span style="color:var(--text-dim);">Worker:</span> <strong id="nodeSpecWorker" style="color:#34d399;">—</strong></div>
+                <div><span style="color:var(--text-dim);">ComfyUI:</span> <strong id="nodeSpecComfy" style="color:#cbd5e1;">—</strong></div>
+                <div><span style="color:var(--text-dim);">FFmpeg:</span> <strong id="nodeSpecFfmpeg" style="color:#34d399;">—</strong></div>
+                <div><span style="color:var(--text-dim);">Modelos Vídeo:</span> <strong id="nodeSpecModels" style="color:#d8b4fe;">—</strong></div>
+              </div>
+
+              <!-- Botões de Ação do Creative Node -->
+              <div id="creativeNodeActions" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:2px;">
+                <button type="button" id="btnInstallNode" class="topbar-btn topbar-btn-primary" onclick="installCreativeNode()" style="flex:1; justify-content:center; background:#2563eb; border-color:#3b82f6; color:#fff; font-weight:800; font-size:0.8rem; padding:9px 12px; cursor:pointer;" title="Instalar e configurar Creative Node neste computador">
+                  🚀 INSTALAR CREATIVE NODE
+                </button>
+                <button type="button" id="btnDiagnoseNode" class="topbar-btn" onclick="diagnoseCreativeNode()" style="flex:1; justify-content:center; background:rgba(59,130,246,0.15); border:1px solid rgba(59,130,246,0.35); color:#93c5fd; font-weight:800; font-size:0.8rem; padding:9px 12px; cursor:pointer;" title="Executar diagnóstico do hardware e componentes locais">
+                  🔍 DIAGNOSTICAR
+                </button>
+                <button type="button" id="btnRepairNode" class="topbar-btn" onclick="repairCreativeNode()" style="flex:1; justify-content:center; background:rgba(168,85,247,0.15); border:1px solid rgba(168,85,247,0.4); color:#d8b4fe; font-weight:800; font-size:0.8rem; padding:9px 12px; cursor:pointer;" title="Executar auto-reparo seguro dos componentes">
+                  🛠️ REPARAR
+                </button>
+              </div>
+            </div>
+          </div>
+
           <!-- GRID FÁBRICA LOCAL & FREQUÊNCIA DE PUBLICAÇÃO -->
           <div class="grid-2" style="margin-top: 14px;">
             <!-- FÁBRICA LOCAL DE CRIATIVOS (COMFYUI + FFMPEG) -->
@@ -2910,38 +2993,100 @@
 
   <!-- MODAL DE REVISÃO DO CRIATIVO 9:16 -->
   <div class="modal-overlay" id="creativeVideoPlayerModal" onclick="closeCreativeVideoPlayer(event)">
-    <div class="modal-window" style="background:#05070c; border:1px solid rgba(255,255,255,0.15); border-radius:24px; padding:0; overflow:hidden; max-width:390px; width:95vw; box-shadow:0 30px 80px rgba(0,0,0,0.9), 0 0 40px rgba(59,130,246,0.3);" onclick="event.stopPropagation()">
+    <div class="modal-window" style="background:#05070c; border:1px solid rgba(255,255,255,0.15); border-radius:24px; padding:0; overflow:hidden; max-width:440px; width:95vw; max-height:92vh; display:flex; flex-direction:column; box-shadow:0 30px 80px rgba(0,0,0,0.9), 0 0 40px rgba(59,130,246,0.3);" onclick="event.stopPropagation()">
       <!-- Topbar do Modal: 🎬 Revisão do Criativo -->
-      <div style="display:flex; justify-content:space-between; align-items:center; padding:14px 18px; background:rgba(10,15,26,0.95); border-bottom:1px solid rgba(255,255,255,0.08);">
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:14px 18px; background:rgba(10,15,26,0.95); border-bottom:1px solid rgba(255,255,255,0.08); flex-shrink:0;">
         <div style="font-size:1.02rem; font-weight:800; color:#fff; display:flex; align-items:center; gap:8px;">
           🎬 Revisão do Criativo
         </div>
         <button type="button" onclick="closeCreativeVideoPlayer()" style="background:transparent; border:none; color:var(--text-dim); font-size:1.3rem; cursor:pointer; padding:4px;" title="Fechar">✖</button>
       </div>
 
-      <!-- [ PLAYER VERTICAL 9:16 ] -->
-      <div style="position:relative; width:100%; aspect-ratio:9/16; max-height:56vh; background:#000; display:flex; align-items:center; justify-content:center; overflow:hidden;" id="playerViewport">
-        <video id="playerVideoEl" controls autoplay playsinline style="width:100%; height:100%; object-fit:contain; background:#000;"></video>
-        <div id="playerVideoRenderingBadge" style="display:none; position:absolute; bottom:16px; background:rgba(0,0,0,0.85); border:1px solid rgba(59,130,246,0.5); padding:8px 14px; border-radius:20px; font-size:0.75rem; color:#60a5fa; font-weight:700; backdrop-filter:blur(8px); align-items:center; gap:6px; z-index:10; box-shadow:0 4px 15px rgba(0,0,0,0.6);">
-          <span class="pulse-dot" style="background:#60a5fa;"></span>
-          <span id="playerVideoBadgeText">Renderizando vídeo 9:16 na fábrica local...</span>
+      <div style="overflow-y:auto; flex:1;">
+        <!-- [ PLAYER VERTICAL 9:16 ] -->
+        <div style="position:relative; width:100%; aspect-ratio:9/16; max-height:50vh; background:#000; display:flex; align-items:center; justify-content:center; overflow:hidden;" id="playerViewport">
+          <video id="playerVideoEl" controls autoplay playsinline style="width:100%; height:100%; object-fit:contain; background:#000;"></video>
+          <div id="playerVideoRenderingBadge" style="display:none; position:absolute; bottom:16px; background:rgba(0,0,0,0.88); border:1px solid rgba(59,130,246,0.6); padding:8px 16px; border-radius:20px; font-size:0.75rem; color:#60a5fa; font-weight:700; backdrop-filter:blur(8px); align-items:center; gap:8px; z-index:10; box-shadow:0 4px 20px rgba(0,0,0,0.8);">
+            <span class="pulse-dot" style="background:#60a5fa;"></span>
+            <span id="playerVideoBadgeText">Renderizando vídeo 9:16 na fábrica local...</span>
+          </div>
+        </div>
+
+        <!-- Nome do produto -->
+        <div style="padding:14px 18px 8px; text-align:center;">
+          <div style="font-size:0.92rem; font-weight:700; color:#fff; line-height:1.35; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;" id="playerProductTitle">
+            Nome do produto
+          </div>
+        </div>
+
+        <!-- BOX EXPANSÍVEL: REFAZER CRIATIVO COM PROMPT -->
+        <div id="remakeCreativeBox" style="display:none; margin:0 14px 14px; padding:14px; background:rgba(15,23,42,0.95); border:1px solid rgba(168,85,247,0.4); border-radius:14px; animation:fadeIn 0.2s ease;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <div style="font-size:0.86rem; font-weight:800; color:#d8b4fe; display:flex; align-items:center; gap:6px;">
+              ✨ Personalizar Roteiro & Locução
+            </div>
+            <button type="button" onclick="closeRemakeCreativeBox()" style="background:transparent; border:none; color:#94a3b8; font-size:1.1rem; cursor:pointer;" title="Fechar refação">✖</button>
+          </div>
+          <p style="font-size:0.75rem; color:#cbd5e1; margin:0 0 8px 0; line-height:1.35;">
+            Instrua a IA sobre o que enfatizar na narração e no vídeo:
+          </p>
+          <!-- Chips Rápidos -->
+          <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px;">
+            <button type="button" class="prompt-chip" onclick="addPromptSuggestion('Enfatizar durabilidade, resistência e acabamento premium.')">💎 Durabilidade</button>
+            <button type="button" class="prompt-chip" onclick="addPromptSuggestion('Destacar que é super barato e o melhor custo-benefício.')">⚡ Preço Baixo</button>
+            <button type="button" class="prompt-chip" onclick="addPromptSuggestion('Foco em praticidade: resolve o dia a dia e economiza tempo.')">⏱️ Praticidade</button>
+            <button type="button" class="prompt-chip" onclick="addPromptSuggestion('Excelente opção para presentear com frete rápido.')">🎁 Presente</button>
+            <button type="button" class="prompt-chip" onclick="addPromptSuggestion('Avisar que restam poucas unidades com esse desconto.')">🔥 Últimas Unidades</button>
+          </div>
+          <!-- Textarea do Prompt -->
+          <textarea id="remakeUserPrompt" rows="3" placeholder="Digite seu prompt para a IA (ex: Destaque que não enferruja e cabe em qualquer cantinho)..." style="width:100%; box-sizing:border-box; background:rgba(5,7,12,0.9); border:1px solid rgba(168,85,247,0.4); border-radius:8px; color:#fff; font-size:0.8rem; padding:8px 10px; font-family:inherit; resize:vertical; outline:none;"></textarea>
+          <div style="display:flex; gap:8px; margin-top:10px;">
+            <button type="button" onclick="closeRemakeCreativeBox()" style="flex:1; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); color:#cbd5e1; font-weight:700; font-size:0.78rem; padding:9px; border-radius:8px; cursor:pointer;">Cancelar</button>
+            <button type="button" id="btnSubmitRemakePrompt" onclick="submitRemakeWithPrompt()" style="flex:2; background:linear-gradient(135deg, #a855f7 0%, #7c3aed 100%); border:1px solid #c084fc; color:#fff; font-weight:800; font-size:0.82rem; padding:9px 12px; border-radius:8px; cursor:pointer; box-shadow:0 0 16px rgba(168,85,247,0.4);">
+              🎬 REGERAR COM MEU PROMPT
+            </button>
+          </div>
+        </div>
+
+        <!-- [ 📋 VER STORYBOARD ] [ ♻️ REFAZER ] [ 🚀 PUBLICAR AGORA ] -->
+        <div style="padding:10px 18px 18px; background:rgba(6,9,16,1); display:flex; gap:8px; align-items:center;" id="playerActionButtons">
+          <button type="button" class="topbar-btn" onclick="openCreativeStoryboardModal()" style="flex:1.1; justify-content:center; background:rgba(59,130,246,0.18); border:1px solid rgba(59,130,246,0.5); color:#60a5fa; font-weight:800; font-size:0.83rem; padding:12px 6px; border-radius:10px; cursor:pointer;" title="Visualizar o Creative Blueprint profissional e Storyboard">
+            📋 VER STORYBOARD
+          </button>
+          <button type="button" class="topbar-btn" onclick="handleModalRemakeCreative()" style="flex:0.9; justify-content:center; background:rgba(168,85,247,0.15); border:1px solid rgba(168,85,247,0.4); color:#d8b4fe; font-weight:800; font-size:0.83rem; padding:12px 6px; border-radius:10px; cursor:pointer;" title="Refazer vídeo com novas instruções de roteiro">
+            ♻️ REFAZER
+          </button>
+          <button type="button" class="topbar-btn topbar-btn-primary" onclick="handleModalPublishNow()" id="btnModalPublishNow" style="flex:1.3; justify-content:center; background:linear-gradient(135deg, #10b981 0%, #059669 100%); border:1px solid #34d399; color:#fff; font-weight:800; font-size:0.88rem; padding:12px 10px; border-radius:10px; box-shadow:0 0 20px rgba(16,185,129,0.45); cursor:pointer;" title="Publicar agora oferta com link oficial validado">
+            🚀 PUBLICAR AGORA
+          </button>
         </div>
       </div>
+    </div>
+  </div>
 
-      <!-- Nome do produto -->
-      <div style="padding:14px 18px 6px; text-align:center;">
-        <div style="font-size:0.92rem; font-weight:700; color:#fff; line-height:1.35; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;" id="playerProductTitle">
-          Nome do produto
+  <!-- ══════════════════════════════════════════════════════════
+       MODAL: CREATIVE BLUEPRINT & STORYBOARD (DIRETOR CRIATIVO)
+       ══════════════════════════════════════════════════════════ -->
+  <div class="modal-overlay" id="creativeStoryboardModal" onclick="closeCreativeStoryboardModal(event)">
+    <div class="modal-window" style="background:#090d16; border:1px solid rgba(59,130,246,0.4); border-radius:24px; padding:0; overflow:hidden; max-width:680px; width:95vw; max-height:90vh; display:flex; flex-direction:column; box-shadow:0 25px 70px rgba(0,0,0,0.9), 0 0 40px rgba(59,130,246,0.25);" onclick="event.stopPropagation()">
+      <!-- Header -->
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:16px 20px; background:rgba(15,23,42,0.98); border-bottom:1px solid rgba(255,255,255,0.08); flex-shrink:0;">
+        <div style="font-size:1.05rem; font-weight:800; color:#fff; display:flex; align-items:center; gap:8px;">
+          <span>📋</span> Creative Blueprint & Storyboard — Diretor Criativo
         </div>
+        <button type="button" onclick="closeCreativeStoryboardModal()" style="background:transparent; border:none; color:var(--text-dim); font-size:1.3rem; cursor:pointer; padding:4px;" title="Fechar">✖</button>
       </div>
 
-      <!-- [ ♻️ REFAZER ] [ 🚀 PUBLICAR AGORA ] -->
-      <div style="padding:14px 18px 20px; background:rgba(6,9,16,1); display:flex; gap:10px; align-items:center;" id="playerActionButtons">
-        <button type="button" class="topbar-btn" onclick="handleModalRemakeCreative()" style="flex:1; justify-content:center; background:rgba(168,85,247,0.15); border:1px solid rgba(168,85,247,0.4); color:#d8b4fe; font-weight:800; font-size:0.85rem; padding:12px 8px; border-radius:10px; cursor:pointer;" title="Refazer vídeo mantendo produto e link oficial">
-          ♻️ REFAZER
-        </button>
-        <button type="button" class="topbar-btn topbar-btn-primary" onclick="handleModalPublishNow()" id="btnModalPublishNow" style="flex:1.4; justify-content:center; background:linear-gradient(135deg, #10b981 0%, #059669 100%); border:1px solid #34d399; color:#fff; font-weight:800; font-size:0.92rem; padding:12px 14px; border-radius:10px; box-shadow:0 0 20px rgba(16,185,129,0.45); cursor:pointer;" title="Publicar agora oferta com link oficial validado">
-          🚀 PUBLICAR AGORA
+      <!-- Body -->
+      <div style="overflow-y:auto; flex:1; padding:20px;" id="storyboardModalContent">
+        <!-- Renderizado dinamicamente via JS -->
+      </div>
+
+      <!-- Footer -->
+      <div style="padding:14px 20px; background:rgba(10,15,26,0.98); border-top:1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; align-items:center; flex-shrink:0;">
+        <span style="font-size:0.75rem; color:#94a3b8; font-weight:600;">Diretrizes PT-BR Naturais • Dados Factuais Confirmados</span>
+        <button type="button" onclick="closeCreativeStoryboardModal()" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); color:#fff; font-weight:700; font-size:0.85rem; padding:8px 18px; border-radius:8px; cursor:pointer;">
+          Fechar
         </button>
       </div>
     </div>
@@ -3059,6 +3204,11 @@
     function renderDashboard(data) {
       if (!data) return;
       window.lastDashboardData = data;
+
+      // 0. Creative Node (Supervisor e Hardware)
+      if (typeof updateCreativeNodeUI === 'function' && data.creativeNode) {
+        updateCreativeNodeUI(data.creativeNode);
+      }
 
       // 1. Status do Robô (Sidebar & Dock)
       const statusBadge = document.getElementById('robotStatusBadge');
@@ -4241,17 +4391,25 @@
         }, 200);
       }
 
+      if (window.achakiInterventionsMap) window.achakiInterventionsMap.clear();
+      window.achakiInterventionsList = [];
+
       showToast('Notificações Limpas', 'Todas as notificações anteriores foram arquivadas com sucesso.');
 
       try {
-        await fetch('/api/controls', {
+        const response = await fetch('/api/controls', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action: 'CLEAR_ALL_INTERVENTIONS' })
         });
-        setTimeout(loadDashboard, 800);
+        const resData = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(resData.error || ('HTTP ' + response.status));
+        }
+        setTimeout(loadDashboard, 600);
       } catch (e) {
         console.warn('Erro ao limpar intervenções:', e.message);
+        showToast('Aviso', 'Erro ao sincronizar limpeza no servidor: ' + e.message);
       }
     }
 
@@ -5419,7 +5577,7 @@
     let currentReviewProductId = null;
     let currentReviewApprovalId = null;
 
-    function openCreativeReviewModal(itemId) {
+    function openCreativeReviewModal(itemId, overrideVideoUrl) {
       currentReviewInterventionId = itemId;
 
       // 1. Localiza item pelo mapa de intervenções, lista ou activeApproval
@@ -5461,7 +5619,8 @@
       }
 
       // 3. Extrai URL REAL do vídeo 9:16 (sem mocks)
-      let videoUrl = meta.videoUrl || meta.video_url || meta.storage_url || meta.media_url || item?.videoUrl;
+      let videoUrl = overrideVideoUrl || window.pendingDirectVideoUrl || meta.videoUrl || meta.video_url || meta.storage_url || meta.media_url || item?.videoUrl;
+      window.pendingDirectVideoUrl = null;
 
       // Fallback em creatives carregados
       if (!videoUrl && window.lastDashboardData?.creatives) {
@@ -5539,8 +5698,19 @@
             })
           }).then(r => r.json()).then(resData => {
             console.log('🎬 [openCreativeReviewModal] Job enfileirado na fábrica local:', resData);
+            if (resData.videoUrl && (resData.videoUrl.includes('.mp4') || resData.videoUrl.includes('.webm'))) {
+              if (badge) badge.style.display = 'none';
+              vidEl.style.display = 'block';
+              vidEl.src = resData.videoUrl;
+              vidEl.load();
+              vidEl.play().catch(() => {});
+            } else {
+              pollForReadyVideo(currentReviewProductId);
+            }
+          }).catch(e => {
+            console.warn('Erro ao disparar job:', e);
             pollForReadyVideo(currentReviewProductId);
-          }).catch(e => console.warn('Erro ao disparar job:', e));
+          });
         }
       }
 
@@ -5551,7 +5721,6 @@
 
     let videoPollTimer = null;
     function pollForReadyVideo(productId) {
-      if (!productId) return;
       if (videoPollTimer) clearInterval(videoPollTimer);
 
       const check = async () => {
@@ -5559,8 +5728,16 @@
           const res = await fetch(`/api/dashboard?t=${Date.now()}`);
           if (!res.ok) return false;
           const data = await res.json();
-          const found = (data.creatives || []).find(c => c.productId === productId && c.videoUrl && (c.videoUrl.includes('.mp4') || c.videoUrl.includes('.webm')));
+          window.lastDashboardData = data;
+          const found = (data.creatives || []).find(c => 
+            (productId && c.productId === productId && c.videoUrl && (c.videoUrl.includes('.mp4') || c.videoUrl.includes('.webm'))) ||
+            (!productId && c.videoUrl && (c.videoUrl.includes('.mp4') || c.videoUrl.includes('.webm')))
+          );
           if (found && found.videoUrl) {
+            // Se estamos aguardando um novo vídeo após remake, checa se a URL mudou
+            if (previousVideoUrl && found.videoUrl === previousVideoUrl) {
+              return false;
+            }
             if (videoPollTimer) {
               clearInterval(videoPollTimer);
               videoPollTimer = null;
@@ -5585,20 +5762,63 @@
       let attempts = 0;
       videoPollTimer = setInterval(async () => {
         attempts++;
-        if (attempts > 30) {
+        if (attempts > 45) {
           clearInterval(videoPollTimer);
           return;
         }
         await check();
-      }, 2500);
+      }, 2000);
     }
 
-    async function handleModalPublishNow() {
-      const btn = document.getElementById('btnModalPublishNow');
-      const origText = btn ? btn.innerHTML : '🚀 PUBLICAR AGORA';
+    function openRemakeCreativeBox() {
+      const box = document.getElementById('remakeCreativeBox');
+      if (box) {
+        box.style.display = 'block';
+        box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        const input = document.getElementById('remakeUserPrompt');
+        if (input) input.focus();
+      }
+    }
+
+    function closeRemakeCreativeBox() {
+      const box = document.getElementById('remakeCreativeBox');
+      if (box) box.style.display = 'none';
+    }
+
+    function addPromptSuggestion(text) {
+      const input = document.getElementById('remakeUserPrompt');
+      if (!input) return;
+      if (input.value && !input.value.endsWith(' ')) {
+        input.value += ' ' + text;
+      } else {
+        input.value += text;
+      }
+      input.focus();
+    }
+
+    function handleModalRemakeCreative() {
+      openRemakeCreativeBox();
+    }
+
+    function promptRemakeCreative(targetId) {
+      if (typeof openCreativeReviewModal === 'function') {
+        openCreativeReviewModal(targetId);
+        setTimeout(() => {
+          openRemakeCreativeBox();
+        }, 250);
+      }
+    }
+
+    async function submitRemakeWithPrompt() {
+      const promptInput = document.getElementById('remakeUserPrompt');
+      const userPrompt = (promptInput?.value || '').trim();
+      const btn = document.getElementById('btnSubmitRemakePrompt');
+      const vidEl = document.getElementById('playerVideoEl');
+      const currentVideoUrl = vidEl ? vidEl.src : null;
+
       if (btn) {
         btn.disabled = true;
-        btn.innerHTML = '⏳ Publicando...';
+        btn.innerHTML = '⏳ Acionando Fábrica...';
       }
 
       try {
@@ -5606,49 +5826,655 @@
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            action: 'APPROVE_AND_PUBLISH',
+            action: 'REMAKE_CREATIVE',
+            productId: currentReviewProductId,
             interventionId: currentReviewInterventionId,
             approvalId: currentReviewApprovalId,
-            productId: currentReviewProductId
+            userPrompt: userPrompt
           })
         });
 
         const data = await res.json();
         if (!res.ok || !data.success) {
-          throw new Error(data.error || data.message || 'Falha ao publicar criativo');
+          throw new Error(data.error || 'Erro ao refazer criativo');
         }
 
-        if (window.achakiAudio?.notifyResolved) window.achakiAudio.notifyResolved();
-        showToast('Sucesso!', 'Oferta publicada e vídeo salvo na Galeria de Criativos!');
-        closeCreativeVideoPlayer();
+        closeRemakeCreativeBox();
+        const badge = document.getElementById('playerVideoRenderingBadge');
+        const badgeText = document.getElementById('playerVideoBadgeText');
+        if (badge) badge.style.display = 'flex';
+        if (badgeText) badgeText.textContent = `🎬 Renderizando v${data.version || 2} com novo roteiro e voz neural...`;
 
-        await loadDashboard();
-        if (typeof loadCreativesGallery === 'function') {
-          loadCreativesGallery();
+        if (vidEl) {
+          vidEl.pause();
         }
+
+        if (window.showToast) {
+          window.showToast('Roteiro Atualizado', `Fábrica local produzindo vídeo v${data.version || 2} com sua instrução!`);
+        }
+
+        pollForReadyVideo(currentReviewProductId, currentVideoUrl);
       } catch (err) {
-        alert('Erro ao publicar criativo: ' + err.message);
+        alert('Erro ao solicitar refação: ' + err.message);
       } finally {
         if (btn) {
           btn.disabled = false;
-          btn.innerHTML = origText;
+          btn.innerHTML = '🎬 REGERAR COM MEU PROMPT';
         }
       }
     }
 
-    function handleModalRemakeCreative() {
-      const targetId = currentReviewApprovalId || currentReviewInterventionId;
-      if (targetId) {
-        closeCreativeVideoPlayer();
-        promptRemakeCreative(targetId);
-      } else {
-        alert('Identificador da oferta não encontrado para refação.');
-      }
-    }
+    window.openRemakeCreativeBox = openRemakeCreativeBox;
+    window.closeRemakeCreativeBox = closeRemakeCreativeBox;
+    window.addPromptSuggestion = addPromptSuggestion;
+    window.submitRemakeWithPrompt = submitRemakeWithPrompt;
+    window.promptRemakeCreative = promptRemakeCreative;
+    window.pollForReadyVideo = pollForReadyVideo;
 
     window.openCreativeReviewModal = openCreativeReviewModal;
     window.handleModalPublishNow = handleModalPublishNow;
     window.handleModalRemakeCreative = handleModalRemakeCreative;
+
+    // ══════════════════════════════════════════════════════════
+    // DIRETOR CRIATIVO: CREATIVE BLUEPRINT & STORYBOARD
+    // ══════════════════════════════════════════════════════════
+    async function openCreativeStoryboardModal() {
+      const modal = document.getElementById('creativeStoryboardModal');
+      const content = document.getElementById('storyboardModalContent');
+      if (modal) modal.classList.add('open');
+
+      if (!content) return;
+      content.innerHTML = `
+        <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px; text-align:center;">
+          <div class="pulse-dot" style="width:14px; height:14px; background:#60a5fa; margin-bottom:12px;"></div>
+          <div style="color:#93c5fd; font-weight:700; font-size:0.95rem;">Consultando Diretor Criativo ACHAki...</div>
+          <div style="color:#64748b; font-size:0.8rem; margin-top:4px;">Carregando Creative Blueprint e Storyboard estruturado</div>
+        </div>
+      `;
+
+      try {
+        const prodId = currentReviewProductId 
+          || (window.lastDashboardData?.activeApproval?.productId)
+          || (window.lastDashboardData?.interventions?.[0]?.productId)
+          || (window.lastDashboardData?.interventions?.[0]?.metadata?.productId);
+
+        const res = await fetch('/api/controls', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'GET_CREATIVE_STORYBOARD',
+            productId: prodId,
+            interventionId: currentReviewInterventionId
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || 'Erro ao carregar Storyboard');
+        }
+
+        renderStoryboardUI(data.blueprint || {}, data.storyboard || []);
+      } catch (err) {
+        content.innerHTML = `
+          <div style="padding:20px; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:12px; color:#fca5a5; text-align:center;">
+            <div style="font-weight:700; margin-bottom:6px;">Falha ao carregar Storyboard</div>
+            <div style="font-size:0.8rem; margin-bottom:12px;">${err.message}</div>
+            <button type="button" onclick="generateNewBlueprintNow()" style="background:#3b82f6; border:none; color:#fff; font-weight:700; font-size:0.8rem; padding:8px 16px; border-radius:8px; cursor:pointer;">
+              Gerar Creative Blueprint Agora
+            </button>
+          </div>
+        `;
+      }
+    }
+
+    async function generateNewBlueprintNow() {
+      const content = document.getElementById('storyboardModalContent');
+      if (content) {
+        content.innerHTML = `
+          <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px; text-align:center;">
+            <div class="pulse-dot" style="width:14px; height:14px; background:#a855f7; margin-bottom:12px;"></div>
+            <div style="color:#d8b4fe; font-weight:700; font-size:0.95rem;">Diretor Criativo redigindo novo Blueprint...</div>
+            <div style="color:#64748b; font-size:0.8rem; margin-top:4px;">Definindo conceito, ganchos, cenas e locução em PT-BR</div>
+          </div>
+        `;
+      }
+
+      try {
+        const prodId = currentReviewProductId 
+          || (window.lastDashboardData?.activeApproval?.productId)
+          || (window.lastDashboardData?.interventions?.[0]?.productId);
+
+        const res = await fetch('/api/controls', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'GENERATE_CREATIVE_BLUEPRINT',
+            productId: prodId,
+            interventionId: currentReviewInterventionId
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data.error || 'Erro ao gerar blueprint');
+        renderStoryboardUI(data.blueprint || {}, data.storyboard || []);
+      } catch (err) {
+        alert('Erro ao gerar blueprint: ' + err.message);
+      }
+    }
+
+    function renderStoryboardUI(blueprint, cenas) {
+      const content = document.getElementById('storyboardModalContent');
+      if (!content) return;
+
+      const scenes = (Array.isArray(cenas) && cenas.length > 0) ? cenas : (blueprint.cenas || []);
+      const meta = blueprint.metadata || {};
+
+      let scenesHtml = '';
+      scenes.forEach((c, idx) => {
+        const previewSrc = c.previewDataUrl || c.fotoReferencia || '';
+        const strategyTag = c.strategyChosen 
+          ? `<span style="background:rgba(168,85,247,0.2); border:1px solid #a855f7; color:#d8b4fe; font-weight:800; font-size:0.7rem; padding:2px 7px; border-radius:4px;">${c.strategyChosen}</span>`
+          : `<span style="background:rgba(255,255,255,0.06); color:#94a3b8; font-size:0.7rem; padding:2px 6px; border-radius:4px;">PLANEJADA</span>`;
+
+        const isProduced = Boolean(c.previewDataUrl || c.status === 'PRODUCED');
+
+        scenesHtml += `
+          <div style="background:rgba(15,23,42,0.7); border:1px solid ${isProduced ? 'rgba(59,130,246,0.35)' : 'rgba(255,255,255,0.08)'}; border-radius:14px; padding:14px 16px; margin-bottom:12px; display:flex; gap:16px;">
+            <!-- Thumbnail / Preview 9:16 da Cena -->
+            ${previewSrc ? `
+              <div style="flex-shrink:0; display:flex; flex-direction:column; align-items:center; gap:6px;">
+                <div style="position:relative; width:80px; height:142px; border-radius:10px; overflow:hidden; border:1px solid rgba(255,255,255,0.18); background:#000; box-shadow:0 4px 15px rgba(0,0,0,0.6);">
+                  <img src="${previewSrc}" alt="${c.cena || 'Preview Cena'}" style="width:100%; height:100%; object-fit:cover;" />
+                  <div style="position:absolute; bottom:0; left:0; right:0; background:rgba(0,0,0,0.75); font-size:0.62rem; color:#fff; text-align:center; padding:2px 0; font-weight:700;">
+                    ${isProduced ? '9:16 PRONTO' : '9:16 GUIA'}
+                  </div>
+                </div>
+                ${isProduced ? '<span style="font-size:0.65rem; color:#34d399; font-weight:800;">✓ PRODUZIDA</span>' : ''}
+              </div>
+            ` : ''}
+
+            <!-- Dados da Cena -->
+            <div style="flex:1; min-width:0;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:8px;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span style="background:linear-gradient(135deg,#3b82f6,#06b6d4); color:#fff; font-weight:800; font-size:0.75rem; padding:3px 8px; border-radius:6px;">${c.cena || ('CENA ' + (idx + 1))}</span>
+                  ${strategyTag}
+                  <span style="font-weight:700; color:#f8fafc; font-size:0.85rem;">${c.objetivo || 'Objetivo da cena'}</span>
+                </div>
+                <span style="background:rgba(255,255,255,0.08); color:#94a3b8; font-family:'JetBrains Mono',monospace; font-size:0.75rem; padding:2px 7px; border-radius:4px; font-weight:700;">⏱️ ${c.duracao || '3s'}</span>
+              </div>
+
+              <div style="display:grid; grid-template-columns:1fr; gap:8px; font-size:0.82rem;">
+                <div style="display:flex; gap:8px;">
+                  <strong style="color:#60a5fa; min-width:85px; flex-shrink:0;">Visual:</strong>
+                  <span style="color:#cbd5e1;">${c.visual || '—'}</span>
+                </div>
+                <div style="display:flex; gap:8px;">
+                  <strong style="color:#a855f7; min-width:85px; flex-shrink:0;">Movimento:</strong>
+                  <span style="color:#cbd5e1;">${c.movimento || '—'}</span>
+                </div>
+                <div style="display:flex; gap:8px;">
+                  <strong style="color:#f59e0b; min-width:85px; flex-shrink:0;">Texto na tela:</strong>
+                  <span style="background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.3); color:#fbbf24; padding:2px 8px; border-radius:4px; font-weight:700; font-family:'JetBrains Mono',monospace;">${c.textoTela || '—'}</span>
+                </div>
+                <div style="display:flex; flex-direction:column; gap:6px; background:rgba(0,0,0,0.35); padding:8px 10px; border-radius:8px; border-left:3px solid #10b981;">
+                  <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div style="display:flex; gap:8px;">
+                      <strong style="color:#34d399; min-width:85px; flex-shrink:0;">Locução:</strong>
+                      <span style="color:#ecfdf5; font-style:italic;">"${c.locucao || '—'}"</span>
+                    </div>
+                    ${c.voiceDurationSeconds ? `<span style="font-size:0.72rem; color:#6ee7b7; background:rgba(16,185,129,0.2); padding:2px 7px; border-radius:4px; font-weight:700;">🎙️ ${c.voiceDurationSeconds}s</span>` : ''}
+                  </div>
+                  ${c.voiceAudioDataUrl ? `
+                    <audio controls src="${c.voiceAudioDataUrl}" style="width:100%; height:30px; margin-top:4px; border-radius:4px; outline:none;"></audio>
+                  ` : ''}
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+
+      const hasProducedScenes = scenes.some(c => c.previewDataUrl || c.status === 'PRODUCED');
+      const hasProducedVoices = scenes.some(c => c.voiceAudioDataUrl || c.voiceStatus === 'PRODUCED');
+
+      content.innerHTML = `
+        <!-- Status & Resumo Estratégico -->
+        <div style="background:linear-gradient(135deg, rgba(30,58,138,0.3), rgba(15,23,42,0.9)); border:1px solid rgba(59,130,246,0.3); border-radius:16px; padding:16px; margin-bottom:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
+            <div>
+              <div style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em; color:#60a5fa; font-weight:800;">
+                Creative Blueprint • ${meta.marketplace || 'Mercado Livre'}
+              </div>
+              <div style="font-size:1.02rem; font-weight:800; color:#fff; margin-top:2px;">
+                ${meta.productTitle || blueprint.conceito || 'Produto Verificado'}
+              </div>
+            </div>
+            <div style="display:flex; gap:6px;">
+              <span style="background:rgba(16,185,129,0.2); border:1px solid #10b981; color:#34d399; font-weight:800; font-size:0.72rem; padding:3px 8px; border-radius:6px;">PT-BR NATURAL</span>
+              <span style="background:rgba(245,158,11,0.2); border:1px solid #f59e0b; color:#fbbf24; font-weight:800; font-size:0.72rem; padding:3px 8px; border-radius:6px;">DURAÇÃO: ${blueprint.duracaoTotalFormatada || '17s'}</span>
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:0.8rem; margin-top:10px;">
+            <div style="background:rgba(0,0,0,0.35); padding:10px; border-radius:8px;">
+              <div style="color:#94a3b8; font-weight:700; margin-bottom:3px;">💡 CONCEITO</div>
+              <div style="color:#e2e8f0; line-height:1.35;">${blueprint.conceito || '—'}</div>
+            </div>
+            <div style="background:rgba(0,0,0,0.35); padding:10px; border-radius:8px;">
+              <div style="color:#94a3b8; font-weight:700; margin-bottom:3px;">🪝 GANCHO (0 A 3S)</div>
+              <div style="color:#e2e8f0; line-height:1.35;">${blueprint.gancho || '—'}</div>
+            </div>
+            <div style="background:rgba(0,0,0,0.35); padding:10px; border-radius:8px;">
+              <div style="color:#94a3b8; font-weight:700; margin-bottom:3px;">⚡ PROBLEMA / DESEJO</div>
+              <div style="color:#e2e8f0; line-height:1.35;">${blueprint.problemaDesejo || '—'}</div>
+            </div>
+            <div style="background:rgba(0,0,0,0.35); padding:10px; border-radius:8px;">
+              <div style="color:#94a3b8; font-weight:700; margin-bottom:3px;">📢 CTA</div>
+              <div style="color:#e2e8f0; line-height:1.35;">${blueprint.cta || '—'}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Cenas do Storyboard + Toolbar de Voz e Cenas -->
+        <div style="margin-bottom:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
+            <div style="font-size:0.88rem; font-weight:800; color:#fff; display:flex; align-items:center; gap:6px;">
+              <span>🎬</span> Sequência de Cenas (${scenes.length} Cenas Estruturadas)
+            </div>
+            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+              <!-- Seletor de Voz & Estilo PT-BR -->
+              <select id="voiceGenderSelect" style="background:#0f172a; border:1px solid rgba(255,255,255,0.2); color:#fff; font-size:0.75rem; padding:4px 6px; border-radius:6px; cursor:pointer;">
+                <option value="FEMALE">👩 Voz Feminina</option>
+                <option value="MALE">👨 Voz Masculina</option>
+              </select>
+              <select id="voiceStyleSelect" style="background:#0f172a; border:1px solid rgba(255,255,255,0.2); color:#fff; font-size:0.75rem; padding:4px 6px; border-radius:6px; cursor:pointer;">
+                <option value="NATURAL">Natural</option>
+                <option value="ENERGETICO">Energético</option>
+                <option value="ELEGANTE">Elegante</option>
+                <option value="CONVERSACIONAL">Conversacional</option>
+                <option value="URGENTE">Urgente</option>
+              </select>
+              <button type="button" id="btnDirectVoiceModal" onclick="directCreativeVoiceNow()" style="background:linear-gradient(135deg, #10b981 0%, #059669 100%); border:1px solid #34d399; color:#fff; font-weight:800; font-size:0.75rem; padding:5px 12px; border-radius:6px; cursor:pointer;" title="Direção de voz cena a cena via VoiceDirector (PT-BR, R$0)">
+                ${hasProducedVoices ? '🔄 REFAZER VOZ' : '🎙️ PRODUZIR VOZ PT-BR'}
+              </button>
+              <button type="button" id="btnProduceScenesModal" onclick="produceCreativeScenesNow()" style="background:linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); border:1px solid #60a5fa; color:#fff; font-weight:800; font-size:0.75rem; padding:5px 12px; border-radius:6px; cursor:pointer;" title="Produzir cada cena visual separadamente via SceneProducer">
+                ${hasProducedScenes ? '🔄 CENAS VISUAIS' : '🎬 CENAS VISUAIS'}
+              </button>
+              <button type="button" id="btnAssembleVideoModal" onclick="assembleFinalVideoNow()" style="background:linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border:1px solid #fbbf24; color:#fff; font-weight:800; font-size:0.75rem; padding:5px 12px; border-radius:6px; cursor:pointer;" title="Montar vídeo publicitário 9:16 final com cortes, ritmo, locução e trilha via ProfessionalVideoEditor">
+                🚀 MONTAR VÍDEO FINAL
+              </button>
+            </div>
+          </div>
+          ${scenesHtml}
+        </div>
+
+        <!-- Locução Completa -->
+        <div style="background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.3); border-radius:14px; padding:14px; margin-bottom:12px;">
+          <div style="font-size:0.8rem; font-weight:800; color:#34d399; margin-bottom:6px; display:flex; justify-content:space-between;">
+            <span>🎙️ LOCUÇÃO COMPLETA (PT-BR)</span>
+            <button type="button" onclick="navigator.clipboard.writeText('${(blueprint.locucaoCompleta || '').replace(/'/g, "\\'")}')" style="background:transparent; border:none; color:#34d399; font-size:0.75rem; cursor:pointer; font-weight:700;">Copiar Texto</button>
+          </div>
+          <div style="font-size:0.85rem; color:#f0fdf4; font-style:italic; line-height:1.45;">
+            "${blueprint.locucaoCompleta || '—'}"
+          </div>
+        </div>
+      `;
+    }
+
+    function closeCreativeStoryboardModal(e) {
+      if (e && e.target !== e.currentTarget && !e.target.closest('button[title="Fechar"]')) return;
+      const modal = document.getElementById('creativeStoryboardModal');
+      if (modal) modal.classList.remove('open');
+    }
+
+    async function produceCreativeScenesNow() {
+      const btn = document.getElementById('btnProduceScenesModal');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '⏳ Produzindo Cenas...';
+      }
+
+      if (window.showToast) {
+        window.showToast('Produção Visual Iniciada', 'SceneProducer renderizando cenas 9:16 individualmente...');
+      }
+
+      try {
+        const prodId = currentReviewProductId 
+          || (window.lastDashboardData?.activeApproval?.productId)
+          || (window.lastDashboardData?.interventions?.[0]?.productId);
+
+        const res = await fetch('/api/controls', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'PRODUCE_CREATIVE_SCENES',
+            productId: prodId,
+            interventionId: currentReviewInterventionId
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data.error || 'Erro ao produzir cenas');
+
+        if (window.showToast) {
+          window.showToast('Cenas Concluídas', `${data.cenasProduzidas} cenas produzidas com fidelidade fotográfica!`);
+        }
+
+        // Recarrega o storyboard atualizado com os novos previews
+        openCreativeStoryboardModal();
+      } catch (err) {
+        alert('Erro na produção de cenas: ' + err.message);
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '🔄 REPRODUZIR CENAS';
+        }
+      }
+    }
+
+    async function directCreativeVoiceNow() {
+      const btn = document.getElementById('btnDirectVoiceModal');
+      const gender = document.getElementById('voiceGenderSelect')?.value || 'FEMALE';
+      const style = document.getElementById('voiceStyleSelect')?.value || 'NATURAL';
+
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '⏳ Sintetizando Voz...';
+      }
+
+      if (window.showToast) {
+        window.showToast('Direção de Voz Iniciada', `Preparando locução cena a cena em PT-BR (${style})...`);
+      }
+
+      try {
+        const prodId = currentReviewProductId 
+          || (window.lastDashboardData?.activeApproval?.productId)
+          || (window.lastDashboardData?.interventions?.[0]?.productId);
+
+        const res = await fetch('/api/controls', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'DIRECT_CREATIVE_VOICE',
+            productId: prodId,
+            interventionId: currentReviewInterventionId,
+            gender,
+            style,
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data.error || 'Erro na direção de voz');
+
+        if (window.showToast) {
+          window.showToast('Voz Concluída', `${data.scenesWithVoice} cenas com locução PT-BR (${data.voice}) prontas!`);
+        }
+
+        // Recarrega o storyboard atualizado com os novos players de voz
+        openCreativeStoryboardModal();
+      } catch (err) {
+        alert('Erro na locução: ' + err.message);
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '🎙️ PRODUZIR VOZ PT-BR';
+        }
+      }
+    }
+
+    async function assembleFinalVideoNow() {
+      const btn = document.getElementById('btnAssembleVideoModal');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '⏳ Montando Vídeo...';
+      }
+
+      if (window.showToast) {
+        window.showToast('Montagem Iniciada', 'ProfessionalVideoEditor sincronizando cenas, locução e trilha...');
+      }
+
+      try {
+        const prodId = currentReviewProductId 
+          || (window.lastDashboardData?.activeApproval?.productId)
+          || (window.lastDashboardData?.interventions?.[0]?.productId);
+
+        const res = await fetch('/api/controls', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'ASSEMBLE_FINAL_VIDEO',
+            productId: prodId,
+            interventionId: currentReviewInterventionId
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data.error || 'Erro na montagem do vídeo');
+
+        // Executa masterização com legendas dinâmicas e safe area
+        const subRes = await fetch('/api/controls', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'APPLY_SUBTITLES_AND_GRAPHICS',
+            productId: prodId,
+            interventionId: currentReviewInterventionId
+          })
+        });
+
+        const subData = await subRes.json();
+        const finalUrl = subData.storageUrl || data.storageUrl;
+
+        if (window.showToast) {
+          window.showToast('Vídeo Publicitário Concluído', `Masterizado com legendas dinâmicas em 9:16 (${subData.duracao || data.duracao}) e salvo no Storage!`);
+        }
+
+        // Abre o player modal com o vídeo master final diretamente
+        if (finalUrl) {
+          closeCreativeStoryboardModal();
+          openCreativeReviewModal(currentReviewInterventionId, finalUrl);
+        }
+      } catch (err) {
+        alert('Erro ao montar vídeo: ' + err.message);
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '🚀 MONTAR VÍDEO FINAL';
+        }
+      }
+    }
+
+    async function applySubtitlesAndGraphicsNow() {
+      const btn = document.getElementById('btnAssembleVideoModal');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '⏳ Aplicando Legendas...';
+      }
+
+      try {
+        const prodId = currentReviewProductId 
+          || (window.lastDashboardData?.activeApproval?.productId)
+          || (window.lastDashboardData?.interventions?.[0]?.productId);
+
+        const res = await fetch('/api/controls', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'APPLY_SUBTITLES_AND_GRAPHICS',
+            productId: prodId,
+            interventionId: currentReviewInterventionId
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data.error || 'Erro nas legendas');
+
+        if (window.showToast) {
+          window.showToast('Master Finalizado', 'Legendas PT-BR e safe area aplicadas com sucesso!');
+        }
+
+        if (data.storageUrl) {
+          closeCreativeStoryboardModal();
+          openCreativeReviewModal(currentReviewInterventionId, data.storageUrl);
+        }
+      } catch (err) {
+        alert('Erro nas legendas: ' + err.message);
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '🚀 MONTAR VÍDEO FINAL';
+        }
+      }
+    }
+
+    window.openCreativeStoryboardModal = openCreativeStoryboardModal;
+    window.closeCreativeStoryboardModal = closeCreativeStoryboardModal;
+    window.generateNewBlueprintNow = generateNewBlueprintNow;
+    window.produceCreativeScenesNow = produceCreativeScenesNow;
+    window.directCreativeVoiceNow = directCreativeVoiceNow;
+    window.assembleFinalVideoNow = assembleFinalVideoNow;
+    window.applySubtitlesAndGraphicsNow = applySubtitlesAndGraphicsNow;
+
+    // ══════════════════════════════════════════════════════════
+    // CREATIVE NODE (DIAGNÓSTICO, INSTALAÇÃO E AUTO-REPARO)
+    // ══════════════════════════════════════════════════════════
+    function updateCreativeNodeUI(nodeData) {
+      if (!nodeData) return;
+      const stateBadge = document.getElementById('creativeNodeStateBadge');
+      const statusMsg = document.getElementById('creativeNodeStatusMsg');
+      const btnInstall = document.getElementById('btnInstallNode');
+
+      const state = nodeData.state || 'NAO_INSTALADO';
+      if (stateBadge) {
+        stateBadge.textContent = state.replace('_', ' ');
+        if (state === 'PRONTO') {
+          stateBadge.style.background = 'rgba(16,185,129,0.15)';
+          stateBadge.style.borderColor = 'rgba(16,185,129,0.4)';
+          stateBadge.style.color = '#34d399';
+        } else if (state === 'NAO_INSTALADO') {
+          stateBadge.style.background = 'rgba(59,130,246,0.15)';
+          stateBadge.style.borderColor = 'rgba(59,130,246,0.4)';
+          stateBadge.style.color = '#60a5fa';
+        } else if (state === 'OFFLINE') {
+          stateBadge.style.background = 'rgba(245,158,11,0.15)';
+          stateBadge.style.borderColor = 'rgba(245,158,11,0.4)';
+          stateBadge.style.color = '#fbbf24';
+        } else if (state === 'ERRO') {
+          stateBadge.style.background = 'rgba(239,68,68,0.15)';
+          stateBadge.style.borderColor = 'rgba(239,68,68,0.4)';
+          stateBadge.style.color = '#f87171';
+        } else {
+          stateBadge.style.background = 'rgba(168,85,247,0.15)';
+          stateBadge.style.borderColor = 'rgba(168,85,247,0.4)';
+          stateBadge.style.color = '#d8b4fe';
+        }
+      }
+
+      if (statusMsg) {
+        if (state === 'NAO_INSTALADO') {
+          statusMsg.innerHTML = '⚠️ <strong>Creative Node não instalado neste computador.</strong> O administrador não precisa configurar ComfyUI manualmente.';
+          if (btnInstall) btnInstall.style.display = 'inline-flex';
+        } else if (state === 'PRONTO') {
+          statusMsg.innerHTML = '✅ <strong>Creative Node instalado e operacional.</strong> Fábrica local de criativos ativa.';
+          if (btnInstall) btnInstall.style.display = 'none';
+        } else if (state === 'OFFLINE') {
+          statusMsg.innerHTML = '⚠️ <strong>Creative Node offline.</strong> Worker local ou ComfyUI parado. Clique em Reparar para restabelecer.';
+          if (btnInstall) btnInstall.style.display = 'none';
+        } else {
+          statusMsg.textContent = nodeData.statusMessage || `Estado do Creative Node: ${state}`;
+          if (btnInstall) btnInstall.style.display = 'none';
+        }
+      }
+
+      const diag = nodeData.diagnostics;
+      if (diag) {
+        if (diag.windows) document.getElementById('nodeSpecWin').textContent = String(diag.windows).slice(0, 24);
+        if (diag.cpu) document.getElementById('nodeSpecCpu').textContent = (diag.cpu.model || '').slice(0, 22);
+        if (diag.gpu) document.getElementById('nodeSpecGpu').textContent = (diag.gpu.name || '').slice(0, 22);
+        if (diag.vram) document.getElementById('nodeSpecVram').textContent = diag.vram;
+        if (diag.ram) document.getElementById('nodeSpecRam').textContent = diag.ram.total || '—';
+        if (diag.disk) document.getElementById('nodeSpecDisk').textContent = diag.disk.free || '—';
+        if (diag.worker) document.getElementById('nodeSpecWorker').textContent = diag.worker.status || 'AUSENTE';
+        if (diag.comfyui) document.getElementById('nodeSpecComfy').textContent = diag.comfyui.status || 'AUSENTE';
+        if (diag.ffmpeg) document.getElementById('nodeSpecFfmpeg').textContent = diag.ffmpeg.status || 'AUSENTE';
+        if (diag.videoModels) document.getElementById('nodeSpecModels').textContent = diag.videoModels.status || 'AUSENTE';
+      }
+    }
+
+    async function diagnoseCreativeNode() {
+      const btn = document.getElementById('btnDiagnoseNode');
+      const origText = btn ? btn.innerHTML : '🔍 DIAGNOSTICAR';
+      if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Diagnosticando...'; }
+      try {
+        const res = await fetch('/api/controls', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'CREATIVE_NODE_DIAGNOSE' })
+        });
+        const data = await res.json();
+        if (data.report) {
+          updateCreativeNodeUI(data.report);
+          if (window.showToast) window.showToast('Diagnóstico Concluído', `Creative Node: ${data.report.state}`);
+        }
+      } catch (err) {
+        alert('Erro ao diagnosticar Creative Node: ' + err.message);
+      } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = origText; }
+      }
+    }
+
+    async function installCreativeNode() {
+      const btn = document.getElementById('btnInstallNode');
+      if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Instalando Node...'; }
+      try {
+        const res = await fetch('/api/controls', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'CREATIVE_NODE_INSTALL' })
+        });
+        const data = await res.json();
+        if (data.report) {
+          updateCreativeNodeUI(data.report);
+          if (window.showToast) window.showToast('Sucesso', 'Creative Node instalado e configurado com sucesso!');
+        }
+      } catch (err) {
+        alert('Erro ao instalar Creative Node: ' + err.message);
+      } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = '🚀 INSTALAR CREATIVE NODE'; }
+      }
+    }
+
+    async function repairCreativeNode() {
+      const btn = document.getElementById('btnRepairNode');
+      if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Reparando...'; }
+      try {
+        const res = await fetch('/api/controls', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'CREATIVE_NODE_REPAIR' })
+        });
+        const data = await res.json();
+        if (data.report) {
+          updateCreativeNodeUI(data.report);
+          if (window.showToast) window.showToast('Reparo Concluído', 'Componentes verificados e reparados com sucesso.');
+        }
+      } catch (err) {
+        alert('Erro ao reparar Creative Node: ' + err.message);
+      } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = '🛠️ REPARAR'; }
+      }
+    }
+
+    window.updateCreativeNodeUI = updateCreativeNodeUI;
+    window.diagnoseCreativeNode = diagnoseCreativeNode;
+    window.installCreativeNode = installCreativeNode;
+    window.repairCreativeNode = repairCreativeNode;
+
+    // Diagnóstico automático em segundo plano no carregamento
+    setTimeout(() => {
+      diagnoseCreativeNode().catch(() => {});
+    }, 1500);
 
     function openCreativeVideoPlayerFromMeta(metaStr) {
       try {

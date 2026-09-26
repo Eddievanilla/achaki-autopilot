@@ -1,0 +1,36 @@
+{
+  "name": "ACHAki Video 9:16 Standard",
+  "version": "1.0.0",
+  "description": "Workflow oficial ACHAki para composição de vídeo vertical 9:16 de alta conversão",
+  "aspect_ratio": "9:16",
+  "resolution": [1080, 1920],
+  "nodes": {
+    "1": {
+      "class_type": "LoadImage",
+      "inputs": {
+        "image": "input_product.png"
+      }
+    },
+    "2": {
+      "class_type": "ACHAki3ActScriptPlanner",
+      "inputs": {
+        "act1_hook_seconds": 4,
+        "act2_feature_seconds": 5,
+        "act3_cta_seconds": 5
+      }
+    },
+    "3": {
+      "class_type": "ACHAkiVoiceoverMuxer",
+      "inputs": {
+        "audio": "input_voice.mp3",
+        "ducking": true
+      }
+    },
+    "4": {
+      "class_type": "SaveVideo916",
+      "inputs": {
+        "filename_prefix": "achaki_creative_v1"
+      }
+    }
+  }
+}

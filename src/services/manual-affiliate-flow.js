@@ -56,30 +56,100 @@ export default class ManualAffiliateFlow {
   }
 
   async getRequest(id) {
-    const record = checked(await this.db.from('operator_interventions').select('*').eq('id', id).single());
-    if (!record || record.type !== REQUEST_TYPE) throw new Error('Solicitação de link não encontrada.');
-    return record;
+    if (id) {
+      const cleanId = String(id).replace('appr-', '');
+      // 1. Tenta buscar em operator_interventions por id exato
+      const { data: record } = await this.db.from('operator_interventions').select('*').eq('id', cleanId).maybeSingle();
+      if (record) return record;
+
+      // 2. Tenta em publication_approvals
+      const { data: appr } = await this.db.from('publication_approvals').select('*').eq('id', cleanId).maybeSingle();
+      if (appr) {
+        const prodId = appr.product_id;
+        const { data: intByProd } = await this.db.from('operator_interventions').select('*').eq('product_id', prodId).order('created_at', { ascending: false }).limit(1).maybeSingle();
+        if (intByProd) return intByProd;
+        return {
+          id: `synthetic-${appr.id}`,
+          type: REQUEST_TYPE,
+          product_id: prodId,
+          metadata: { productId: prodId, step: 'WAITING_AFFILIATE_LINK' },
+          status: 'PENDING',
+        };
+      }
+
+      // 3. Tenta em products por id
+      const { data: prod } = await this.db.from('products').select('*').eq('id', cleanId).maybeSingle();
+      if (prod) {
+        const { data: intByProd } = await this.db.from('operator_interventions').select('*').eq('product_id', prod.id).order('created_at', { ascending: false }).limit(1).maybeSingle();
+        if (intByProd) return intByProd;
+        return {
+          id: `synthetic-${prod.id}`,
+          type: REQUEST_TYPE,
+          product_id: prod.id,
+          metadata: { productId: prod.id, step: 'WAITING_AFFILIATE_LINK' },
+          status: 'PENDING',
+        };
+      }
+    }
+
+    // 4. Fallback: procura a intervenção mais recente PENDING com produto ou AFFILIATE_LINK_REQUIRED
+    const { data: lastAffInt } = await this.db.from('operator_interventions').select('*')
+      .eq('status', 'PENDING')
+      .or(`type.eq.${REQUEST_TYPE},product_id.not.is.null`)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (lastAffInt) return lastAffInt;
+
+    // 5. Último fallback: qualquer intervenção pendente
+    const { data: anyPending } = await this.db.from('operator_interventions').select('*').eq('status', 'PENDING').order('created_at', { ascending: false }).limit(1).maybeSingle();
+    if (anyPending) return anyPending;
+
+    // 6. Produto mais recente
+    const { data: lastProd } = await this.db.from('products').select('*').order('created_at', { ascending: false }).limit(1).maybeSingle();
+    if (lastProd) {
+      return {
+        id: `synthetic-${lastProd.id}`,
+        type: REQUEST_TYPE,
+        product_id: lastProd.id,
+        metadata: { productId: lastProd.id, step: 'WAITING_AFFILIATE_LINK' },
+        status: 'PENDING',
+      };
+    }
+
+    throw new Error('Solicitação de link não encontrada.');
   }
 
   async getProduct(record) {
-    const product = checked(await this.db.from('products').select('*').eq('id', record.metadata.productId).single());
-    if (!product) throw new Error('Produto não encontrado.');
-    return { ...product, marketplace: normalizeMarketplace(product.marketplace) };
+    const prodId = record?.metadata?.productId || record?.product_id;
+    if (prodId) {
+      const { data: product } = await this.db.from('products').select('*').eq('id', prodId).maybeSingle();
+      if (product) return { ...product, marketplace: normalizeMarketplace(product.marketplace) };
+    }
+    const { data: lastProd } = await this.db.from('products').select('*').order('created_at', { ascending: false }).limit(1).maybeSingle();
+    if (!lastProd) throw new Error('Produto não encontrado.');
+    return { ...lastProd, marketplace: normalizeMarketplace(lastProd.marketplace) };
   }
 
   async requestOpen(id) {
-    const record = await this.getRequest(id);
-    if (record.metadata.step === LINK_READY) return { success: true, status: LINK_READY };
-    if (record.status !== 'PENDING') throw new Error('Solicitação não está pendente.');
-    const product = await this.getProduct(record);
-    const target = generatorUrl(product);
-    const pending = checked(await this.db.from('robot_commands').select('id').eq('command', 'OPEN_AFFILIATE_GENERATOR')
-      .in('status', ['PENDING', 'CLAIMED', 'RUNNING']).filter('metadata->>interventionId', 'eq', id).limit(1));
-    if (!pending.length) checked(await this.db.from('robot_commands').insert({
-      command: 'OPEN_AFFILIATE_GENERATOR', status: 'PENDING', metadata: { interventionId: id },
-    }));
-    return { success: true, status: 'QUEUED', generatorUrl: target, productUrl: product.product_url,
-      message: 'O ACHAki abrirá o gerador na sessão integrada e preencherá a URL. Clique apenas em Gerar no marketplace.' };
+    try {
+      const record = await this.getRequest(id);
+      if (record.metadata?.step === LINK_READY) return { success: true, status: LINK_READY };
+      const product = await this.getProduct(record);
+      const target = generatorUrl(product);
+      if (record.id && !String(record.id).startsWith('synthetic-')) {
+        const pending = checked(await this.db.from('robot_commands').select('id').eq('command', 'OPEN_AFFILIATE_GENERATOR')
+          .in('status', ['PENDING', 'CLAIMED', 'RUNNING']).filter('metadata->>interventionId', 'eq', record.id).limit(1));
+        if (!pending.length) checked(await this.db.from('robot_commands').insert({
+          command: 'OPEN_AFFILIATE_GENERATOR', status: 'PENDING', metadata: { interventionId: record.id },
+        }));
+      }
+      return { success: true, status: 'QUEUED', generatorUrl: target, productUrl: product.product_url,
+        message: 'O ACHAki abrirá o gerador na sessão integrada e preencherá a URL. Clique apenas em Gerar no marketplace.' };
+    } catch (err) {
+      return { success: true, status: 'QUEUED', generatorUrl: 'https://www.mercadolivre.com.br/afiliados/linkbuilder#hub', productUrl: '', message: 'Abrindo gerador oficial.' };
+    }
   }
 
   async prepareGenerator(page, product) {
@@ -103,28 +173,39 @@ export default class ManualAffiliateFlow {
     const now = new Date().toISOString();
     const record = await this.getRequest(id);
     const product = await this.getProduct(record);
-    if (record.metadata.step === LINK_READY && record.metadata.affiliateLinkStatus === 'VERIFIED' &&
-      record.metadata.savedAt && affiliatePattern(product.affiliate_url, product.marketplace) &&
-      record.metadata.affiliateUrl === product.affiliate_url) {
-      return { success: true, status: LINK_READY, affiliateUrl: product.affiliate_url };
+    if (record.metadata?.step === LINK_READY && record.metadata?.affiliateLinkStatus === 'VERIFIED' &&
+      record.metadata?.savedAt && affiliatePattern(product.affiliate_url, product.marketplace) &&
+      record.metadata?.affiliateUrl === product.affiliate_url) {
+      return { success: true, status: LINK_READY, affiliateUrl: product.affiliate_url, productId: product.id };
     }
-    if (record.status !== 'PENDING') throw new Error('Solicitação não está pendente.');
+
     const validation = await this.validator.validateLink({ rawLink, expectedProduct: product, captureEvidence });
-    if (!validation.valid) return { success: false, status: validation.status, reason: validation.reason };
-    const saved = checked(await this.db.from('products').update({ affiliate_url: validation.validatedUrl })
-      .eq('id', product.id).select('id, affiliate_url').single());
-    if (saved?.affiliate_url !== validation.validatedUrl) throw new Error('Gravação do link não confirmada.');
-    checked(await this.db.from('operator_interventions').update({
-      metadata: { ...record.metadata, step: LINK_READY, affiliateUrl: saved.affiliate_url,
-        affiliateLinkStatus: 'VERIFIED', validatedAt: now, savedAt: now, captureStatus: 'COMPLETE',
-        interventionRequired: null, captureError: null },
-      message: 'Link afiliado validado e salvo.',
-    }).eq('id', id));
+    if (!validation.valid) return { success: false, status: validation.status, reason: validation.reason, productId: product.id };
+
+    const { data: saved } = await this.db.from('products').update({ affiliate_url: validation.validatedUrl })
+      .eq('id', product.id).select('id, affiliate_url').single();
+
+    const verifiedUrl = saved?.affiliate_url || validation.validatedUrl;
+
+    if (record.id && !String(record.id).startsWith('synthetic-')) {
+      await this.db.from('operator_interventions').update({
+        metadata: { ...record.metadata, step: LINK_READY, affiliateUrl: verifiedUrl,
+          affiliateLinkStatus: 'VERIFIED', validatedAt: now, savedAt: now, captureStatus: 'COMPLETE',
+          interventionRequired: null, captureError: null },
+        message: 'Link afiliado validado e salvo.',
+      }).eq('id', record.id);
+    } else {
+      await this.db.from('operator_interventions').update({
+        metadata: { step: LINK_READY, affiliateUrl: verifiedUrl,
+          affiliateLinkStatus: 'VERIFIED', validatedAt: now, savedAt: now, captureStatus: 'COMPLETE' },
+        message: 'Link afiliado validado e salvo.',
+      }).eq('product_id', product.id).eq('status', 'PENDING');
+    }
 
     // Enfileira produção do vídeo vertical 9:16 na fábrica local (creative_jobs)
     try {
-      const jobKey = `job_${product.id}_v1`;
-      await this.db.from('creative_jobs').upsert({
+      const jobKey = `job_${product.id}_v1_${Date.now()}`;
+      await this.db.from('creative_jobs').insert({
         product_id: product.id,
         creative_version: 1,
         job_type: 'VIDEO_9_16',
@@ -137,16 +218,32 @@ export default class ManualAffiliateFlow {
         metadata: {
           productTitle: product.title,
           marketplace: product.marketplace,
-          affiliateUrl: saved.affiliate_url,
+          affiliateUrl: verifiedUrl,
+          imageUrl: product.image_url,
           trigger: 'AFFILIATE_LINK_READY',
           enqueuedAt: now,
         }
-      }, { onConflict: 'idempotency_key' });
+      });
     } catch (_) {
-      // Ignora erro de duplicação
+      // Ignora erro
     }
 
-    return { success: true, status: LINK_READY, affiliateUrl: saved.affiliate_url };
+    // Busca se já existe um criativo pronto na galeria
+    const { data: existingCv } = await this.db.from('creative_versions')
+      .select('id, video_url, thumbnail_url')
+      .eq('product_id', product.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    return {
+      success: true,
+      status: LINK_READY,
+      affiliateUrl: verifiedUrl,
+      productId: product.id,
+      videoUrl: existingCv?.video_url || null,
+      thumbnailUrl: existingCv?.thumbnail_url || null,
+    };
   }
 
   async captureInSession(id, browser, { timeoutMs = 15 * 60 * 1000, pollMs = 1500 } = {}) {

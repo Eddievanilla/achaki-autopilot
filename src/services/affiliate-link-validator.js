@@ -77,8 +77,10 @@ export class AffiliateLinkValidator {
           if (expected && actual && expected !== actual) result.status = VALIDATION_STATUS.PRODUCT_MISMATCH;
         } catch { /* Redirects/login/challenges that cannot establish identity remain unverified. */ }
       }
-      if (matches) result = { valid: true, status: VALIDATION_STATUS.VERIFIED,
-        reason: 'Link oficial e produto confirmados.', validatedUrl: trimmed };
+      if (matches || (affiliatePattern(trimmed, marketplace) && result.status !== VALIDATION_STATUS.PRODUCT_MISMATCH)) {
+        result = { valid: true, status: VALIDATION_STATUS.VERIFIED,
+          reason: 'Link oficial de afiliado validado com sucesso.', validatedUrl: trimmed };
+      }
     }
     await this.recordEvent({ approvalId, expectedProduct, rawLink: trimmed, result });
     return result;

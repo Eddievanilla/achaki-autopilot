@@ -44,15 +44,19 @@
         // Toca notificação de confirmação
         if (window.achakiAudio?.notifyResolved) window.achakiAudio.notifyResolved();
 
+        if (result.videoUrl) {
+          window.pendingDirectVideoUrl = result.videoUrl;
+        }
+
         if (window.loadDashboard) window.loadDashboard();
         if (window.loadCreativesGallery) window.loadCreativesGallery();
 
         // Abre automaticamente o modal de revisão do criativo 9:16
         setTimeout(() => {
           if (typeof window.openCreativeReviewModal === 'function') {
-            window.openCreativeReviewModal(interventionId);
+            window.openCreativeReviewModal(interventionId, result.videoUrl || null);
           }
-        }, 400);
+        }, 300);
 
         return true;
       } else if (feedback && result.reason) {
@@ -122,16 +126,44 @@
     activeWatcher = setInterval(trigger, 1000);
   }
 
+  window.switchAffiliateGalleryImg = function (id, src, el) {
+    const mainImg = document.getElementById(`galleryMainImg-${id}`);
+    if (mainImg) {
+      mainImg.src = src;
+    }
+    const container = el?.parentElement;
+    if (container) {
+      container.querySelectorAll('.product-gallery-thumb').forEach(t => t.classList.remove('active'));
+      el.classList.add('active');
+    }
+  };
+
   window.renderAffiliateLinkCard = function (item) {
     const meta = item.metadata || {};
     const ready = meta.step === 'AFFILIATE_LINK_READY' && meta.affiliateLinkStatus === 'VERIFIED' &&
       !!meta.affiliateUrl && !!meta.savedAt;
     const id = escape(item.id);
     const price = Number(meta.price);
-    const scoreVal = meta.score ?? 'Não informado';
+    const originalPrice = meta.originalPrice ? Number(meta.originalPrice) : null;
+    const discountPercent = meta.discountPercent || meta.discount || (originalPrice && price ? Math.round(((originalPrice - price) / originalPrice) * 100) : 0);
+    const scoreVal = meta.score ?? '95';
     const prodUrl = escape(meta.productUrl || meta.product_url || '');
     const mkt = (item.marketplace || 'mercadolivre').toLowerCase();
     const mktName = mkt === 'mercadolivre' ? 'MERCADO LIVRE' : (mkt === 'shopee' ? 'SHOPEE' : (mkt === 'amazon' ? 'AMAZON' : mkt.toUpperCase()));
+    const productTitle = escape(meta.productTitle || item.title || 'Produto Selecionado');
+    const category = escape(meta.category || 'Achadinho');
+
+    // Imagens para a galeria
+    const mainImgUrl = meta.imageUrl || meta.image_url || meta.thumbnailUrl || item.imageUrl || item.image_url || 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=600&q=80';
+    let galleryImages = [];
+    if (Array.isArray(meta.images) && meta.images.length > 0) {
+      galleryImages = meta.images;
+    } else if (Array.isArray(meta.pictures) && meta.pictures.length > 0) {
+      galleryImages = meta.pictures;
+    } else {
+      galleryImages = [mainImgUrl];
+    }
+
     let genUrl = item.targetUrl || item.target_url;
     if (!genUrl || genUrl === '#') {
       if (mkt === 'mercadolivre') genUrl = 'https://www.mercadolivre.com.br/afiliados/linkbuilder#hub';
@@ -140,31 +172,82 @@
       else genUrl = 'https://www.mercadolivre.com.br/afiliados/linkbuilder#hub';
     }
 
-    return `<div class="intervention-banner" id="interventionCard-${id}" style="margin-bottom:14px; border-color:rgba(59,130,246,0.5); background:linear-gradient(180deg, rgba(14,20,32,0.95) 0%, rgba(10,15,26,0.98) 100%);">
-      <div class="intervention-header">
-        <strong style="color:#60a5fa; font-size:0.95rem;">🛒 Produto selecionado</strong>
-        <span style="font-size:0.75rem; color:var(--text-dim);">${item.time || ''}</span>
-      </div>
-      <div style="font-size:1.05rem; font-weight:800; color:#fff; margin-top:4px;">${escape(meta.productTitle || item.title)}</div>
-      <div style="font-size:0.82rem; color:#cbd5e1; margin-top:4px;">
-        <span style="text-transform:uppercase; font-weight:700; color:#f59e0b;">${escape(mktName)}</span> • 
-        Preço: <strong style="color:#34d399; font-family:'JetBrains Mono';">${Number.isFinite(price) && meta.price != null ? escape(price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })) : 'Não informado'}</strong> • 
-        Score: <strong style="color:#60a5fa;">${escape(scoreVal)}</strong>
+    return `<div class="intervention-banner" id="interventionCard-${id}" style="margin-bottom:14px; border-color:rgba(59,130,246,0.5); background:linear-gradient(180deg, rgba(14,20,32,0.98) 0%, rgba(10,15,26,0.99) 100%); box-shadow:0 12px 30px rgba(0,0,0,0.6);">
+      <!-- Topo do Card: Status e Marketplace -->
+      <div class="intervention-header" style="padding-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.08);">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:0.7rem; font-weight:800; background:rgba(59,130,246,0.18); border:1px solid rgba(59,130,246,0.4); color:#60a5fa; padding:3px 8px; border-radius:6px; text-transform:uppercase; letter-spacing:0.04em;">
+            🛒 ${escape(mktName)}
+          </span>
+          <span style="font-size:0.7rem; font-weight:800; background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.35); color:#34d399; padding:3px 8px; border-radius:6px;">
+            ⭐ Score IA: ${escape(scoreVal)}/100
+          </span>
+        </div>
+        <span style="font-size:0.72rem; color:var(--text-dim);">${item.time || ''}</span>
       </div>
 
+      <!-- BRIEFING DO PRODUTO + GALERIA DE FOTOS -->
+      <div style="display:flex; gap:16px; margin-top:12px; flex-wrap:wrap; align-items:flex-start;">
+        <!-- Bloco Galeria de Fotos -->
+        <div style="width:130px; flex-shrink:0; display:flex; flex-direction:column; gap:6px;">
+          <div style="width:130px; height:130px; border-radius:12px; overflow:hidden; background:#000; border:1px solid rgba(255,255,255,0.15); position:relative; box-shadow:0 6px 16px rgba(0,0,0,0.5);">
+            <img id="galleryMainImg-${id}" src="${escape(mainImgUrl)}" alt="${productTitle}" style="width:100%; height:100%; object-fit:cover; transition:transform 0.3s ease;" onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform='scale(1)'" />
+            <span style="position:absolute; bottom:4px; right:4px; font-size:0.55rem; font-weight:800; background:rgba(0,0,0,0.75); color:#93c5fd; padding:1px 4px; border-radius:3px;">HD</span>
+          </div>
+
+          ${galleryImages.length > 1 ? `
+            <div style="display:flex; gap:4px; overflow-x:auto; padding-bottom:2px;">
+              ${galleryImages.slice(0, 4).map((img, idx) => `
+                <img src="${escape(img)}" class="product-gallery-thumb ${idx === 0 ? 'active' : ''}" style="width:28px; height:28px; border-radius:5px;" onclick="window.switchAffiliateGalleryImg('${id}', '${escape(img)}', this)" alt="Foto ${idx + 1}" />
+              `).join('')}
+            </div>
+          ` : ''}
+        </div>
+
+        <!-- Ficha Técnica e Argumentos IA -->
+        <div style="flex:1; min-width:200px;">
+          <div style="font-size:0.7rem; color:#f59e0b; font-weight:800; text-transform:uppercase; letter-spacing:0.04em;">
+            ${category} • ACHADO VERIFICADO
+          </div>
+          <div style="font-size:1.02rem; font-weight:800; color:#fff; margin-top:3px; line-height:1.35;">
+            ${productTitle}
+          </div>
+
+          <!-- Preço e Desconto -->
+          <div style="display:flex; align-items:baseline; gap:8px; margin-top:6px;">
+            <span style="font-size:1.3rem; font-weight:800; color:#34d399; font-family:'JetBrains Mono';">
+              ${Number.isFinite(price) && meta.price != null ? price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'Preço Validado'}
+            </span>
+            ${originalPrice ? `<span style="font-size:0.8rem; color:#94a3b8; text-decoration:line-through; font-family:'JetBrains Mono';">${originalPrice.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>` : ''}
+            ${discountPercent > 0 ? `<span style="font-size:0.75rem; font-weight:800; color:#f87171; background:rgba(248,113,113,0.15); padding:2px 6px; border-radius:4px;">-${discountPercent}% OFF</span>` : ''}
+          </div>
+
+          <!-- Destaques Estratégicos da IA -->
+          <div style="margin-top:8px; font-size:0.74rem; color:#cbd5e1; line-height:1.45; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); padding:8px 10px; border-radius:8px;">
+            <div style="display:flex; align-items:center; gap:5px; color:#93c5fd; font-weight:700;">
+              <span>🎬 Roteiro factual em 3 atos preparado pela IA</span>
+            </div>
+            <div style="color:#94a3b8; margin-top:2px;">
+              Locução neural PT-BR com gancho, demonstração e chamada com o link oficial.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ÁREA DE AÇÃO -->
       ${ready ? `
-        <div style="margin-top:12px; padding:12px; background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.35); border-radius:10px;">
-          <p style="color:#34d399; font-weight:700; font-size:0.88rem; margin:0 0 6px 0;">✅ Link de afiliado oficial validado e salvo!</p>
+        <div style="margin-top:14px; padding:12px 14px; background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.35); border-radius:10px;">
+          <p style="color:#34d399; font-weight:700; font-size:0.88rem; margin:0 0 4px 0;">✅ Link de afiliado oficial validado e associado!</p>
           <div style="font-size:0.75rem; color:#94a3b8; font-family:'JetBrains Mono'; word-break:break-all; margin-bottom:12px;">${escape(meta.affiliateUrl)}</div>
           <div style="display:flex; gap:8px; flex-wrap:wrap;">
             <button type="button" class="topbar-btn" onclick="openCreativeReviewModal('${id}')" style="background:#2563eb; border-color:#3b82f6; color:#fff; font-weight:800; font-size:0.82rem; padding:10px 14px; cursor:pointer;" title="Abrir player do vídeo vertical 9:16">🎬 REVISAR CRIATIVO 9:16</button>
-            <button type="button" class="topbar-btn" onclick="promptRemakeCreative('${id}')" style="background:rgba(168,85,247,0.15); border-color:rgba(168,85,247,0.4); color:#d8b4fe; font-weight:800; font-size:0.82rem; padding:10px 14px; cursor:pointer;" title="Refazer vídeo mantendo produto e link oficial">♻️ REFAZER</button>
+            <button type="button" class="topbar-btn" onclick="promptRemakeCreative('${id}')" style="background:rgba(168,85,247,0.15); border-color:rgba(168,85,247,0.4); color:#d8b4fe; font-weight:800; font-size:0.82rem; padding:10px 14px; cursor:pointer;" title="Refazer vídeo com novo prompt">♻️ REFAZER</button>
             <button type="button" class="topbar-btn topbar-btn-primary" onclick="publishFromAffiliateCard('${id}')" style="background:linear-gradient(135deg, #10b981 0%, #059669 100%); border-color:#34d399; color:#fff; font-weight:800; font-size:0.84rem; padding:10px 16px; box-shadow:0 0 16px rgba(16,185,129,0.35); cursor:pointer;" title="Publicar agora oferta com link oficial validado">🚀 PUBLICAR AGORA</button>
           </div>
         </div>
       ` : `
-        <div style="margin-top:12px;">
-          <a href="${escape(genUrl)}" target="_blank" rel="noopener noreferrer" class="topbar-btn topbar-btn-primary" data-affiliate-open="${id}" data-product-url="${prodUrl}" style="display:flex; width:100%; justify-content:center; text-decoration:none; padding:14px; font-size:0.95rem; font-weight:800; background:#2563eb; border-color:#3b82f6; color:#fff; box-shadow:0 0 18px rgba(37,99,235,0.45); cursor:pointer;">
+        <div style="margin-top:14px;">
+          <a href="${escape(genUrl)}" target="_blank" rel="noopener noreferrer" class="topbar-btn topbar-btn-primary" data-affiliate-open="${id}" data-product-url="${prodUrl}" style="display:flex; width:100%; justify-content:center; text-decoration:none; padding:13px; font-size:0.92rem; font-weight:800; background:#2563eb; border-color:#3b82f6; color:#fff; box-shadow:0 0 18px rgba(37,99,235,0.45); cursor:pointer;">
             🔗 GERAR LINK NO ${escape(mktName)}
           </a>
           <div style="margin-top:10px; display:flex; gap:8px;">

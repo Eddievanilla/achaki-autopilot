@@ -18,11 +18,15 @@ export class MediaAssetService {
   }
 
   _ensureDirectories() {
-    if (!fs.existsSync(this.musicLibraryDir)) {
-      fs.mkdirSync(this.musicLibraryDir, { recursive: true });
-    }
-    if (!fs.existsSync(this.tempAssetsDir)) {
-      fs.mkdirSync(this.tempAssetsDir, { recursive: true });
+    try {
+      if (!fs.existsSync(this.musicLibraryDir)) {
+        fs.mkdirSync(this.musicLibraryDir, { recursive: true });
+      }
+      if (!fs.existsSync(this.tempAssetsDir)) {
+        fs.mkdirSync(this.tempAssetsDir, { recursive: true });
+      }
+    } catch (e) {
+      // Ignora erro em ambientes de filesystem read-only (Vercel)
     }
   }
 

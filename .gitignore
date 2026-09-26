@@ -36,4 +36,8 @@ scratch/
 data/generated_creatives/
 data/temp_creatives/
 data/media/
+data/produced_scenes/
+data/temp_photos/
+data/creative-node/
+data/*.mp3
 

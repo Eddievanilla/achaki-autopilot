@@ -323,22 +323,26 @@ export default async function handler(req, res) {
     const todayPubs = publishedPubs.filter(p => (p.published_at || p.created_at) >= todayStartIso);
 
     // 7.15 Criativos 9:16 e Aprovações Mobile
-    const { data: creativeVersionsData } = await supabase
+    const { data: rawCreativeVersions } = await supabase
       .from('creative_versions')
-      .select(`
-        *,
-        products (
-          id,
-          title,
-          marketplace,
-          category,
-          product_url,
-          image_url,
-          marketplace_product_id
-        )
-      `)
+      .select('*')
       .order('created_at', { ascending: false })
       .limit(30);
+
+    const cvProdIds = [...new Set((rawCreativeVersions || []).map(c => c.product_id).filter(Boolean))];
+    let cvProdMap = new Map();
+    if (cvProdIds.length > 0) {
+      const { data: cvProducts } = await supabase
+        .from('products')
+        .select('id, title, marketplace, category, product_url, image_url, marketplace_product_id')
+        .in('id', cvProdIds);
+      cvProdMap = new Map((cvProducts || []).map(p => [p.id, p]));
+    }
+
+    const creativeVersionsData = (rawCreativeVersions || []).map(cv => ({
+      ...cv,
+      products: cvProdMap.get(cv.product_id) || null,
+    }));
 
     const { data: approvalsData } = await supabase
       .from('publication_approvals')
@@ -1215,6 +1219,13 @@ export default async function handler(req, res) {
         queueLength: 0,
         wanModelAvailable: false,
         lastCreative: null,
+      },
+      // 13.6 Creative Node (Supervisor e Saúde dos 7 Componentes)
+      creativeNode: {
+        state: state.creative_node_state || 'NAO_INSTALADO',
+        health: state.creative_node_health || {},
+        profile: state.creative_node_profile || null,
+        registeredAt: state.creative_node_registered_at || null,
       },
       // 14. Galeria de Criativos 9:16 e Aprovações Mobile
       creatives: (creativeVersionsData || []).map((cv) => {
