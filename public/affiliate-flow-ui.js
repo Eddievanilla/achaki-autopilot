@@ -99,6 +99,13 @@
     const prodUrl = escape(meta.productUrl || meta.product_url || '');
     const mkt = (item.marketplace || 'mercadolivre').toLowerCase();
     const mktName = mkt === 'mercadolivre' ? 'MERCADO LIVRE' : (mkt === 'shopee' ? 'SHOPEE' : (mkt === 'amazon' ? 'AMAZON' : mkt.toUpperCase()));
+    let genUrl = item.targetUrl || item.target_url;
+    if (!genUrl || genUrl === '#') {
+      if (mkt === 'mercadolivre') genUrl = 'https://www.mercadolivre.com.br/afiliados/linkbuilder#hub';
+      else if (mkt === 'shopee') genUrl = 'https://affiliate.shopee.com.br/offer/custom_link';
+      else if (mkt === 'amazon') genUrl = prodUrl || 'https://www.amazon.com.br';
+      else genUrl = 'https://www.mercadolivre.com.br/afiliados/linkbuilder#hub';
+    }
 
     return `<div class="intervention-banner" id="interventionCard-${id}" style="margin-bottom:14px; border-color:rgba(59,130,246,0.5); background:linear-gradient(180deg, rgba(14,20,32,0.95) 0%, rgba(10,15,26,0.98) 100%);">
       <div class="intervention-header">
@@ -123,11 +130,11 @@
         </div>
       ` : `
         <div style="margin-top:12px;">
-          <button type="button" class="topbar-btn topbar-btn-primary" data-affiliate-open="${id}" data-product-url="${prodUrl}" style="width:100%; justify-content:center; padding:14px; font-size:0.95rem; font-weight:800; background:#2563eb; border-color:#3b82f6; color:#fff; box-shadow:0 0 18px rgba(37,99,235,0.45); cursor:pointer;">
+          <a href="${escape(genUrl)}" target="_blank" rel="noopener noreferrer" class="topbar-btn topbar-btn-primary" data-affiliate-open="${id}" data-product-url="${prodUrl}" style="display:flex; width:100%; justify-content:center; text-decoration:none; padding:14px; font-size:0.95rem; font-weight:800; background:#2563eb; border-color:#3b82f6; color:#fff; box-shadow:0 0 18px rgba(37,99,235,0.45); cursor:pointer;">
             🔗 GERAR LINK NO ${escape(mktName)}
-          </button>
+          </a>
           ${meta.interventionRequired ? `<p style="color:#fbbf24; font-size:0.75rem; margin-top:6px;">⚠️ ${escape(meta.interventionRequired)}: conclua a verificação solicitada pelo marketplace nessa janela.</p>` : ''}
-          ${meta.captureStatus === 'TIMED_OUT' ? `<p style="color:#f87171; font-size:0.75rem; margin-top:6px;">Link ainda não confirmado. Clique em GERAR LINK NO ${escape(mktName)} para tentar novamente.</p>` : ''}
+          ${meta.captureStatus === 'TIMED_OUT' ? `<p style="color:#f87171; font-size:0.75rem; margin-top:6px;">Link ainda não confirmado. Clique em GERAR LINK NO ${escape(mktName)} para retomar a captura.</p>` : ''}
         </div>
       `}
       ${!ready && ['ERROR', 'CLOSED'].includes(meta.captureStatus) ? `<p style="color:#f87171; font-size:0.75rem; margin-top:6px;">A captura foi interrompida. Clique em GERAR LINK NO ${escape(mktName)} para tentar novamente.</p>` : ''}
@@ -135,49 +142,29 @@
     </div>`;
   };
 
-  document.addEventListener('click', async event => {
-    const button = event.target.closest('[data-affiliate-open]');
-    if (!button || button.disabled) return;
-    const id = button.dataset.affiliateOpen;
-    const prodUrl = button.dataset.productUrl;
-    const feedback = button.parentElement.parentElement.querySelector(`[data-affiliate-feedback="${id}"]`) || document.querySelector(`[data-affiliate-feedback="${id}"]`);
+  document.addEventListener('click', event => {
+    const link = event.target.closest('[data-affiliate-open]');
+    if (!link) return;
+    const id = link.dataset.affiliateOpen;
+    const prodUrl = link.dataset.productUrl;
+    const feedback = link.parentElement.parentElement.querySelector(`[data-affiliate-feedback="${id}"]`) || document.querySelector(`[data-affiliate-feedback="${id}"]`);
 
-    // 1. Cópia síncrona imediata da URL original do produto no gesto do usuário
+    // 1. Cópia síncrona imediata da URL original do produto no gesto do clique
     if (prodUrl) {
       copySynchronously(prodUrl);
     }
 
-    button.disabled = true;
-
-    try {
-      if (feedback) feedback.textContent = 'Abrindo gerador oficial... A URL do produto já está na sua memória (Ctrl+V).';
-
-      const response = await fetch('/api/controls', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'OPEN_AFFILIATE_GENERATOR', interventionId: id }),
-      });
-      const data = await response.json();
-      if (!response.ok || !data.success) throw new Error(data.error || data.reason || 'Não foi possível abrir o gerador.');
-
-      if (data.productUrl) {
-        copySynchronously(data.productUrl);
-      }
-
-      // Abre a aba do gerador oficial para o operador
-      if (data.generatorUrl) {
-        window.open(data.generatorUrl, '_blank', 'noopener,noreferrer');
-      }
-
-      if (feedback) {
-        feedback.innerHTML = '📋 <strong>URL copiada!</strong> Na página do gerador, dê <strong>Ctrl+V</strong> e clique em <em>Gerar</em>.<br>Quando você clicar em <strong>Copiar</strong> no Mercado Livre, o ACHAki segue o fluxo automaticamente!';
-      }
-
-      // Inicia a escuta ativa da cópia no clipboard
-      startClipboardWatcher(id);
-    } catch (error) {
-      if (feedback) feedback.textContent = error.message;
-    } finally {
-      button.disabled = false;
+    if (feedback) {
+      feedback.innerHTML = '📋 <strong>URL copiada!</strong> Na página do gerador, dê <strong>Ctrl+V</strong> e clique em <em>Gerar</em>.<br>Quando você clicar em <strong>Copiar</strong> no Mercado Livre, o ACHAki segue o fluxo automaticamente!';
     }
+
+    // 2. Dispara a notificação de comando ao backend em segundo plano (sem bloquear o link)
+    fetch('/api/controls', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'OPEN_AFFILIATE_GENERATOR', interventionId: id }),
+    }).catch(() => {});
+
+    // 3. Inicia a escuta ativa da cópia no clipboard
+    startClipboardWatcher(id);
   });
 })();
