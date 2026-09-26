@@ -5871,6 +5871,15 @@
     window.promptRemakeCreative = promptRemakeCreative;
     window.pollForReadyVideo = pollForReadyVideo;
 
+    async function handleModalPublishNow() {
+      if (typeof window.publishFromAffiliateCard === 'function' && currentReviewInterventionId) {
+        return window.publishFromAffiliateCard(currentReviewInterventionId);
+      }
+      if (currentReviewApprovalId) {
+        return approveCreativeAction(currentReviewApprovalId);
+      }
+    }
+
     window.openCreativeReviewModal = openCreativeReviewModal;
     window.handleModalPublishNow = handleModalPublishNow;
     window.handleModalRemakeCreative = handleModalRemakeCreative;
