@@ -923,6 +923,79 @@ export class ProductRepository {
       return [];
     }
   }
+
+  /**
+   * Retorna um Set com os IDs de produtos que já foram publicados recentemente
+   * para impedir repetição na esteira de postagens.
+   *
+   * @param {number} [days=7]
+   * @returns {Promise<Set<string>>}
+   */
+  async getRecentlyPublishedProductIds(days = 7) {
+    try {
+      const sinceDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+      const { data, error } = await this.client
+        .from('publications')
+        .select('product_id')
+        .gte('created_at', sinceDate)
+        .in('status', ['PUBLISHED', 'DRY_RUN_PUBLISHED', 'READY']);
+
+      if (error) {
+        logger.warn(`[ProductRepository] Erro ao consultar publicações recentes: ${error.message}`);
+        return new Set();
+      }
+
+      return new Set((data || []).map(p => p.product_id).filter(Boolean));
+    } catch (e) {
+      logger.warn(`[ProductRepository] Exceção em getRecentlyPublishedProductIds: ${e.message}`);
+      return new Set();
+    }
+  }
+
+  /**
+   * Busca produtos do catálogo com link verificado, ordenando por rotação justa
+   * (aqueles que nunca foram publicados ou publicados há mais tempo).
+   *
+   * @param {object} params
+   * @param {number} [params.limit=10]
+   * @param {number} [params.cooldownDays=7]
+   * @returns {Promise<Array<object>>}
+   */
+  async getEligibleCatalogCandidates({ limit = 10, cooldownDays = 7 } = {}) {
+    try {
+      const recentIds = await this.getRecentlyPublishedProductIds(cooldownDays);
+
+      const { data: dbVerifiedProducts, error } = await this.client
+        .from('products')
+        .select(`
+          id,
+          marketplace,
+          marketplace_product_id,
+          title,
+          category,
+          product_url,
+          image_url,
+          affiliate_url,
+          updated_at,
+          product_prices (
+            current_price,
+            original_price,
+            discount_percent
+          )
+        `)
+        .not('affiliate_url', 'is', null)
+        .order('updated_at', { ascending: true })
+        .limit(30);
+
+      if (error || !dbVerifiedProducts) return [];
+
+      const eligible = dbVerifiedProducts.filter(p => !recentIds.has(p.id));
+      return eligible.slice(0, limit);
+    } catch (e) {
+      logger.warn(`[ProductRepository] Erro em getEligibleCatalogCandidates: ${e.message}`);
+      return [];
+    }
+  }
 }
 
 export default ProductRepository;

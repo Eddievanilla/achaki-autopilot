@@ -42,8 +42,12 @@ export default class GoogleTrendsSource extends BaseDemandSource {
         let traffic = approxTrafficMatch ? approxTrafficMatch[1].replace(/[^0-9]/g, '') : null;
         let trafficNum = traffic ? parseInt(traffic, 10) : 0;
 
-        const nonCommercialRegex = /jogo|futebol|gol|escalação|campeonato|copa|tabela|placar|eliminação|paredão|bbb|novela|polícia|acidente|falecimento|morre|luto/i;
-        if (nonCommercialRegex.test(title)) {
+        const nonCommercialRegex = /jogo|futebol|gol|escalação|escalacao|campeonato|copa|tabela|placar|eliminação|eliminacao|paredão|paredao|bbb|novela|polícia|policia|acidente|falecimento|morre|luto|morte|crime|preso|f1|fórmula 1|formula 1|gp |ufc|mma|lutador|basquete|nba|volei|tenis|flamengo|palmeiras|corinthians|sao paulo|santos|gremio|internacional|vasco|atletico|cruzeiro|botafogo|fluminense|real madrid|barcelona|champions|quina|megasena|mega-sena|mega sena|lotofacil|lotomania|duplasena|timemania|sorteio|aposta|bet|cassino|tigrinho|blaze|fortune tiger|after|filme|serie|netflix|trailer|elenco|estreia|cinema|ator|atriz|cantor|cantora|musica|música|album|show|turne|carnaval|fofoca|separação|divorcio|namoro|traição|reality|fazenda|eleição|eleicao|lula|bolsonaro|governo|stf|senado|câmara|camara|prefeito|vereador|votação|votacao|urna|g1|uol|cnn|notícia|noticia|clima|previsão|previsao|chuva|ciclone|terremoto|calor|frio|temperatura|enem|sisu|prouni|concurso|inss|feriado|\b\d{4}\b/i;
+
+        const commercialRegex = /comprar|preco|preço|promocao|promoção|oferta|desconto|barato|barata|custo beneficio|custo-beneficio|vale a pena|review|unboxing|fone|headset|headphone|earbud|airpods|bluetooth|caixa de som|alexa|soundbar|smartwatch|relogio|relógio|pulseira|teclado|mouse|mousepad|monitor|suporte|hub usb|webcam|gamer|carregador|cabo usb|power bank|bateria portatil|celular|smartphone|iphone|samsung|xiaomi|motorola|tablet|ipad|notebook|air fryer|fritadeira|liquidificador|batedeira|cafeteira|panela|garrafa|copo stanley|pote hermetico|organizador|mop|aspirador|parafusadeira|furadeira|chave|jogo de ferramentas|trena|esmerilhadeira|compressor|secador|chapinha|barbeador|aparador|perfume|tenis|tênis|mochila|bolsa|calca|calça|luminaria|luminária|ring light|camera|câmera/i;
+
+        // Rejeita notícias, esportes, loterias ou termos sem contexto comercial de produto
+        if (nonCommercialRegex.test(title) || !commercialRegex.test(title)) {
           continue;
         }
 

@@ -60,38 +60,61 @@ export class CreativeDirector {
     const priceFormatted = price > 0 ? price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'Preço Especial';
     const originalFormatted = originalPrice ? originalPrice.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : null;
 
-    // 2. Definição do Conceito do Anúncio
-    let conceito = `Apresentação dinâmica e factual de ${title.slice(0, 45)}, destacando utilidade prática imediata e comprovação de preço no ${marketplace}.`;
-    if (discountPercent >= 20) {
-      conceito = `Achado de oportunidade com ${discountPercent}% de desconto real confirmado no ${marketplace}, resolvendo necessidade de ${category} com economia garantida.`;
+    // 2. Determinação de Ângulo Narrativo Dinâmico (Rotação Obrigatória para Criativos Inéditos)
+    const versionNumber = context.versionNumber || context.version || 1;
+    const remakeFocus = context.remakeFocus || null;
+    const ytOpinion = product.youtubeOpinion || context.youtubeOpinion || null;
+
+    let narrativeAngle = context.angle;
+    if (!narrativeAngle) {
+      if (remakeFocus === 'NARRACAO' || remakeFocus === 'EDICAO') {
+        narrativeAngle = 'DEMONSTRACAO';
+      } else if (versionNumber === 2) {
+        narrativeAngle = 'DEMONSTRACAO';
+      } else if (versionNumber === 3 || (ytOpinion && ytOpinion.hasSocialValidation)) {
+        narrativeAngle = 'OPINIAO_SINCERA';
+      } else if (versionNumber >= 4) {
+        narrativeAngle = 'PROBLEMA_SOLUCAO';
+      } else {
+        narrativeAngle = discountPercent >= 20 ? 'DESCONTO' : 'DEMONSTRACAO';
+      }
     }
 
-    // 3. Gancho (Hook - 0 a 3s)
-    let gancho = 'Dá uma olhada nesse achadinho!';
-    if (discountPercent >= 25) {
-      gancho = `Olha o que acabou de entrar em oferta com ${discountPercent}% de desconto!`;
-    } else if (price > 0 && price <= 60) {
-      gancho = `Achadinho por menos de 60 reais que vale muito a pena!`;
-    } else if (category.includes('cozinha')) {
-      gancho = 'Olha o que acabou de baixar na categoria Cozinha!';
-    } else if (category.includes('organiza') || title.toLowerCase().includes('organizador') || title.toLowerCase().includes('cesto')) {
-      gancho = 'Se você precisa de espaço e organização, olha isso!';
-    }
+    // 2.1 Conceito do Anúncio por Ângulo
+    let conceito = '';
+    let gancho = '';
+    let hookBadge = 'ACHADINHO 🔥';
+    let problemaDesejo = '';
 
-    // 4. Problema / Desejo real
-    let problemaDesejo = 'Sabe quando você precisa de mais praticidade na rotina e não quer gastar muito?';
-    if (category.includes('cozinha')) {
-      problemaDesejo = 'Quem cuida da casa sabe como é chato ficar sem espaço na bancada e armários.';
-    } else if (category.includes('organiza') || title.toLowerCase().includes('cesto')) {
-      problemaDesejo = 'Aquele problema clássico de bagunça espalhada e falta de lugar para guardar as coisas.';
-    } else if (category.includes('ferramenta') || category.includes('constru')) {
-      problemaDesejo = 'Ter a ferramenta certa na hora do reparo economiza tempo e dor de cabeça.';
+    if (narrativeAngle === 'OPINIAO_SINCERA') {
+      conceito = `Validação sincera e recomendação real de ${title.slice(0, 45)}, destacando aprovação dos compradores e durabilidade comprovada.`;
+      gancho = 'Todo mundo elogiando esse produto e agora eu entendi o porquê!';
+      hookBadge = 'OPINIÃO SINCERA ⭐';
+      problemaDesejo = 'Antes de comprar qualquer coisa na internet, o que a gente mais quer é saber se realmente funciona.';
+    } else if (narrativeAngle === 'DEMONSTRACAO') {
+      conceito = `Demonstração visual direta da praticidade de ${title.slice(0, 45)}, focando em acabamento e funcionalidade imediata.`;
+      gancho = 'Dá uma olhada na prática em como esse item facilita a sua rotina!';
+      hookBadge = 'UTILIDADE PURA 💡';
+      problemaDesejo = 'Quem busca praticidade sabe o quanto um detalhe bem pensado faz diferença no dia a dia.';
+    } else if (narrativeAngle === 'PROBLEMA_SOLUCAO') {
+      conceito = `Apresentação focada na solução do problema cotidiano com ${title.slice(0, 45)}, eliminando perrengues comuns.`;
+      gancho = 'Se você precisa de mais praticidade e organização no dia a dia, olha isso!';
+      hookBadge = 'RESOLVE SEU DIA 🎯';
+      problemaDesejo = 'Aquele problema clássico de falta de espaço e bagunça que todo mundo quer resolver.';
+    } else {
+      // DESCONTO / ACHADO
+      conceito = `Oportunidade de economia real com ${discountPercent}% de desconto no ${marketplace} para ${title.slice(0, 45)}.`;
+      gancho = discountPercent >= 20
+        ? `Olha o que acabou de entrar em oferta com ${discountPercent}% de desconto real!`
+        : `Achadinho por apenas ${priceFormatted} que vale cada centavo!`;
+      hookBadge = 'OFERTA VERIFICADA 🔥';
+      problemaDesejo = 'Sabe quando você encontra aquele produto que precisava, mas com um preço muito abaixo do normal?';
     }
 
     // 5. Solução Apresentada
     const solucao = `${title.slice(0, 55)}: estrutura prática, resistente e pensada para resolver o seu dia a dia sem complicação.`;
 
-    // 6. Sequência de Cenas (Storyboard Estruturado em 5 Cenas)
+    // 6. Sequência de Cenas (Storyboard Estruturado em 5 Cenas com Variabilidade)
     const cenas = [
       {
         cena: 'CENA 1',
@@ -101,7 +124,7 @@ export class CreativeDirector {
         visual: `Apresentação em close do produto em ângulo frontal destacado sobre fundo vertical 9:16.`,
         fotoReferencia: primaryPhoto,
         movimento: 'Zoom-in lento e centralizado (escala 1.0x para 1.15x) com fundo dinâmico desfocado.',
-        textoTela: `OLHA ESSE ACHADINHO! 🔥`,
+        textoTela: hookBadge,
         locucao: gancho,
       },
       {
@@ -124,9 +147,11 @@ export class CreativeDirector {
         fotoReferencia: detailPhoto,
         movimento: 'Leve tilt vertical descendente evidenciando a resistência e o acabamento.',
         textoTela: rating ? `AVALIAÇÃO NOTA ${rating} ⭐` : 'QUALIDADE COMPROVADA ✓',
-        locucao: rating
-          ? `Super resistente, bem avaliado com nota ${rating} e pronto para o uso diário.`
-          : 'Acabamento resistente, fácil de limpar e pronto para aguentar o uso diário.',
+        locucao: ytOpinion?.honestReviewQuotes?.[0]
+          ? `Quem já comprou e testou confirma: acabamento de primeira e muito prático.`
+          : (rating
+            ? `Super resistente, bem avaliado com nota ${rating} e pronto para o uso diário.`
+            : 'Acabamento resistente, fácil de limpar e pronto para aguentar o uso diário.'),
       },
       {
         cena: 'CENA 4',

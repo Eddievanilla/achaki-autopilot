@@ -3,6 +3,8 @@ import InternalHistorySource from './internal-history-source.js';
 import { PriceValidationEngine } from '../price-validation-engine.js';
 import logger from '../../utils/logger.js';
 import { supabase } from '../../database/supabase.js';
+import ProductRepository from '../../database/product-repository.js';
+import YouTubeMarketIntelligence from './youtube-market-intelligence.js';
 
 /**
  * OpportunityEngine
@@ -24,6 +26,8 @@ export default class OpportunityEngine {
   constructor({ browserManager, priceValidationEngine } = {}) {
     this.demandEngine = new DemandIntelligenceEngine();
     this.historySource = new InternalHistorySource();
+    this.productRepository = new ProductRepository();
+    this.youtubeIntelligence = new YouTubeMarketIntelligence();
     this.browserManager = browserManager || null;
     this.priceValidationEngine = priceValidationEngine || new PriceValidationEngine({ browserManager: this.browserManager });
     
@@ -81,12 +85,12 @@ export default class OpportunityEngine {
 
     // 4. Seller Score
     let sellerScore = 65;
-    const seller = (candidate.seller || '').toLowerCase();
+    const seller = String(candidate.seller?.name || candidate.sellerName || candidate.seller || '').toLowerCase();
     if (seller.includes('oficial') || seller.includes('platinum') || seller.includes('mercado líder platinum')) {
       sellerScore = 95;
-    } else if (seller.includes('gold') || seller.includes('líder')) {
+    } else if (seller.includes('gold') || seller.includes('líder') || seller.includes('lider')) {
       sellerScore = 85;
-    } else if (candidate.seller) {
+    } else if (candidate.seller || candidate.sellerName) {
       sellerScore = 75;
     }
 
@@ -239,26 +243,11 @@ export default class OpportunityEngine {
 
       if (!candidates || candidates.length === 0) {
         try {
-          // Busca produtos aprovados no catálogo com link verificado meli.la
-          const { data: dbProducts } = await supabase
-            .from('products')
-            .select(`
-              id,
-              marketplace,
-              marketplace_product_id,
-              title,
-              category,
-              product_url,
-              image_url,
-              affiliate_url,
-              product_prices (
-                current_price,
-                original_price,
-                discount_percent
-              )
-            `)
-            .not('affiliate_url', 'is', null)
-            .limit(5);
+          // Busca produtos aprovados no catálogo com link verificado meli.la excluindo os já publicados recentemente
+          const dbProducts = await this.productRepository.getEligibleCatalogCandidates({
+            limit: 10,
+            cooldownDays: 7
+          });
 
           if (dbProducts && dbProducts.length > 0) {
             candidates = dbProducts.map(p => {
@@ -330,6 +319,22 @@ export default class OpportunityEngine {
           bestValidation = priceValidation;
         }
       }
+ 
+       // Validação Social & Opinião Sincera no YouTube
+       if (bestCandidate) {
+         try {
+           const ytOpinion = await this.youtubeIntelligence.evaluateProductOpinion(bestCandidate);
+           bestCandidate.youtubeOpinion = ytOpinion;
+           if (ytOpinion.redFlagsDetected) {
+             logger.warn(`[OpportunityEngine] Candidato #${bestCandidate.title} penalizado: Red flags detectadas em análises no YouTube.`);
+             highestScore = Math.min(highestScore, 50);
+           } else if (ytOpinion.hasSocialValidation) {
+             highestScore = Math.min(100, highestScore + 4);
+           }
+         } catch (ytErr) {
+           logger.warn(`[OpportunityEngine] Erro ao consultar opinião no YouTube: ${ytErr.message}`);
+         }
+       }
 
       const rationale = this.generateRationale(bestBreakdown, bestCandidate, opp);
 

@@ -31,6 +31,7 @@ import logger from './utils/logger.js';
 import DemandIntelligenceEngine from './services/demand/demand-intelligence-engine.js';
 import OpportunityEngine from './services/demand/opportunity-engine.js';
 import creativeJobQueue from './services/factory/creative-job-queue.js';
+import ProductRepository from './database/product-repository.js';
 
 const WORKER_ID = process.env.WORKER_ID || `worker-${os.hostname().toLowerCase().replace(/[^a-z0-9]/g, '')}`;
 const HEARTBEAT_INTERVAL_MS = 10000; // 10 segundos
@@ -60,6 +61,7 @@ class RobotWorker {
     this.demandScanTimer = null;
     this.realtimeChannel = null;
     this.isShuttingDown = false;
+    this.productRepository = new ProductRepository();
     this.priceValidationEngine = new PriceValidationEngine();
     this.demandEngine = new DemandIntelligenceEngine();
     this.opportunityEngine = new OpportunityEngine({ priceValidationEngine: this.priceValidationEngine });
@@ -802,28 +804,16 @@ class RobotWorker {
       await this.setStep('VALIDANDO PREÇOS');
 
       // Recupera produtos aprovados do catálogo que já possuem link oficial comissionado (meli.la) confirmado
+      // APLICAÇÃO DA TRAVA ANTIRREPETIÇÃO: Exclui qualquer produto publicado nos últimos 7 dias
       let catalogCandidates = [];
+      const COOLDOWN_DAYS = 7;
+      let recentlyPublishedProductIds = new Set();
       try {
-        const { data: dbVerifiedProducts } = await supabase
-          .from('products')
-          .select(`
-            id,
-            marketplace,
-            marketplace_product_id,
-            title,
-            category,
-            product_url,
-            image_url,
-            affiliate_url,
-            product_prices (
-              current_price,
-              original_price,
-              discount_percent
-            )
-          `)
-          .not('affiliate_url', 'is', null)
-          .order('updated_at', { ascending: false })
-          .limit(5);
+        recentlyPublishedProductIds = await this.productRepository.getRecentlyPublishedProductIds(COOLDOWN_DAYS);
+        const dbVerifiedProducts = await this.productRepository.getEligibleCatalogCandidates({
+          limit: 10,
+          cooldownDays: COOLDOWN_DAYS
+        });
 
         if (dbVerifiedProducts && dbVerifiedProducts.length > 0) {
           catalogCandidates = dbVerifiedProducts.map(p => {
@@ -850,16 +840,27 @@ class RobotWorker {
           });
         }
       } catch (catErr) {
-        logger.warn(`[Worker] Erro ao carregar catálogo com link verificado: ${catErr.message}`);
+        logger.warn(`[Worker] Erro ao carregar catálogo com rotação e cooldown: ${catErr.message}`);
       }
 
       const priorityCandidates = [];
       if (cmd?.metadata?.candidate) {
-        priorityCandidates.push(cmd.metadata.candidate);
+        const candId = cmd.metadata.candidate.dbId || cmd.metadata.candidate.id;
+        if (!recentlyPublishedProductIds.has(candId)) {
+          priorityCandidates.push(cmd.metadata.candidate);
+        } else {
+          logger.info(`[Worker] Candidato prioritário #${candId} ignorado por estar em cooldown de publicação (${COOLDOWN_DAYS} dias).`);
+        }
       }
 
+      // Filtra também topOffers ao vivo para garantir que nenhum produto repetido entre na esteira
+      const freshTopOffers = (topOffers || []).filter(o => {
+        const idToCheck = o.dbId || o.productId;
+        return !recentlyPublishedProductIds.has(idToCheck);
+      });
+
       let candidateIdx = 0;
-      let candidatesPool = [...priorityCandidates, ...catalogCandidates, ...topOffers];
+      let candidatesPool = [...priorityCandidates, ...catalogCandidates, ...freshTopOffers];
       this.priceValidationEngine.browserManager = browserManager;
       const affiliateService = new AffiliateLinkService({ browserManager });
       const trackingService = new TrackingService();
