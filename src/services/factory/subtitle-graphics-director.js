@@ -268,7 +268,7 @@ export class SubtitleAndGraphicsDirector {
 
     // 4.1 Header Branding Permanente (Safe Area Superior: Y=90)
     filterParts.push(`[${currentIn}]drawbox=x=80:y=90:w=920:h=90:color=black@0.80:t=fill[h_box]`);
-    filterParts.push(`[h_box]drawtext=text='ACHAki - ACHADO FACTUAL VERIFICADO':fontcolor=white:fontsize=32:x=(w-text_w)/2:y=122[h_out]`);
+    filterParts.push(`[h_box]drawtext=text='ACHAki • ACHADINHOS RECOMENDADOS':fontcolor=white:fontsize=32:x=(w-text_w)/2:y=122[h_out]`);
     currentIn = 'h_out';
 
     // 4.2 Legendas Dinâmicas em Sincronia Precisa (Safe Area Central-Inferior: Y=1390)

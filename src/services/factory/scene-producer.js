@@ -25,6 +25,7 @@ import fs from 'node:fs';
 import { createClient } from '@supabase/supabase-js';
 import logger from '../../utils/logger.js';
 import { ComfyUIClient } from './comfyui-client.js';
+import { CreativeDirector } from '../../agents/creative-director.js';
 
 const execAsync = promisify(exec);
 
@@ -153,14 +154,16 @@ export class SceneProducer {
   }
 
   /**
-   * Sanitiza strings para uso em filtros drawtext do FFmpeg.
+   * Sanitiza strings para uso em filtros drawtext do FFmpeg (remove emojis e caracteres problemáticos).
    */
   _sanitizeDrawtext(text) {
     if (!text) return '';
     return String(text)
+      .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1F018}-\u{1F270}\u{2388}\u{2B05}\u{2B06}\u{2B07}\u{2B1B}\u{2B1C}\u{2B50}\u{2B55}]/gu, '')
       .slice(0, 48)
       .replace(/[\r\n]+/g, ' ')
-      .replace(/[:\\'%]/g, ' ')
+      .replace(/[:\\'%"]/g, ' ')
+      .replace(/\s+/g, ' ')
       .trim()
       .toUpperCase();
   }
@@ -192,14 +195,29 @@ export class SceneProducer {
     const normPreviewPath = previewPath.replace(/\\/g, '/');
     const normPhotoPath = localPhotoPath ? localPhotoPath.replace(/\\/g, '/') : null;
 
-    const textoTelaSanitizado = this._sanitizeDrawtext(scene.textoTela);
-    const titleSanitizado = this._sanitizeDrawtext(product.title || 'ACHAki Achado Verificado');
-    const priceFormatted = product.price || product.current_price
-      ? `R$ ${Number(product.price || product.current_price).toFixed(2).replace('.', ',')}`
-      : 'OFERTA VERIFICADA';
-    const discountText = product.discount_percent ? `-${product.discount_percent}% OFF` : '';
+    // Prioriza o título limpo e humanizado
+    const rawCleanTitle = scene.overlay?.title || CreativeDirector.cleanProductTitle(product.title || product.name || 'Achadinho Exclusivo');
+    const cleanTitle = this._sanitizeDrawtext(rawCleanTitle);
 
-    logger.info(`[SceneProducer] 🎬 Produzindo ${sceneId} [Visual Provider: LIGHTWEIGHT_FFMPEG] [Estratégia: ${strategy}] [Duração: ${durationSeconds}s] (Fotos reais + FFmpeg cinematográfico; não é IA I2V)...`);
+    // Badge moderna superior (livre de jargão burocrático)
+    const rawBadge = scene.overlay?.badge || scene.textoTela || 'ACHADINHO DO DIA';
+    const topBadge = this._sanitizeDrawtext(rawBadge);
+
+    // Formatação de preços e economia
+    const priceNum = Number(product.price || product.current_price || 0);
+    const priceFormatted = priceNum > 0
+      ? `R$ ${priceNum.toFixed(2).replace('.', ',')}`
+      : 'OFERTA ESPECIAL';
+
+    const origPriceNum = Number(product.original_price || 0);
+    const origPriceFormatted = origPriceNum > priceNum
+      ? `R$ ${origPriceNum.toFixed(2).replace('.', ',')}`
+      : null;
+
+    const discountPercent = product.discount_percent || (origPriceNum > priceNum ? Math.round(((origPriceNum - priceNum) / origPriceNum) * 100) : null);
+    const discountText = discountPercent ? `-${discountPercent}% OFF` : '';
+
+    logger.info(`[SceneProducer] 🎬 Produzindo ${sceneId} [Visual: LIGHTWEIGHT_FFMPEG] [Estratégia: ${strategy}] [Duração: ${durationSeconds}s] (Fotos reais + FFmpeg cinematográfico)...`);
 
     let ffmpegCmd = '';
 
@@ -211,98 +229,104 @@ export class SceneProducer {
 
     if (isZoom && normPhotoPath && fs.existsSync(localPhotoPath)) {
       // ─────────────────────────────────────────────────────────────
-      // CENA 1: VISÃO GERAL + APROXIMAÇÃO MARCADA (ZOOM-IN PROGRESSIVO)
-      // - Fundo dinâmico com desfoque suave
-      // - Produto com zoom-in progressivo marcante (1.05x para 1.25x)
-      // - Topbar e Badge com identificação factual do produto
+      // CENA 1: HOOK / IMPACTO VISUAL + APRESENTAÇÃO DO PRODUTO
+      // - Fundo estúdio com blur elegante e vinheta escura
+      // - Produto centralizado em safe-area com zoom-in cinematográfico (1.02x para 1.15x)
+      // - Badge superior moderna (ex: ACHADINHO DO DIA)
+      // - Barra inferior elegante com título limpo do produto
       // ─────────────────────────────────────────────────────────────
       const filter = [
-        `[0:v]loop=loop=-1:size=1:start=0,scale=1280:2276:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=28:6[bg]`,
-        `[0:v]loop=loop=-1:size=1:start=0,scale='min(960,iw*(1.05+0.20*t/${durationSeconds}))':'min(960,ih*(1.05+0.20*t/${durationSeconds}))':force_original_aspect_ratio=decrease:eval=frame,format=rgba[fg]`,
-        `[bg][fg]overlay=x='(W-w)/2':y='(H-h)/2 - 40 + if(lt(t,0.35), (0.35-t)*300, 0)':eval=frame[base]`,
-        `[base]drawbox=x=80:y=100:w=920:h=85:color=black@0.80:t=fill[b1]`,
-        `[b1]drawtext=text='ACHAki - ACHADO FACTUAL VERIFICADO':fontcolor=white:fontsize=32:x=(w-text_w)/2:y=128[b2]`,
-        `[b2]drawbox=x=80:y=1400:w=920:h=120:color=black@0.88:t=fill[b3]`,
-        `[b3]drawtext=text='${textoTelaSanitizado || titleSanitizado}':fontcolor=0xfacc15:fontsize=44:x=(w-text_w)/2:y=1438:borderw=3:bordercolor=black[v]`
+        `[0:v]loop=loop=-1:size=1:start=0,scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=26:6,drawbox=x=0:y=0:w=1080:h=1920:color=black@0.62:t=fill[bg]`,
+        `[0:v]loop=loop=-1:size=1:start=0,scale='min(960,iw*(1.02+0.13*t/${durationSeconds}))':'min(960,ih*(1.02+0.13*t/${durationSeconds}))':force_original_aspect_ratio=decrease:eval=frame,format=rgba[fg]`,
+        `[bg][fg]overlay=x='(W-w)/2':y='(H-h)/2 - 50':eval=frame[base]`,
+        `[base]drawbox=x=140:y=130:w=800:h=76:color=0x0f172a@0.90:t=fill[b1]`,
+        `[b1]drawtext=text='${topBadge || 'ACHADINHO DO DIA'}':fontcolor=0xfacc15:fontsize=34:x=(w-text_w)/2:y=153[b2]`,
+        `[b2]drawbox=x=90:y=1420:w=900:h=110:color=black@0.85:t=fill[b3]`,
+        `[b3]drawtext=text='${cleanTitle}':fontcolor=white:fontsize=38:x=(w-text_w)/2:y=1455[v]`
       ].join(';');
 
       ffmpegCmd = `ffmpeg -y -i "${normPhotoPath}" -filter_complex "${filter}" -map "[v]" -c:v libx264 -preset fast -crf 20 -pix_fmt yuv420p -t ${durationSeconds} "${normVideoPath}"`;
 
     } else if (isHorizontalPan && normPhotoPath && fs.existsSync(localPhotoPath)) {
       // ─────────────────────────────────────────────────────────────
-      // CENA 2: CROP DE CARACTERÍSTICA REAL (10 TOMADAS + 4 USB) COM PAN LATERAL
-      // - Crop focado nas tomadas e entradas USB
-      // - Deslocamento lateral horizontal suave mostrando os conectores
-      // - Badge informando 10 TOMADAS + 4 PORTAS USB
+      // CENA 2: DEMONSTRAÇÃO / PRATICIDADE NO DIA A DIA
+      // - Fundo estúdio suavemente desfocado
+      // - Produto com movimento sutil e flutuação lateral
+      // - Badge superior (ex: PRATICIDADE PURA)
+      // - Barra inferior focada em benefícios e facilidade de uso
       // ─────────────────────────────────────────────────────────────
       const filter = [
-        `[0:v]loop=loop=-1:size=1:start=0,scale=1280:2276:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=32:8[bg]`,
-        `[0:v]loop=loop=-1:size=1:start=0,crop=w='in_w*0.75':h='in_h*0.50':x='in_w*0.12 - 30 + 60*(t/${durationSeconds})':y='in_h*0.28',scale=920:920:force_original_aspect_ratio=decrease,format=rgba[fg]`,
-        `[bg][fg]overlay=x='(W-w)/2':y='(H-h)/2 - 50':eval=frame[base]`,
-        `[base]drawbox=x=80:y=100:w=920:h=85:color=black@0.80:t=fill[b1]`,
-        `[b1]drawtext=text='ACHAki - CARACTERISTICA CONFIRMADA':fontcolor=white:fontsize=32:x=(w-text_w)/2:y=128[b2]`,
-        `[b2]drawbox=x=80:y=1400:w=920:h=120:color=0x064e3b@0.92:t=fill[b3]`,
-        `[b3]drawtext=text='${textoTelaSanitizado || '10 TOMADAS + 4 PORTAS USB'}':fontcolor=white:fontsize=44:x=(w-text_w)/2:y=1438:borderw=3:bordercolor=black[v]`
+        `[0:v]loop=loop=-1:size=1:start=0,scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=28:7,drawbox=x=0:y=0:w=1080:h=1920:color=black@0.65:t=fill[bg]`,
+        `[0:v]loop=loop=-1:size=1:start=0,scale='min(980,iw*(1.12-0.08*t/${durationSeconds}))':'min(980,ih*(1.12-0.08*t/${durationSeconds}))':force_original_aspect_ratio=decrease:eval=frame,format=rgba[fg]`,
+        `[bg][fg]overlay=x='(W-w)/2 + 25*sin(2*PI*t/${durationSeconds})':y='(H-h)/2 - 50':eval=frame[base]`,
+        `[base]drawbox=x=140:y=130:w=800:h=76:color=0x0f172a@0.90:t=fill[b1]`,
+        `[b1]drawtext=text='${topBadge || 'PRATICIDADE PURA'}':fontcolor=0x38bdf8:fontsize=34:x=(w-text_w)/2:y=153[b2]`,
+        `[b2]drawbox=x=90:y=1420:w=900:h=110:color=0x064e3b@0.90:t=fill[b3]`,
+        `[b3]drawtext=text='FACILIDADE E PRATICIDADE NO SEU DIA A DIA':fontcolor=white:fontsize=34:x=(w-text_w)/2:y=1457[v]`
       ].join(';');
 
       ffmpegCmd = `ffmpeg -y -i "${normPhotoPath}" -filter_complex "${filter}" -map "[v]" -c:v libx264 -preset fast -crf 20 -pix_fmt yuv420p -t ${durationSeconds} "${normVideoPath}"`;
 
     } else if (isVerticalTiltCrop && normPhotoPath && fs.existsSync(localPhotoPath)) {
       // ─────────────────────────────────────────────────────────────
-      // CENA 3: CROP DE CARACTERÍSTICA REAL (CABO 2M + BIVOLT) COM TILT VERTICAL
-      // - Crop focado no cabo e na estrutura bivolt
-      // - Movimento descendente contínuo (tilt vertical)
-      // - Badge destacando CABO DE 2 METROS • BIVOLT
+      // CENA 3: CUSTO-BENEFÍCIO / VALOR REAL DO PRODUTO
+      // - Fundo cinematográfico escurecido
+      // - Produto com foco dinâmico e suave oscilação vertical
+      // - Badge superior (ex: CUSTO-BENEFICIO SURREAL)
+      // - Barra inferior destacando qualidade com o melhor preço
       // ─────────────────────────────────────────────────────────────
       const filter = [
-        `[0:v]loop=loop=-1:size=1:start=0,scale=1280:2276:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=32:8[bg]`,
-        `[0:v]loop=loop=-1:size=1:start=0,crop=w='in_w*0.70':h='in_h*0.50':x='in_w*0.15':y='in_h*0.05 + (in_h*0.35)*(t/${durationSeconds})',scale=920:920:force_original_aspect_ratio=decrease,format=rgba[fg]`,
-        `[bg][fg]overlay=x='(W-w)/2':y='(H-h)/2 - 50':eval=frame[base]`,
-        `[base]drawbox=x=80:y=100:w=920:h=85:color=black@0.80:t=fill[b1]`,
-        `[b1]drawtext=text='ACHAki - ESPECIFICACOES FACTUAIS':fontcolor=white:fontsize=32:x=(w-text_w)/2:y=128[b2]`,
-        `[b2]drawbox=x=80:y=1400:w=920:h=120:color=0x1e293b@0.92:t=fill[b3]`,
-        `[b3]drawtext=text='${textoTelaSanitizado || 'CABO DE 2 METROS - BIVOLT'}':fontcolor=0x34d399:fontsize=42:x=(w-text_w)/2:y=1438:borderw=3:bordercolor=black[v]`
+        `[0:v]loop=loop=-1:size=1:start=0,scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=28:7,drawbox=x=0:y=0:w=1080:h=1920:color=black@0.65:t=fill[bg]`,
+        `[0:v]loop=loop=-1:size=1:start=0,scale='min(980,iw*1.08)':'min(980,ih*1.08)':force_original_aspect_ratio=decrease,format=rgba[fg]`,
+        `[bg][fg]overlay=x='(W-w)/2':y='(H-h)/2 - 70 + 30*sin(PI*t/${durationSeconds})':eval=frame[base]`,
+        `[base]drawbox=x=140:y=130:w=800:h=76:color=0x0f172a@0.90:t=fill[b1]`,
+        `[b1]drawtext=text='${topBadge || 'CUSTO-BENEFICIO SURREAL'}':fontcolor=0x34d399:fontsize=34:x=(w-text_w)/2:y=153[b2]`,
+        `[b2]drawbox=x=90:y=1420:w=900:h=110:color=0x1e293b@0.90:t=fill[b3]`,
+        `[b3]drawtext=text='ALTA QUALIDADE COM O MELHOR PRECO':fontcolor=0x34d399:fontsize=36:x=(w-text_w)/2:y=1455[v]`
       ].join(';');
 
       ffmpegCmd = `ffmpeg -y -i "${normPhotoPath}" -filter_complex "${filter}" -map "[v]" -c:v libx264 -preset fast -crf 20 -pix_fmt yuv420p -t ${durationSeconds} "${normVideoPath}"`;
 
     } else if (isOfferCard) {
       // ─────────────────────────────────────────────────────────────
-      // CENA 4: CARD DE OFERTA COM PREÇO FACTUAL ANIMADO E PULSO
+      // CENA 4: CARD MODERNO DE OFERTA COM PREÇO PULSANTE
       // - Fundo escurecido e desfocado com foto real
-      // - Card com entrada animada subindo do fundo
-      // - Preço factual confirmado pulsando suavemente
-      // - Badge de desconto em destaque real
+      // - Card moderno estilo dark glass com bordas elegantes
+      // - Preço em amarelo ouro pulsante em grande destaque
+      // - Destaque para economia e link oficial
       // ─────────────────────────────────────────────────────────────
       const bgInput = (normPhotoPath && fs.existsSync(localPhotoPath))
         ? `-i "${normPhotoPath}"`
         : `-f lavfi -i color=c=0x07090e:s=1080x1920:d=${durationSeconds}`;
 
+      const offerPillText = discountPercent ? `${discountPercent}  DE DESCONTO` : 'OFERTA EXCLUSIVA';
+      const dePrecoText = origPriceFormatted ? `DE R$ ${origPriceFormatted}` : 'VALOR PROMOCIONAL';
+
       let filter = '';
       if (normPhotoPath && fs.existsSync(localPhotoPath)) {
         filter = [
           `[0:v]loop=loop=-1:size=1:start=0,scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=30:8[bg]`,
-          `[bg]drawbox=x=0:y=0:w=1080:h=1920:color=black@0.65:t=fill[dark]`,
-          `[dark]drawbox=x=60:y=400:w=960:h=1000:color=black@0.88:t=fill[card]`,
-          `[card]drawtext=text='OFERTA FACTUAL VERIFICADA':fontcolor=0x60a5fa:fontsize=36:x=(w-text_w)/2:y=460[c1]`,
-          `[c1]drawtext=text='${titleSanitizado}':fontcolor=white:fontsize=36:x=(w-text_w)/2:y=540[c2]`,
-          product.original_price
-            ? `[c2]drawtext=text='DE R$ ${Number(product.original_price).toFixed(2).replace('.', ',')}':fontcolor=0xef4444:fontsize=38:x=(w-text_w)/2:y=640[c3]`
-            : `[c2]drawtext=text='PRECO PROMOCIONAL':fontcolor=0xef4444:fontsize=38:x=(w-text_w)/2:y=640[c3]`,
-          `[c3]drawtext=text='POR ${priceFormatted}':fontcolor=0xfacc15:fontsize=74:x=(w-text_w)/2:y='720 + 6*sin(2*PI*t*1.5)'[c4]`,
-          discountText
-            ? `[c4]drawtext=text='${discountText} DE DESCONTO REAL':fontcolor=0x34d399:fontsize=46:x=(w-text_w)/2:y=830[c5]`
-            : `[c4]drawtext=text='ECONOMIA COMPROVADA':fontcolor=0x34d399:fontsize=42:x=(w-text_w)/2:y=830[c5]`,
-          `[c5]drawbox=x=100:y=1120:w=880:h=110:color=0x10b981@0.25:t=fill[c6]`,
-          `[c6]drawtext=text='LINK NOS COMENTARIOS FIXADOS':fontcolor=0x34d399:fontsize=34:x=(w-text_w)/2:y=1160[v]`
+          `[bg]drawbox=x=0:y=0:w=1080:h=1920:color=black@0.68:t=fill[dark]`,
+          `[dark]drawbox=x=70:y=380:w=940:h=1040:color=black@0.88:t=fill[card]`,
+          `[card]drawbox=x=120:y=440:w=840:h=80:color=0x1e293b@0.95:t=fill[pill]`,
+          `[pill]drawtext=text='${offerPillText}':fontcolor=0x38bdf8:fontsize=36:x=(w-text_w)/2:y=465[c1]`,
+          `[c1]drawtext=text='${cleanTitle}':fontcolor=white:fontsize=36:x=(w-text_w)/2:y=560[c2]`,
+          `[c2]drawtext=text='${dePrecoText}':fontcolor=0x94a3b8:fontsize=36:x=(w-text_w)/2:y=660[c3]`,
+          `[c3]drawtext=text='POR ${priceFormatted}':fontcolor=0xfacc15:fontsize=76:x=(w-text_w)/2:y='735 + 5*sin(2*PI*t*1.5)':borderw=3:bordercolor=black[c4]`,
+          `[c4]drawbox=x=120:y=860:w=840:h=85:color=0x064e3b@0.85:t=fill[c5]`,
+          `[c5]drawtext=text='MELHOR CUSTO-BENEFICIO DA CATEGORIA':fontcolor=0x34d399:fontsize=32:x=(w-text_w)/2:y=888[c6]`,
+          `[c6]drawbox=x=120:y=1160:w=840:h=120:color=0x10b981@0.90:t=fill[c7]`,
+          `[c7]drawtext=text='LINK OFICIAL COM DESCONTO NA BIO / 1º COMENTARIO':fontcolor=white:fontsize=28:x=(w-text_w)/2:y=1205[v]`
         ].join(';');
       } else {
         filter = [
-          `[0:v]drawbox=x=60:y=400:w=960:h=1000:color=0x0f172a@0.95:t=fill[card]`,
-          `[card]drawtext=text='ACHAki RECOMENDACAO FACTUAL':fontcolor=0x60a5fa:fontsize=36:x=(w-text_w)/2:y=480[c1]`,
-          `[c1]drawtext=text='${titleSanitizado}':fontcolor=white:fontsize=34:x=(w-text_w)/2:y=560[c2]`,
-          `[c2]drawtext=text='${priceFormatted}':fontcolor=0xfacc15:fontsize=74:x=(w-text_w)/2:y='700 + 6*sin(2*PI*t*1.5)'[c3]`,
-          `[c3]drawtext=text='LINK FIXADO NO PRIMEIRO COMENTARIO':fontcolor=0x34d399:fontsize=36:x=(w-text_w)/2:y=860[v]`
+          `[0:v]drawbox=x=70:y=380:w=940:h=1040:color=0x0f172a@0.95:t=fill[card]`,
+          `[card]drawbox=x=120:y=440:w=840:h=80:color=0x1e293b@0.95:t=fill[pill]`,
+          `[pill]drawtext=text='${offerPillText}':fontcolor=0x38bdf8:fontsize=36:x=(w-text_w)/2:y=465[c1]`,
+          `[c1]drawtext=text='${cleanTitle}':fontcolor=white:fontsize=36:x=(w-text_w)/2:y=560[c2]`,
+          `[c2]drawtext=text='POR ${priceFormatted}':fontcolor=0xfacc15:fontsize=76:x=(w-text_w)/2:y='710 + 5*sin(2*PI*t*1.5)':borderw=3:bordercolor=black[c3]`,
+          `[c3]drawbox=x=120:y=1160:w=840:h=120:color=0x10b981@0.90:t=fill[c4]`,
+          `[c4]drawtext=text='LINK OFICIAL FIXADO NO PRIMEIRO COMENTARIO':fontcolor=white:fontsize=30:x=(w-text_w)/2:y=1205[v]`
         ].join(';');
       }
 
@@ -310,10 +334,10 @@ export class SceneProducer {
 
     } else if (isCtaCard) {
       // ─────────────────────────────────────────────────────────────
-      // CENA 5: ENCERRAMENTO COM CTA ANIMADO E SETA INDICATIVA
-      // - Foto real do produto posicionada
-      // - Elementos de CTA com pulso rítmico chamando para ação
-      // - Transição de encerramento
+      // CENA 5: CALL TO ACTION DIRETO E PERSUASIVO
+      // - Foto real do produto em tamanho destaque
+      // - Card de ação inferior de alta conversão
+      // - Botão chamativo pulsante com indicação clara para o link
       // ─────────────────────────────────────────────────────────────
       const bgInput = (normPhotoPath && fs.existsSync(localPhotoPath))
         ? `-i "${normPhotoPath}"`
@@ -323,22 +347,22 @@ export class SceneProducer {
       if (normPhotoPath && fs.existsSync(localPhotoPath)) {
         filter = [
           `[0:v]loop=loop=-1:size=1:start=0,scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=28:6[bg]`,
-          `[0:v]loop=loop=-1:size=1:start=0,scale=720:720:force_original_aspect_ratio=decrease,format=rgba[fg]`,
-          `[bg][fg]overlay=x='(W-w)/2':y=240[base]`,
-          `[base]drawbox=x=70:y=980:w=940:h=600:color=black@0.90:t=fill[card]`,
-          `[card]drawtext=text='ACHAki - ACHADO VERIFICADO':fontcolor=0x60a5fa:fontsize=34:x=(w-text_w)/2:y=1040[c1]`,
-          `[c1]drawtext=text='${titleSanitizado}':fontcolor=white:fontsize=32:x=(w-text_w)/2:y=1110[c2]`,
-          `[c2]drawbox=x=100:y=1220:w=880:h=130:color=0x10b981@0.85:t=fill[c3]`,
-          `[c3]drawtext=text='CONFIRA NO PRIMEIRO COMENTARIO':fontcolor=white:fontsize=36:x=(w-text_w)/2:y='1265 + 4*sin(2*PI*t*2)'[c4]`,
-          `[c4]drawtext=text='LINK OFICIAL COM DESCONTO LIBERADO':fontcolor=0xfacc15:fontsize=30:x=(w-text_w)/2:y=1400[v]`
+          `[0:v]loop=loop=-1:size=1:start=0,scale=760:760:force_original_aspect_ratio=decrease,format=rgba[fg]`,
+          `[bg][fg]overlay=x='(W-w)/2':y=260[base]`,
+          `[base]drawbox=x=70:y=1020:w=940:h=560:color=black@0.90:t=fill[card]`,
+          `[card]drawtext=text='NAO PERCA ESSA OPORTUNIDADE':fontcolor=0xfacc15:fontsize=36:x=(w-text_w)/2:y=1075[c1]`,
+          `[c1]drawtext=text='${cleanTitle}':fontcolor=white:fontsize=34:x=(w-text_w)/2:y=1140[c2]`,
+          `[c2]drawbox=x=100:y=1240:w=880:h=130:color=0x10b981@0.95:t=fill[c3]`,
+          `[c3]drawtext=text='CLIQUE NO LINK DO 1º COMENTARIO':fontcolor=white:fontsize=38:x=(w-text_w)/2:y='1285 + 4*sin(2*PI*t*2)':borderw=2:bordercolor=black[c4]`,
+          `[c4]drawtext=text='GARANTA O SEU COM O MELHOR PRECO':fontcolor=0x34d399:fontsize=28:x=(w-text_w)/2:y=1420[v]`
         ].join(';');
       } else {
         filter = [
-          `[0:v]drawbox=x=70:y=980:w=940:h=600:color=black@0.90:t=fill[card]`,
-          `[card]drawtext=text='ACHAki - ACHADO VERIFICADO':fontcolor=0x60a5fa:fontsize=34:x=(w-text_w)/2:y=1040[c1]`,
-          `[c1]drawtext=text='${titleSanitizado}':fontcolor=white:fontsize=32:x=(w-text_w)/2:y=1110[c2]`,
-          `[c2]drawbox=x=100:y=1220:w=880:h=130:color=0x10b981@0.85:t=fill[c3]`,
-          `[c3]drawtext=text='CONFIRA NO PRIMEIRO COMENTARIO':fontcolor=white:fontsize=36:x=(w-text_w)/2:y='1265 + 4*sin(2*PI*t*2)'[v]`
+          `[0:v]drawbox=x=70:y=1020:w=940:h=560:color=black@0.90:t=fill[card]`,
+          `[card]drawtext=text='NAO PERCA ESSA OPORTUNIDADE':fontcolor=0xfacc15:fontsize=36:x=(w-text_w)/2:y=1075[c1]`,
+          `[c1]drawtext=text='${cleanTitle}':fontcolor=white:fontsize=34:x=(w-text_w)/2:y=1140[c2]`,
+          `[c2]drawbox=x=100:y=1240:w=880:h=130:color=0x10b981@0.95:t=fill[c3]`,
+          `[c3]drawtext=text='CLIQUE NO LINK DO 1º COMENTARIO':fontcolor=white:fontsize=38:x=(w-text_w)/2:y='1285 + 4*sin(2*PI*t*2)':borderw=2:bordercolor=black[v]`
         ].join(';');
       }
 
