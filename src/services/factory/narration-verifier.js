@@ -289,6 +289,11 @@ export class NarrationVerifier {
       factsMatched.push('cta_location');
     }
 
+    // 6.1 Ganchos comerciais, dores do cliente e custo-benefício (Super Produtora)
+    if (/(?:procurando|quer\s+(?:cuidar|monitorar|proteger|economizar|resolver)|ama\s+praticidade|d[aá]\s+uma\s+olhada|achadinho|custo[- ]benef[íi]cio|pelo\s+que\s+entrega|vale\s+cada\s+centavo|facilita\s+(?:a\s+sua\s+)?rotina|na\s+palma\s+da\s+m[aã]o|sem\s+mensalidade|sem\s+gastar|resolve\s+(?:aquele|o)|encaixa\s+direto|conecta\s+no\s+wi-?fi|aproveita\s+enquanto)/i.test(s)) {
+      factsMatched.push('commercial_hook_or_benefit');
+    }
+
     // 7. Frases conectivas neutras e factualmente seguras
     const isPlausibleFactual = factsMatched.length > 0;
 

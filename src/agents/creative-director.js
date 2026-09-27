@@ -51,64 +51,40 @@ export class CreativeDirector {
     const discount = productFacts.discount || 0;
     const features = Array.isArray(productFacts.features_verified) ? productFacts.features_verified : [];
     const brand = productFacts.brand && productFacts.brand !== 'Não informada' ? productFacts.brand : null;
-    const prodName = productFacts.product_name;
+    const rawProdName = productFacts.product_name;
 
-    // 2. Cenas estruturadas estritamente com base em PRODUCT_FACTS
-    // Cada cena recebe movimento diferente e perceptível (zoom, pan horizontal, tilt vertical, pulse card, CTA)
-    
-    // Cena 1: Apresentação do produto
-    const cena1Narration = `Dá uma olhada no ${prodName}.`;
-    
-    // Cena 2: Destaque de característica ou marca verificada
-    let cena2Narration = '';
-    let cena2Badge = 'DETALHES REAIS';
-    let cena2Facts = [];
-    if (features.length >= 1) {
-      cena2Narration = `Conta com ${features[0]}${features[1] ? ` e ${features[1]}` : ''}.`;
-      cena2Badge = features[0].toUpperCase();
-      cena2Facts = features.slice(0, 2).map(f => `features: ${f}`);
-    } else if (brand) {
-      cena2Narration = `Item oficial verificado da marca ${brand}.`;
-      cena2Badge = `MARCA ${brand.toUpperCase()}`;
-      cena2Facts = ['brand'];
-    } else {
-      cena2Narration = `Confira todos os detalhes nas fotos reais do produto.`;
-      cena2Badge = 'FOTOS REAIS';
-      cena2Facts = ['product_name'];
-    }
+    // Sanitização e humanização do título do produto
+    const cleanProdName = CreativeDirector.cleanProductTitle(rawProdName);
 
-    // Cena 3: Especificações adicionais ou confirmação do produto
-    let cena3Narration = '';
-    let cena3Badge = 'ESPECIFICAÇÕES';
-    let cena3Facts = [];
-    if (features.length >= 3) {
-      cena3Narration = `Destaque também para ${features[2]}${features[3] ? ` e ${features[3]}` : ''}.`;
-      cena3Badge = features[2].toUpperCase();
-      cena3Facts = features.slice(2, 4).map(f => `features: ${f}`);
-    } else {
-      const shortTitle = prodName.length > 35 ? prodName.split(' ').slice(0, 4).join(' ') : prodName;
-      cena3Narration = `Veja as fotos reais do ${shortTitle} diretamente no anúncio oficial.`;
-      cena3Badge = 'FOTOS REAIS';
-      cena3Facts = ['product_name'];
-    }
+    // Geração de Roteiro Comercial de Alta Conversão (Super Produtora)
+    const script = CreativeDirector.generateCommercialCopy({
+      cleanName: cleanProdName,
+      productFacts,
+      userPrompt: context?.userPrompt,
+      brand,
+      features,
+      discount,
+      priceFormatted,
+      originalFormatted,
+    });
 
-    // Cena 4: Preço e desconto confirmados
-    let cena4Narration = '';
-    let cena4Badge = discount > 0 ? `${discount}% OFF` : 'OFERTA VERIFICADA';
-    let cena4Facts = [];
-    if (originalFormatted && discount > 0) {
-      cena4Narration = `De ${originalFormatted} por apenas ${priceFormatted} com ${discount}% de desconto.`;
-      cena4Facts = ['price', 'original_price', 'discount'];
-    } else if (priceFormatted) {
-      cena4Narration = `Tá saindo por apenas ${priceFormatted} no anúncio oficial.`;
-      cena4Facts = ['price'];
-    } else {
-      cena4Narration = `Confira a oferta verificada disponível no anúncio oficial.`;
-      cena4Facts = ['product_name'];
-    }
+    const cena1Narration = script.cena1;
+    const cena1Badge = script.badge1 || '🔥 ACHADINHO DO DIA';
 
-    // Cena 5: CTA oficial
-    const cena5Narration = 'O link com desconto tá liberado e fixado no primeiro comentário!';
+    const cena2Narration = script.cena2;
+    const cena2Badge = script.badge2 || '💡 PRATICIDADE PURA';
+    const cena2Facts = ['product_name'];
+
+    const cena3Narration = script.cena3;
+    const cena3Badge = script.badge3 || '⭐ CUSTO-BENEFÍCIO NOTA 10';
+    const cena3Facts = ['product_name'];
+
+    const cena4Narration = script.cena4;
+    const cena4Badge = script.badge4 || (discount > 0 ? `${discount}% OFF` : 'PREÇO ESPECIAL');
+    const cena4Facts = discount > 0 && originalFormatted ? ['price', 'original_price', 'discount'] : ['price'];
+
+    const cena5Narration = script.cena5;
+    const cena5Badge = script.badge5 || '🔗 LINK NO 1º COMENTÁRIO';
 
     const cenas = [
       {
@@ -121,10 +97,10 @@ export class CreativeDirector {
         camera_motion: 'PROGRESSIVE_ZOOM_IN',
         movimento: 'Aproximação progressiva (zoom de 1.0x para 1.15x) sobre a foto real do produto.',
         overlay: {
-          badge: 'ACHADINHO FACTUAL 🔥',
-          title: prodName,
+          badge: cena1Badge,
+          title: cleanProdName,
         },
-        textoTela: 'ACHADINHO FACTUAL 🔥',
+        textoTela: cena1Badge,
         narration: cena1Narration,
         locucao: cena1Narration,
         facts_used: ['product_name'],
@@ -140,7 +116,7 @@ export class CreativeDirector {
         movimento: 'Deslocamento lateral em enquadramento focado nos detalhes reais do produto.',
         overlay: {
           badge: cena2Badge,
-          title: 'ESTRUTURA COMPLETA',
+          title: cleanProdName,
         },
         textoTela: cena2Badge,
         narration: cena2Narration,
@@ -158,7 +134,7 @@ export class CreativeDirector {
         movimento: 'Corte de detalhe aproximado com descida vertical evidenciando as especificações reais.',
         overlay: {
           badge: cena3Badge,
-          title: 'ESPECIFICAÇÕES CONFIRMADAS',
+          title: 'CUSTO-BENEFÍCIO',
         },
         textoTela: cena3Badge,
         narration: cena3Narration,
@@ -194,10 +170,10 @@ export class CreativeDirector {
         camera_motion: 'CTA_PULSE_ARROWS',
         movimento: 'Enquadramento final dinâmico com indicação pulsante para o link nos comentários.',
         overlay: {
-          badge: 'LINK NOS COMENTÁRIOS! 👇',
+          badge: cena5Badge,
           cta: 'GARANTA O SEU',
         },
-        textoTela: 'LINK NOS COMENTÁRIOS! 👇',
+        textoTela: cena5Badge,
         narration: cena5Narration,
         locucao: cena5Narration,
         facts_used: ['cta_location'],
@@ -276,6 +252,119 @@ export class CreativeDirector {
     }
 
     return blueprint;
+  }
+
+  /**
+   * Sanitiza e humaniza o título bruto do produto para linguagem falada de vídeo
+   */
+  static cleanProductTitle(rawTitle = '') {
+    if (!rawTitle) return 'Produto Selecionado';
+    let clean = String(rawTitle)
+      // Separa palavras grudadas comuns de catálogo (ex: Segurançawi-ficom -> Segurança Wi-Fi com)
+      .replace(/([a-záéíóúãõç])(wi[- ]?fi)/gi, (m, p1, p2) => p1 + ' ' + p2)
+      .replace(/(wi[- ]?fi)(com)/gi, (m, p1, p2) => p1 + ' ' + p2)
+      .replace(/([a-záéíóúãõç])([A-ZÁÉÍÓÚÃÕÇ])/g, (m, p1, p2) => p1 + ' ' + p2)
+      // Remove termos irrelevantes e ruídos de busca de marketplace
+      .replace(/\b(original|lacrado|novo|envio\s+imediato|pronta\s+entrega|promocao|promoção|imperdível|qualidade|garantia|com\s+nota\s+fiscal|nf-e|barato|bivolt\s+110v\s*220v|110v\/220v)\b/gi, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    return clean || rawTitle;
+  }
+
+  /**
+   * Gera roteiro comercial focado em dor, praticidade e custo-benefício (Super Produtora)
+   */
+  static generateCommercialCopy({ cleanName, productFacts, userPrompt, brand, features = [], discount = 0, priceFormatted = 'Preço Promocional', originalFormatted = null }) {
+    const lower = cleanName.toLowerCase();
+
+    // 1. Categoria Segurança / Câmera / Vigilância
+    if (lower.includes('câmera') || lower.includes('camera') || lower.includes('segurança') || lower.includes('vigilância') || lower.includes('alarme')) {
+      return {
+        cena1: 'Quer monitorar sua casa ou seu pet direto do celular sem gastar com instalador?',
+        badge1: '🔥 ACHADINHO DO DIA',
+        cena2: `Essa ${cleanName} rosqueia no bocal comum de luz e conecta no Wi-Fi em poucos minutos.`,
+        badge2: '💡 PRATICIDADE PURA',
+        cena3: 'Você tem visão noturna nítida e controle 360 graus na palma da mão sem pagar mensalidade.',
+        badge3: '⭐ CUSTO-BENEFÍCIO SURREAL',
+        cena4: discount > 0 && originalFormatted
+          ? `Pelo que entrega, o custo-benefício é excelente: de ${originalFormatted} por apenas ${priceFormatted} hoje.`
+          : `Pelo que entrega, o custo-benefício é excelente: tá saindo por apenas ${priceFormatted} hoje.`,
+        badge4: discount > 0 ? `${discount}% OFF` : 'OFERTA VERIFICADA',
+        cena5: 'O link oficial com o melhor preço garantido tá liberado e fixado no primeiro comentário!',
+        badge5: '🔗 LINK NO 1º COMENTÁRIO'
+      };
+    }
+
+    // 2. Categoria Conforto / Saúde / Calçados / Palmilha
+    if (lower.includes('palmilha') || lower.includes('ortopéd') || lower.includes('conforto') || lower.includes('tênis') || lower.includes('sapato') || lower.includes('colch')) {
+      return {
+        cena1: 'Sente dores nos pés ou desconforto depois de passar o dia em pé ou caminhando?',
+        badge1: '🔥 ACHADINHO DO DIA',
+        cena2: `Essa ${cleanName} traz suporte anatômico com amortecimento que alivia a pressão a cada passo.`,
+        badge2: '💡 CONFORTO DIÁRIO',
+        cena3: 'Cabe em qualquer tênis ou sapato e transforma o conforto da sua rotina.',
+        badge3: '⭐ CUSTO-BENEFÍCIO NOTA 10',
+        cena4: discount > 0 && originalFormatted
+          ? `Um custo-benefício incrível para o seu bem-estar: de ${originalFormatted} por apenas ${priceFormatted}.`
+          : `Um custo-benefício incrível para o seu bem-estar: apenas ${priceFormatted} hoje.`,
+        badge4: discount > 0 ? `${discount}% OFF` : 'PREÇO ESPECIAL',
+        cena5: 'O link com desconto tá liberado e fixado aqui no primeiro comentário!',
+        badge5: '🔗 LINK NO 1º COMENTÁRIO'
+      };
+    }
+
+    // 3. Categoria Organização / Casa / Cozinha
+    if (lower.includes('organiza') || lower.includes('cesto') || lower.includes('suporte') || lower.includes('cozinha') || lower.includes('prateleira')) {
+      return {
+        cena1: 'Se você ama praticidade e organização no dia a dia, dá uma olhada nesse achadinho!',
+        badge1: '🔥 ACHADINHO DO DIA',
+        cena2: `O ${cleanName} resolve aquele problema de espaço e bagunça com muita facilidade.`,
+        badge2: '💡 RESOLVE SEU PROBLEMA',
+        cena3: 'Super prático, versátil e com design funcional que facilita a sua rotina.',
+        badge3: '⭐ CUSTO-BENEFÍCIO SURREAL',
+        cena4: discount > 0 && originalFormatted
+          ? `E o preço é o grande destaque: de ${originalFormatted} por apenas ${priceFormatted} no anúncio oficial.`
+          : `E o preço é o grande destaque: apenas ${priceFormatted} no anúncio oficial.`,
+        badge4: discount > 0 ? `${discount}% OFF` : 'OFERTA VERIFICADA',
+        cena5: 'Aproveita enquanto tá disponível, link oficial fixado no primeiro comentário!',
+        badge5: '🔗 LINK NO 1º COMENTÁRIO'
+      };
+    }
+
+    // 4. Categoria Tecnologia / Fones / Acessórios / Eletrônicos
+    if (lower.includes('fone') || lower.includes('bluetooth') || lower.includes('tomada') || lower.includes('cabo') || lower.includes('extensão') || lower.includes('carregador')) {
+      return {
+        cena1: 'Procurando mais praticidade e tecnologia pro seu dia a dia sem gastar uma fortuna?',
+        badge1: '🔥 ACHADINHO DO DIA',
+        cena2: `O ${cleanName} entrega tudo o que você precisa com muita eficiência e qualidade.`,
+        badge2: '💡 TECNOLOGIA PRÁTICA',
+        cena3: 'Acabamento impecável, alta eficiência e um desempenho que impressiona pelo valor.',
+        badge3: '⭐ CUSTO-BENEFÍCIO NOTA 10',
+        cena4: discount > 0 && originalFormatted
+          ? `Pelo que entrega, o custo-benefício é excelente: de ${originalFormatted} por apenas ${priceFormatted}.`
+          : `Pelo que entrega, o custo-benefício é excelente: tá saindo por apenas ${priceFormatted}.`,
+        badge4: discount > 0 ? `${discount}% OFF` : 'PREÇO ESPECIAL',
+        cena5: 'Garanta o seu no link oficial fixado aqui no primeiro comentário!',
+        badge5: '🔗 LINK NO 1º COMENTÁRIO'
+      };
+    }
+
+    // 5. Categoria Geral / Padrão Comercial de Alta Conversão
+    return {
+      cena1: 'Dá uma olhada nesse achadinho que tá fazendo o maior sucesso pelo custo-benefício!',
+      badge1: '🔥 ACHADINHO DO DIA',
+      cena2: `O ${cleanName} entrega muita utilidade e praticidade para facilitar a sua rotina.`,
+      badge2: '💡 PRATICIDADE PURA',
+      cena3: 'Um produto super útil que resolve de verdade e entrega um custo-benefício imbatível.',
+      badge3: '⭐ CUSTO-BENEFÍCIO NOTA 10',
+      cena4: discount > 0 && originalFormatted
+        ? `Tá saindo de ${originalFormatted} por apenas ${priceFormatted} com oferta especial no anúncio oficial.`
+        : `Tá saindo por apenas ${priceFormatted} com oferta especial no anúncio oficial.`,
+      badge4: discount > 0 ? `${discount}% OFF` : 'OFERTA VERIFICADA',
+      cena5: 'O link verificado com desconto tá liberado e fixado no primeiro comentário!',
+      badge5: '🔗 LINK NO 1º COMENTÁRIO'
+    };
   }
 }
 
