@@ -11,6 +11,7 @@
  * - Integração direta com a máquina de estados existente (CREATIVE_READY -> CREATIVE_REVIEW)
  */
 
+import fs from 'node:fs';
 import path from 'node:path';
 import { supabase } from '../../database/supabase.js';
 import logger from '../../utils/logger.js';
@@ -257,6 +258,31 @@ export class CreativeJobQueue {
         productFacts,
       });
 
+      // 4.1 Persiste cenas no Supabase para exibição em tempo real no modal do operador
+      const formattedScenes = (blueprint.cenas || []).map((c, idx) => ({
+        scene_id: c.scene_id || idx + 1,
+        photo: c.visual_source || (productFacts.images && productFacts.images[idx]) || product.image_url,
+        badge: c.overlay || 'DESTAQUE OFICIAL',
+        narration: c.narration || '',
+        status: 'READY_SCRIPT'
+      }));
+
+      try {
+        await supabase
+          .from('creative_jobs')
+          .update({
+            metadata: {
+              ...(job.metadata || {}),
+              scenes: formattedScenes,
+              headline: blueprint.headline,
+            },
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', jobId);
+      } catch (errMeta) {
+        logger.warn(`[CreativeJobQueue] Falha ao persistir scenes em metadata: ${errMeta.message}`);
+      }
+
       // 5. Salva arquivos para auditoria prévia antes de qualquer render
       const auditDir = path.resolve('data/generated_creatives');
       if (!fs.existsSync(auditDir)) fs.mkdirSync(auditDir, { recursive: true });
@@ -303,6 +329,21 @@ export class CreativeJobQueue {
             if (fs.existsSync(generatedPath) && generatedPath !== sceneAudioPath) {
               fs.copyFileSync(generatedPath, sceneAudioPath);
             }
+
+            // Atualiza status da cena para VOICE_READY no Supabase em tempo real
+            if (formattedScenes[i]) {
+              formattedScenes[i].status = 'VOICE_READY';
+              try {
+                await supabase.from('creative_jobs').update({
+                  metadata: {
+                    ...(job.metadata || {}),
+                    scenes: formattedScenes,
+                    headline: blueprint.headline,
+                  },
+                  updated_at: new Date().toISOString(),
+                }).eq('id', jobId);
+              } catch (_) {}
+            }
           } catch (voiceErr) {
             logger.warn(`[CreativeJobQueue] Falha ao gerar voz da cena ${sceneNumber}: ${voiceErr.message}`);
           }
@@ -310,12 +351,36 @@ export class CreativeJobQueue {
       }
 
       // 8. Montagem Publicitária Final Sincronizada (ProfessionalVideoEditor)
+      formattedScenes.forEach(s => { s.status = 'EDITING'; });
+      try {
+        await supabase.from('creative_jobs').update({
+          metadata: {
+            ...(job.metadata || {}),
+            scenes: formattedScenes,
+            headline: blueprint.headline,
+          },
+          updated_at: new Date().toISOString(),
+        }).eq('id', jobId);
+      } catch (_) {}
+
       const { ProfessionalVideoEditor } = await import('./professional-video-editor.js');
       const videoEditor = new ProfessionalVideoEditor({ supabaseClient: supabase });
       const editResult = await videoEditor.editAndAssemble({
         creativeId: jobId,
         version: job.creative_version,
       });
+
+      formattedScenes.forEach(s => { s.status = 'COMPLETED'; });
+      try {
+        await supabase.from('creative_jobs').update({
+          metadata: {
+            ...(job.metadata || {}),
+            scenes: formattedScenes,
+            headline: blueprint.headline,
+          },
+          updated_at: new Date().toISOString(),
+        }).eq('id', jobId);
+      } catch (_) {}
 
       const composed = {
         videoPath: editResult.videoPath,

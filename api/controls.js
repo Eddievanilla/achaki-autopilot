@@ -24,7 +24,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { action, publicationId, interventionId, approvalId, reason, remakeFocus, note, rawLink, dryRun, productId, strategy } = req.body || {};
+    const { action, publicationId, interventionId, approvalId, reason, remakeFocus, note, rawLink, dryRun, productId, strategy, forceRetry } = req.body || {};
 
     const validActions = [
       'INICIAR',
@@ -408,6 +408,29 @@ export default async function handler(req, res) {
         });
       }
 
+      // Se não for forceRetry, checa se já existe job ativo em andamento
+      if (!forceRetry) {
+        const { data: activeJob } = await supabase.from('creative_jobs')
+          .select('id, status, error_message, metadata, created_at')
+          .eq('product_id', prod.id)
+          .in('status', ['PENDING', 'PROCESSING', 'COMPOSING', 'UPLOADING'])
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (activeJob) {
+          return res.status(200).json({
+            success: true,
+            ok: true,
+            jobId: activeJob.id,
+            jobStatus: activeJob.status,
+            scenes: activeJob.metadata?.scenes || [],
+            headline: activeJob.metadata?.headline || null,
+            message: 'Job já está em processamento na fábrica local!'
+          });
+        }
+      }
+
       const nowIso = new Date().toISOString();
       const jobKey = `job_${prod.id}_v1_${Date.now()}`;
 
@@ -482,7 +505,7 @@ export default async function handler(req, res) {
 
       // 3. Checa status do job na fila creative_jobs
       const { data: job } = await supabase.from('creative_jobs')
-        .select('id, status, error_message, updated_at, created_at')
+        .select('id, status, error_message, updated_at, created_at, metadata')
         .eq('product_id', resolvedProdId)
         .order('created_at', { ascending: false })
         .limit(1)
@@ -493,6 +516,8 @@ export default async function handler(req, res) {
         jobStatus: job?.status || 'PENDING',
         jobId: job?.id || null,
         error: job?.error_message || null,
+        scenes: job?.metadata?.scenes || [],
+        headline: job?.metadata?.headline || null
       });
     }
 
