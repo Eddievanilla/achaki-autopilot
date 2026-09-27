@@ -320,14 +320,15 @@ export class CreativeJobQueue {
         const isApproved = verificationReport.approvedSentences.some(s => s.includes(scene.narration) || scene.narration.includes(s));
         if (isApproved && scene.narration) {
           try {
-            await voiceoverService.generateVoiceover({
+            const voiceRes = await voiceoverService.generateVoiceover({
               text: scene.narration,
               filename: sceneAudioName,
+              outputDir: scenesDir,
+              rate: '+10%',
+              volume: '+10%',
             });
-            // Copia para pasta da cena
-            const generatedPath = path.join(auditDir, sceneAudioName);
-            if (fs.existsSync(generatedPath) && generatedPath !== sceneAudioPath) {
-              fs.copyFileSync(generatedPath, sceneAudioPath);
+            if (voiceRes?.audioPath && voiceRes.audioPath !== sceneAudioPath && fs.existsSync(voiceRes.audioPath)) {
+              fs.copyFileSync(voiceRes.audioPath, sceneAudioPath);
             }
 
             // Atualiza status da cena para VOICE_READY no Supabase em tempo real

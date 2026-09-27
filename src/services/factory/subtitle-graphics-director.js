@@ -60,7 +60,7 @@ export class SubtitleAndGraphicsDirector {
   _sanitizeText(str) {
     if (!str) return '';
     return String(str)
-      .slice(0, 36)
+      .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1F018}-\u{1F270}\u{2388}\u{2B05}\u{2B06}\u{2B07}\u{2B1B}\u{2B1C}\u{2B50}\u{2B55}]/gu, '')
       .replace(/[\r\n]+/g, ' ')
       .replace(/[:\\'%"]/g, ' ')
       .replace(/\s+/g, ' ')
@@ -84,13 +84,13 @@ export class SubtitleAndGraphicsDirector {
   }
 
   /**
-   * Constrói blocos dinâmicos de legendas sincronizados com cada cena.
-   * Divide cada cena em 2 a 3 cartões curtos (2 a 4 palavras) para leitura dinâmica.
+   * Constrói blocos dinâmicos de legendas sincronizados com o roteiro real de cada cena.
+   * Divide a fala real da cena em cartões curtos (3 a 5 palavras) para leitura no Reels/TikTok.
    *
    * @param {object} params
    * @param {object[]} params.scenesWithVoice - Cenas com locução e durações medidas
    * @param {object} params.product - Dados factuais do produto
-   * @returns {object[]} Lista de cartões de legendas com { start, end, text, highlightWord, color }
+   * @returns {object[]} Lista de cartões de legendas com { start, end, text, color, isHighlight }
    */
   buildDynamicCaptions({ scenesWithVoice = [], product = {} }) {
     const captions = [];
@@ -102,100 +102,104 @@ export class SubtitleAndGraphicsDirector {
 
     scenesWithVoice.forEach((scene, idx) => {
       const sceneNum = idx + 1;
-      const duration = Number(scene.voiceDurationSeconds) || Number(scene.duracaoSegundos) || 4.5;
+      const duration = Number(scene.voiceDurationSeconds) || Number(scene.duracaoSegundos) || 3.5;
       const sceneStart = currentTime;
       const sceneEnd = currentTime + duration;
       currentTime = sceneEnd;
 
-      const rawText = scene.voicePreparedText || scene.locucao || scene.textoTela || '';
+      const rawText = scene.voicePreparedText || scene.narration || scene.locucao || scene.textoTela || '';
+      const cleanWords = this._sanitizeText(rawText).split(/\s+/).filter(Boolean);
 
-      if (sceneNum === 1) {
-        // CENA 1: Gancho (Impacto Imediato)
-        const midTime = sceneStart + duration * 0.5;
+      if (sceneNum === 4) {
+        // CENA 4: Foco na Oferta e Preço
+        const tMid = sceneStart + duration * 0.45;
         captions.push({
           start: sceneStart,
-          end: midTime,
-          text: 'OLHA ESSE ACHADINHO!',
-          color: '0xfacc15', // Amarelo vibrante
-          isHighlight: true,
-        });
-        captions.push({
-          start: midTime,
-          end: sceneEnd,
-          text: 'SE VOCE PRECISA DE ESPACO',
-          color: '0xffffff',
-          isHighlight: false,
-        });
-
-      } else if (sceneNum === 2) {
-        // CENA 2: Problema e Desejo (Conexão e Empatia)
-        const t1 = sceneStart + duration * 0.45;
-        captions.push({
-          start: sceneStart,
-          end: t1,
-          text: 'CHEGA DE BAGUNCA ESPALHADA',
-          color: '0xffffff',
-          isHighlight: false,
-        });
-        captions.push({
-          start: t1,
-          end: sceneEnd,
-          text: 'ESSE MODELO RESOLVE TUDO',
+          end: tMid,
+          text: 'OFERTA EXCLUSIVA',
           color: '0x38bdf8', // Azul celeste moderno
-          isHighlight: true,
-        });
-
-      } else if (sceneNum === 3) {
-        // CENA 3: Diferencial / Qualidade Factual
-        const t1 = sceneStart + duration * 0.5;
-        captions.push({
-          start: sceneStart,
-          end: t1,
-          text: 'ACABAMENTO RESISTENTE',
-          color: '0xffffff',
           isHighlight: false,
         });
         captions.push({
-          start: t1,
+          start: tMid,
           end: sceneEnd,
-          text: 'SUPER PRATICO NO DIA A DIA',
-          color: '0x34d399', // Verde esmeralda
-          isHighlight: true,
-        });
-
-      } else if (sceneNum === 4) {
-        // CENA 4: Oferta e Preço Factual (Comprovado nos Dados Reais)
-        const t1 = sceneStart + duration * 0.5;
-        captions.push({
-          start: sceneStart,
-          end: t1,
-          text: 'CONFIRA O PRECO OFICIAL',
-          color: '0xffffff',
-          isHighlight: false,
-        });
-        captions.push({
-          start: t1,
-          end: sceneEnd,
-          text: discount ? `${priceFormatted} (${discount})` : (priceFormatted || 'PRECO ESPECIAL'),
+          text: discount ? `POR ${priceFormatted} (${discount})` : (priceFormatted ? `POR ${priceFormatted}` : 'MELHOR PRECO DO MERCADO'),
           color: '0xfacc15', // Destaque neon de preço
           isHighlight: true,
         });
-
-      } else {
-        // CENA 5: CTA em PT-BR Natural (Sem Falsa Urgência)
-        const t1 = sceneStart + duration * 0.5;
+      } else if (sceneNum === 5) {
+        // CENA 5: Call to Action de Alta Conversão
+        const tMid = sceneStart + duration * 0.50;
         captions.push({
           start: sceneStart,
-          end: t1,
-          text: 'CONFIRA A OFERTA COMPLETA',
+          end: tMid,
+          text: 'GARANTA O SEU AGORA',
           color: '0xffffff',
           isHighlight: false,
         });
         captions.push({
-          start: t1,
+          start: tMid,
           end: sceneEnd,
-          text: 'LINK NO PRIMEIRO COMENTARIO',
+          text: 'LINK NO 1º COMENTARIO',
           color: '0x34d399', // Verde de ação
+          isHighlight: true,
+        });
+      } else if (cleanWords.length >= 10) {
+        // Divide frases longas em 3 cartões curtos e ágeis
+        const chunkSize = Math.ceil(cleanWords.length / 3);
+        const card1 = cleanWords.slice(0, chunkSize).join(' ').slice(0, 36);
+        const card2 = cleanWords.slice(chunkSize, chunkSize * 2).join(' ').slice(0, 36);
+        const card3 = cleanWords.slice(chunkSize * 2).join(' ').slice(0, 36);
+
+        const step = duration / 3;
+        captions.push({
+          start: sceneStart,
+          end: sceneStart + step,
+          text: card1,
+          color: sceneNum === 1 ? '0xfacc15' : '0xffffff',
+          isHighlight: sceneNum === 1,
+        });
+        captions.push({
+          start: sceneStart + step,
+          end: sceneStart + step * 2,
+          text: card2,
+          color: '0x38bdf8',
+          isHighlight: true,
+        });
+        captions.push({
+          start: sceneStart + step * 2,
+          end: sceneEnd,
+          text: card3,
+          color: sceneNum === 3 ? '0x34d399' : '0xffffff',
+          isHighlight: true,
+        });
+      } else if (cleanWords.length >= 5) {
+        // Divide frases médias em 2 cartões
+        const midIndex = Math.ceil(cleanWords.length / 2);
+        const part1 = cleanWords.slice(0, midIndex).join(' ').slice(0, 36);
+        const part2 = cleanWords.slice(midIndex).join(' ').slice(0, 36);
+        const tMid = sceneStart + duration * 0.50;
+
+        captions.push({
+          start: sceneStart,
+          end: tMid,
+          text: part1,
+          color: sceneNum === 1 ? '0xfacc15' : '0xffffff',
+          isHighlight: sceneNum === 1,
+        });
+        captions.push({
+          start: tMid,
+          end: sceneEnd,
+          text: part2,
+          color: sceneNum === 2 ? '0x38bdf8' : (sceneNum === 3 ? '0x34d399' : '0xffffff'),
+          isHighlight: true,
+        });
+      } else if (cleanWords.length > 0) {
+        captions.push({
+          start: sceneStart,
+          end: sceneEnd,
+          text: cleanWords.join(' ').slice(0, 36),
+          color: '0xfacc15',
           isHighlight: true,
         });
       }
