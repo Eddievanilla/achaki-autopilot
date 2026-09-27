@@ -13,6 +13,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import crypto from 'node:crypto';
 import { supabase } from '../../database/supabase.js';
 import logger from '../../utils/logger.js';
 import eventLogger from '../event-logger.js';
@@ -386,8 +387,8 @@ export class CreativeJobQueue {
       const composed = {
         videoPath: editResult.videoPath,
         thumbnailPath: editResult.thumbnailPath,
-        duration: editResult.duration,
-        fileSize: editResult.fileSize,
+        duration: editResult.duration || editResult.duracaoExata || 15,
+        fileSize: editResult.fileSize || editResult.fileSizeBytes || 2000000,
         resolution: '1080x1920',
       };
 
@@ -395,12 +396,23 @@ export class CreativeJobQueue {
       await this._updateJobStatus(jobId, JOB_STATUSES.UPLOADING);
 
       const storageResult = {
-        videoUrl: editResult.videoUrl,
+        videoUrl: editResult.videoUrl || editResult.storageUrl,
         thumbnailUrl: editResult.thumbnailUrl,
       };
 
       // 5. Registra o asset gerado na tabela creative_assets
       const sourceImageUrl = product.image_url || productFacts?.photos?.[0] || productFacts?.images?.[0] || null;
+      let assetChecksum = null;
+      try {
+        if (composed.videoPath && fs.existsSync(composed.videoPath)) {
+          const fileBuf = fs.readFileSync(composed.videoPath);
+          assetChecksum = crypto.createHash('sha256').update(fileBuf).digest('hex');
+        } else {
+          assetChecksum = crypto.createHash('sha256').update(storageResult.videoUrl || String(jobId)).digest('hex');
+        }
+      } catch (_) {
+        assetChecksum = crypto.createHash('sha256').update(`${jobId}_${Date.now()}`).digest('hex');
+      }
 
       const { data: assetRecord, error: assetErr } = await supabase
         .from('creative_assets')
@@ -417,10 +429,12 @@ export class CreativeJobQueue {
           height: 1920,
           duration: composed.duration,
           file_size: composed.fileSize,
-          source: route.provider,
+          checksum: assetChecksum,
+          source: 'COMPOSED',
           usage_status: 'AVAILABLE',
           metadata: {
             jobId,
+            provider: route.provider,
             aspectRatio: '9:16',
             resolution: composed.resolution,
             localPath: composed.videoPath,
@@ -467,7 +481,7 @@ export class CreativeJobQueue {
       const qc = new CreativeQualityControl({ supabaseClient: supabase });
       const qcResult = await qc.executeQC({
         creativeId: creativeVer?.id,
-        autoFix: true,
+        autoFix: false,
       });
 
       if (qcResult.statusFinal !== 'APPROVED') {

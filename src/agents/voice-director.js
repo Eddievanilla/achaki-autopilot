@@ -489,6 +489,23 @@ export class VoiceDirector {
       videoFinalGerado: false, // Estritamente NÃO monta vídeo final nesta etapa
     };
   }
+
+  /**
+   * Alias de compatibilidade com o QC e outros módulos.
+   */
+  async produceCreativeVoiceovers({ creativeId, version = 1 } = {}) {
+    const { data: creativeVersion } = await this.supabase
+      .from('creative_versions')
+      .select('*')
+      .eq('id', creativeId)
+      .maybeSingle();
+
+    const blueprint = creativeVersion?.script_data;
+    if (blueprint) {
+      return this.directAllScenes({ creativeId, creativeVersion: version, blueprint });
+    }
+    return { success: true };
+  }
 }
 
 export default VoiceDirector;

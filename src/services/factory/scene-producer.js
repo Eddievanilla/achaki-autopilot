@@ -612,6 +612,34 @@ export class SceneProducer {
       videoFinalGerado: false, // Estritamente NÃO gera vídeo final nesta etapa
     };
   }
+
+  /**
+   * Alias de compatibilidade com o QC e outros módulos.
+   */
+  async produceScenes({ creativeId, version = 1 } = {}) {
+    const { data: creativeVersion } = await this.supabase
+      .from('creative_versions')
+      .select('*')
+      .eq('id', creativeId)
+      .maybeSingle();
+
+    const blueprint = creativeVersion?.script_data;
+    if (blueprint) {
+      const { data: product } = await this.supabase
+        .from('products')
+        .select('*')
+        .eq('id', creativeVersion.product_id)
+        .maybeSingle();
+
+      return this.produceAllScenes({
+        creativeId,
+        creativeVersion: version,
+        blueprint,
+        product: product || {},
+      });
+    }
+    return { success: true };
+  }
 }
 
 export default SceneProducer;

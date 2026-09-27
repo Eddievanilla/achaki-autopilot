@@ -298,17 +298,27 @@ export class ProfessionalVideoEditor {
       cenasUtilizadas,
       duracao: `${Math.round(finalDuration)}s`,
       duracaoExata: finalDuration,
+      duration: finalDuration,
       videoPath: finalVideoPath,
       thumbnailPath: finalThumbPath,
       resolucao: '1080x1920',
       audioStatus: 'OK',
       mp4Status: 'OK',
       storageStatus: uploadResult.videoUrl ? 'OK' : 'ERRO',
+      videoUrl: uploadResult.videoUrl,
       storageUrl: uploadResult.videoUrl,
       thumbnailUrl: uploadResult.thumbnailUrl,
+      fileSize: stats.size,
       fileSizeBytes: stats.size,
       updatedRecord,
     };
+  }
+
+  /**
+   * Alias de compatibilidade com o QC e outros módulos.
+   */
+  async assembleCreativeVideo(params) {
+    return this.editAndAssemble(params);
   }
 }
 

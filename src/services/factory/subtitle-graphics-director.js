@@ -144,64 +144,26 @@ export class SubtitleAndGraphicsDirector {
           color: '0x34d399', // Verde de ação
           isHighlight: true,
         });
-      } else if (cleanWords.length >= 10) {
-        // Divide frases longas em 3 cartões curtos e ágeis
-        const chunkSize = Math.ceil(cleanWords.length / 3);
-        const card1 = cleanWords.slice(0, chunkSize).join(' ').slice(0, 36);
-        const card2 = cleanWords.slice(chunkSize, chunkSize * 2).join(' ').slice(0, 36);
-        const card3 = cleanWords.slice(chunkSize * 2).join(' ').slice(0, 36);
-
-        const step = duration / 3;
-        captions.push({
-          start: sceneStart,
-          end: sceneStart + step,
-          text: card1,
-          color: sceneNum === 1 ? '0xfacc15' : '0xffffff',
-          isHighlight: sceneNum === 1,
-        });
-        captions.push({
-          start: sceneStart + step,
-          end: sceneStart + step * 2,
-          text: card2,
-          color: '0x38bdf8',
-          isHighlight: true,
-        });
-        captions.push({
-          start: sceneStart + step * 2,
-          end: sceneEnd,
-          text: card3,
-          color: sceneNum === 3 ? '0x34d399' : '0xffffff',
-          isHighlight: true,
-        });
-      } else if (cleanWords.length >= 5) {
-        // Divide frases médias em 2 cartões
-        const midIndex = Math.ceil(cleanWords.length / 2);
-        const part1 = cleanWords.slice(0, midIndex).join(' ').slice(0, 36);
-        const part2 = cleanWords.slice(midIndex).join(' ').slice(0, 36);
-        const tMid = sceneStart + duration * 0.50;
-
-        captions.push({
-          start: sceneStart,
-          end: tMid,
-          text: part1,
-          color: sceneNum === 1 ? '0xfacc15' : '0xffffff',
-          isHighlight: sceneNum === 1,
-        });
-        captions.push({
-          start: tMid,
-          end: sceneEnd,
-          text: part2,
-          color: sceneNum === 2 ? '0x38bdf8' : (sceneNum === 3 ? '0x34d399' : '0xffffff'),
-          isHighlight: true,
-        });
       } else if (cleanWords.length > 0) {
-        captions.push({
-          start: sceneStart,
-          end: sceneEnd,
-          text: cleanWords.join(' ').slice(0, 36),
-          color: '0xfacc15',
-          isHighlight: true,
-        });
+        // Divide em cartões curtos e ágeis (máx 5 palavras por cartão, máx 30 caracteres)
+        const maxWordsPerCard = 5;
+        const totalCards = Math.ceil(cleanWords.length / maxWordsPerCard);
+        const cardDuration = duration / Math.max(totalCards, 1);
+
+        for (let c = 0; c < totalCards; c++) {
+          const cardWords = cleanWords.slice(c * maxWordsPerCard, (c + 1) * maxWordsPerCard);
+          const cardText = cardWords.join(' ').slice(0, 30);
+          const cStart = sceneStart + c * cardDuration;
+          const cEnd = sceneStart + (c + 1) * cardDuration;
+
+          captions.push({
+            start: cStart,
+            end: cEnd,
+            text: cardText,
+            color: (c % 2 === 0) ? (sceneNum === 1 ? '0xfacc15' : '0xffffff') : '0x38bdf8',
+            isHighlight: (c % 2 !== 0) || (sceneNum === 1),
+          });
+        }
       }
     });
 
