@@ -400,14 +400,16 @@ export class CreativeJobQueue {
       };
 
       // 5. Registra o asset gerado na tabela creative_assets
-      const { data: assetRecord } = await supabase
+      const sourceImageUrl = product.image_url || productFacts?.photos?.[0] || productFacts?.images?.[0] || null;
+
+      const { data: assetRecord, error: assetErr } = await supabase
         .from('creative_assets')
         .insert({
           product_id: job.product_id,
           marketplace: product.marketplace || 'mercadolivre',
           marketplace_product_id: product.marketplace_product_id,
           type: 'VIDEO',
-          source_url: rawImageUrl,
+          source_url: sourceImageUrl,
           storage_url: storageResult.videoUrl,
           thumbnail_url: storageResult.thumbnailUrl,
           mime_type: 'video/mp4',
@@ -427,19 +429,25 @@ export class CreativeJobQueue {
         .select()
         .single();
 
-      // 6. Registra/Atualiza em creative_versions inicialmente como PENDING_QC
-      const { data: creativeVer } = await supabase
+      if (assetErr) {
+        logger.warn(`[CreativeJobQueue] Erro ao cadastrar creative_assets: ${assetErr.message}`);
+      }
+
+      // 6. Registra/Atualiza em creative_versions
+      const resolvedHeadline = blueprint.headline || blueprint.gancho || blueprint.hook || product.title || 'Achado Exclusivo';
+
+      const { data: creativeVer, error: verErr } = await supabase
         .from('creative_versions')
         .insert({
           product_id: job.product_id,
-          version_number: job.creative_version,
+          version_number: job.creative_version || 1,
           status: 'PENDING_QC',
           aspect_ratio: '9:16',
           video_url: storageResult.videoUrl,
           thumbnail_url: storageResult.thumbnailUrl,
           duration: composed.duration,
-          headline,
-          script_data: job.metadata?.scriptData || {},
+          headline: resolvedHeadline,
+          script_data: blueprint || job.metadata?.scriptData || {},
           metadata: {
             jobId,
             assetId: assetRecord?.id,
@@ -450,6 +458,10 @@ export class CreativeJobQueue {
         .select()
         .single();
 
+      if (verErr) {
+        logger.warn(`[CreativeJobQueue] Erro ao cadastrar creative_versions: ${verErr.message}`);
+      }
+
       // 7. CONTROLE DE QUALIDADE (ETAPA 6) — Executar estritamente ANTES de enviar ao administrador
       const { CreativeQualityControl } = await import('./creative-quality-control.js');
       const qc = new CreativeQualityControl({ supabaseClient: supabase });
@@ -459,7 +471,17 @@ export class CreativeJobQueue {
       });
 
       if (qcResult.statusFinal !== 'APPROVED') {
-        logger.warn(`[CreativeJobQueue] ⚠️ Criativo ${creativeVer?.id} retido no QC: status=${qcResult.statusFinal}. NÃO enviado ao administrador.`);
+        logger.warn(`[CreativeJobQueue] ⚠️ Criativo ${creativeVer?.id} retido no QC: status=${qcResult.statusFinal}.`);
+        await supabase
+          .from('creative_jobs')
+          .update({
+            status: 'NEEDS_QC_FIX',
+            creative_id: creativeVer?.id,
+            output_asset_id: assetRecord?.id,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', jobId);
+
         return {
           success: false,
           creativeId: creativeVer?.id,
@@ -481,23 +503,43 @@ export class CreativeJobQueue {
         })
         .eq('id', jobId);
 
+      // Promove versão criativa para APPROVED para visualização imediata na Galeria
+      if (creativeVer?.id) {
+        await supabase
+          .from('creative_versions')
+          .update({
+            status: 'APPROVED',
+            updated_at: completedIso,
+          })
+          .eq('id', creativeVer.id);
+      }
+
       this.lastCreative = {
         jobId,
         productId: job.product_id,
+        creativeId: creativeVer?.id,
+        assetId: assetRecord?.id,
         videoUrl: storageResult.videoUrl,
         thumbnailUrl: storageResult.thumbnailUrl,
         completedAt: completedIso,
         duration: composed.duration,
       };
 
-      logger.info(`[CreativeJobQueue] 🎉 Job [ID: ${jobId}] concluído com sucesso: ${storageResult.videoUrl}`);
+      logger.info(`[CreativeJobQueue] 🎉 Job [ID: ${jobId}] concluído com sucesso e homologado na Galeria: ${storageResult.videoUrl}`);
 
       await eventLogger.info('ORCHESTRATOR', `🎬 Criativo 9:16 concluído na fábrica local para "${product.title?.slice(0, 45)}...".`, {
         action: 'CREATIVE_READY',
-        metadata: { jobId, creativeId: creativeVer?.id, videoUrl: storageResult.videoUrl },
+        metadata: { jobId, creativeId: creativeVer?.id, assetId: assetRecord?.id, videoUrl: storageResult.videoUrl },
       });
 
-      // 9. Limpeza de cache temporário
+      // 9. Limpeza imediata de assets intermediários (ZERO BYTES de acúmulo no disco)
+      await localCreativeCacheManager.cleanJobArtifacts({
+        creativeId: jobId,
+        version: job.creative_version || 1,
+      }).catch(errClean => {
+        logger.warn(`[CreativeJobQueue] Aviso na limpeza pós-upload: ${errClean.message}`);
+      });
+
       await localCreativeCacheManager.cleanExpiredCache().catch(() => {});
 
       return { success: true, creativeId: creativeVer?.id, videoUrl: storageResult.videoUrl };
