@@ -11,6 +11,7 @@
  * - Integração direta com a máquina de estados existente (CREATIVE_READY -> CREATIVE_REVIEW)
  */
 
+import path from 'node:path';
 import { supabase } from '../../database/supabase.js';
 import logger from '../../utils/logger.js';
 import eventLogger from '../event-logger.js';

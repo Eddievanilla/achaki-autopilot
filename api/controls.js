@@ -56,6 +56,7 @@ export default async function handler(req, res) {
       'ASSEMBLE_FINAL_VIDEO',
       'APPLY_SUBTITLES_AND_GRAPHICS',
       'EVALUATE_CREATIVE_QC',
+      'CHECK_CREATIVE_VIDEO_STATUS',
     ];
 
     if (!validActions.includes(action)) {
@@ -381,7 +382,28 @@ export default async function handler(req, res) {
           success: true,
           ok: true,
           videoUrl: existingCv.video_url,
+          thumbnailUrl: existingCv.thumbnail_url,
           creativeId: existingCv.id,
+          message: 'Vídeo 9:16 já disponível!'
+        });
+      }
+
+      // Checa também na tabela creative_assets
+      const { data: existingAsset } = await supabase.from('creative_assets')
+        .select('*')
+        .eq('product_id', resolvedProdId)
+        .eq('type', 'VIDEO')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (existingAsset?.storage_url && (existingAsset.storage_url.includes('.mp4') || existingAsset.storage_url.includes('.webm'))) {
+        return res.status(200).json({
+          success: true,
+          ok: true,
+          videoUrl: existingAsset.storage_url,
+          thumbnailUrl: existingAsset.thumbnail_url,
+          creativeId: existingAsset.id,
           message: 'Vídeo 9:16 já disponível!'
         });
       }
@@ -398,6 +420,80 @@ export default async function handler(req, res) {
       if (jobErr) return res.status(500).json({ error: 'Erro ao enfileirar: ' + jobErr.message });
 
       return res.status(200).json({ success: true, ok: true, jobId: job.id, message: 'Job de vídeo 9:16 enfileirado na fábrica local!' });
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // 0.25 CHECAR STATUS DO VÍDEO CRIATIVO (POLLING DO MODAL)
+    // ─────────────────────────────────────────────────────────────
+    if (action === 'CHECK_CREATIVE_VIDEO_STATUS') {
+      let resolvedProdId = productId;
+      if (!resolvedProdId && interventionId) {
+        const cleanId = String(interventionId).replace('appr-', '');
+        const { data: appr } = await supabase.from('publication_approvals').select('product_id').eq('id', cleanId).maybeSingle();
+        resolvedProdId = appr?.product_id;
+        if (!resolvedProdId) {
+          const { data: intRow } = await supabase.from('operator_interventions').select('product_id, metadata').eq('id', cleanId).maybeSingle();
+          resolvedProdId = intRow?.product_id || intRow?.metadata?.productId;
+        }
+      }
+
+      if (!resolvedProdId) {
+        return res.status(400).json({ error: 'productId ou interventionId obrigatório.' });
+      }
+
+      // 1. Checa se o vídeo já está em creative_versions
+      const { data: cv } = await supabase.from('creative_versions')
+        .select('*')
+        .eq('product_id', resolvedProdId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (cv?.video_url && (cv.video_url.includes('.mp4') || cv.video_url.includes('.webm'))) {
+        return res.status(200).json({
+          ready: true,
+          videoUrl: cv.video_url,
+          thumbnailUrl: cv.thumbnail_url,
+          status: cv.status || 'APPROVED',
+          creativeId: cv.id,
+          version: cv.version_number || 1
+        });
+      }
+
+      // 2. Checa se o vídeo está em creative_assets
+      const { data: asset } = await supabase.from('creative_assets')
+        .select('*')
+        .eq('product_id', resolvedProdId)
+        .eq('type', 'VIDEO')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (asset?.storage_url && (asset.storage_url.includes('.mp4') || asset.storage_url.includes('.webm'))) {
+        return res.status(200).json({
+          ready: true,
+          videoUrl: asset.storage_url,
+          thumbnailUrl: asset.thumbnail_url,
+          status: 'READY',
+          creativeId: asset.id,
+          version: 1
+        });
+      }
+
+      // 3. Checa status do job na fila creative_jobs
+      const { data: job } = await supabase.from('creative_jobs')
+        .select('id, status, error_message, updated_at, created_at')
+        .eq('product_id', resolvedProdId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      return res.status(200).json({
+        ready: false,
+        jobStatus: job?.status || 'PENDING',
+        jobId: job?.id || null,
+        error: job?.error_message || null,
+      });
     }
 
     // ─────────────────────────────────────────────────────────────

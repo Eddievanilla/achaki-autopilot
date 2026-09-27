@@ -49,9 +49,67 @@ export class CreativeDirector {
     const priceFormatted = productFacts.price_formatted || 'Preço Oficial';
     const originalFormatted = productFacts.original_price_formatted;
     const discount = productFacts.discount || 0;
+    const features = Array.isArray(productFacts.features_verified) ? productFacts.features_verified : [];
+    const brand = productFacts.brand && productFacts.brand !== 'Não informada' ? productFacts.brand : null;
+    const prodName = productFacts.product_name;
 
     // 2. Cenas estruturadas estritamente com base em PRODUCT_FACTS
     // Cada cena recebe movimento diferente e perceptível (zoom, pan horizontal, tilt vertical, pulse card, CTA)
+    
+    // Cena 1: Apresentação do produto
+    const cena1Narration = `Dá uma olhada no ${prodName}.`;
+    
+    // Cena 2: Destaque de característica ou marca verificada
+    let cena2Narration = '';
+    let cena2Badge = 'DETALHES REAIS';
+    let cena2Facts = [];
+    if (features.length >= 1) {
+      cena2Narration = `Conta com ${features[0]}${features[1] ? ` e ${features[1]}` : ''}.`;
+      cena2Badge = features[0].toUpperCase();
+      cena2Facts = features.slice(0, 2).map(f => `features: ${f}`);
+    } else if (brand) {
+      cena2Narration = `Item oficial verificado da marca ${brand}.`;
+      cena2Badge = `MARCA ${brand.toUpperCase()}`;
+      cena2Facts = ['brand'];
+    } else {
+      cena2Narration = `Confira todos os detalhes nas fotos reais do produto.`;
+      cena2Badge = 'FOTOS REAIS';
+      cena2Facts = ['product_name'];
+    }
+
+    // Cena 3: Especificações adicionais ou confirmação do produto
+    let cena3Narration = '';
+    let cena3Badge = 'ESPECIFICAÇÕES';
+    let cena3Facts = [];
+    if (features.length >= 3) {
+      cena3Narration = `Destaque também para ${features[2]}${features[3] ? ` e ${features[3]}` : ''}.`;
+      cena3Badge = features[2].toUpperCase();
+      cena3Facts = features.slice(2, 4).map(f => `features: ${f}`);
+    } else {
+      const shortTitle = prodName.length > 35 ? prodName.split(' ').slice(0, 4).join(' ') : prodName;
+      cena3Narration = `Veja as fotos reais do ${shortTitle} diretamente no anúncio oficial.`;
+      cena3Badge = 'FOTOS REAIS';
+      cena3Facts = ['product_name'];
+    }
+
+    // Cena 4: Preço e desconto confirmados
+    let cena4Narration = '';
+    let cena4Badge = discount > 0 ? `${discount}% OFF` : 'OFERTA VERIFICADA';
+    let cena4Facts = [];
+    if (originalFormatted && discount > 0) {
+      cena4Narration = `De ${originalFormatted} por apenas ${priceFormatted} com ${discount}% de desconto.`;
+      cena4Facts = ['price', 'original_price', 'discount'];
+    } else if (priceFormatted) {
+      cena4Narration = `Tá saindo por apenas ${priceFormatted} no anúncio oficial.`;
+      cena4Facts = ['price'];
+    } else {
+      cena4Narration = `Confira a oferta verificada disponível no anúncio oficial.`;
+      cena4Facts = ['product_name'];
+    }
+
+    // Cena 5: CTA oficial
+    const cena5Narration = 'O link com desconto tá liberado e fixado no primeiro comentário!';
+
     const cenas = [
       {
         scene_id: 'scene_01',
@@ -64,12 +122,12 @@ export class CreativeDirector {
         movimento: 'Aproximação progressiva (zoom de 1.0x para 1.15x) sobre a foto real do produto.',
         overlay: {
           badge: 'ACHADINHO FACTUAL 🔥',
-          title: productFacts.product_name,
+          title: prodName,
         },
         textoTela: 'ACHADINHO FACTUAL 🔥',
-        narration: `Extensão ${productFacts.brand} modelo WKC-541.`,
-        locucao: `Extensão ${productFacts.brand} modelo WKC-541.`,
-        facts_used: ['product_name', 'brand', 'model'],
+        narration: cena1Narration,
+        locucao: cena1Narration,
+        facts_used: ['product_name'],
       },
       {
         scene_id: 'scene_02',
@@ -77,17 +135,17 @@ export class CreativeDirector {
         duration: '4s',
         duracaoSegundos: 4,
         visual_source: primaryPhoto,
-        crop: 'DETAIL_10_OUTLETS',
+        crop: 'DETAIL_PRODUCT_FOCUS',
         camera_motion: 'HORIZONTAL_LATERAL_PAN',
-        movimento: 'Deslocamento lateral em enquadramento focado nas 10 tomadas e entradas.',
+        movimento: 'Deslocamento lateral em enquadramento focado nos detalhes reais do produto.',
         overlay: {
-          badge: '10 TOMADAS + 4 USB',
+          badge: cena2Badge,
           title: 'ESTRUTURA COMPLETA',
         },
-        textoTela: '10 TOMADAS + 4 USB',
-        narration: 'Conta com 10 tomadas e 4 portas USB para conectar seus aparelhos.',
-        locucao: 'Conta com 10 tomadas e 4 portas USB para conectar seus aparelhos.',
-        facts_used: ['features: 10 tomadas', 'features: 4 portas USB'],
+        textoTela: cena2Badge,
+        narration: cena2Narration,
+        locucao: cena2Narration,
+        facts_used: cena2Facts,
       },
       {
         scene_id: 'scene_03',
@@ -95,17 +153,17 @@ export class CreativeDirector {
         duration: '4s',
         duracaoSegundos: 4,
         visual_source: primaryPhoto,
-        crop: 'DETAIL_CABLE_VOLTAGE',
+        crop: 'DETAIL_INSPECTION',
         camera_motion: 'VERTICAL_TILT_DESCENDING',
-        movimento: 'Corte de detalhe aproximado com descida vertical evidenciando o cabo de 2 metros.',
+        movimento: 'Corte de detalhe aproximado com descida vertical evidenciando as especificações reais.',
         overlay: {
-          badge: 'CABO DE 2 METROS • BIVOLT',
+          badge: cena3Badge,
           title: 'ESPECIFICAÇÕES CONFIRMADAS',
         },
-        textoTela: 'CABO 2M • BIVOLT',
-        narration: 'O cabo tem 2 metros de comprimento e o modelo funciona em Bivolt.',
-        locucao: 'O cabo tem 2 metros de comprimento e o modelo funciona em Bivolt.',
-        facts_used: ['features: cabo de 2 metros', 'features: bivolt'],
+        textoTela: cena3Badge,
+        narration: cena3Narration,
+        locucao: cena3Narration,
+        facts_used: cena3Facts,
       },
       {
         scene_id: 'scene_04',
@@ -117,18 +175,14 @@ export class CreativeDirector {
         camera_motion: 'PRICE_PULSE',
         movimento: 'Card de preço oficial com efeito pulsante de destaque nos valores verificados.',
         overlay: {
-          badge: discount > 0 ? `${discount}% OFF` : 'OFERTA VERIFICADA',
+          badge: cena4Badge,
           price: priceFormatted,
           originalPrice: originalFormatted,
         },
         textoTela: discount > 0 ? `${priceFormatted} (${discount}% OFF)` : priceFormatted,
-        narration: originalFormatted && discount > 0
-          ? `De ${originalFormatted} por apenas ${priceFormatted} com ${discount}% de desconto.`
-          : `Tá saindo por apenas ${priceFormatted} no anúncio oficial.`,
-        locucao: originalFormatted && discount > 0
-          ? `De ${originalFormatted} por apenas ${priceFormatted} com ${discount}% de desconto.`
-          : `Tá saindo por apenas ${priceFormatted} no anúncio oficial.`,
-        facts_used: ['price', 'original_price', 'discount'],
+        narration: cena4Narration,
+        locucao: cena4Narration,
+        facts_used: cena4Facts,
       },
       {
         scene_id: 'scene_05',
@@ -144,8 +198,8 @@ export class CreativeDirector {
           cta: 'GARANTA O SEU',
         },
         textoTela: 'LINK NOS COMENTÁRIOS! 👇',
-        narration: 'O link com desconto tá liberado e fixado no primeiro comentário!',
-        locucao: 'O link com desconto tá liberado e fixado no primeiro comentário!',
+        narration: cena5Narration,
+        locucao: cena5Narration,
         facts_used: ['cta_location'],
       },
     ];
@@ -166,7 +220,7 @@ export class CreativeDirector {
       duracaoTotal,
       duracaoTotalFormatada: `${duracaoTotal}s`,
       product_facts: productFacts,
-      conceito: `Apresentação factual de ${productFacts.product_name} destacando tomadas, portas USB, cabo e preço real.`,
+      conceito: `Apresentação factual de ${productFacts.product_name} com dados e preços verificados.`,
       gancho: cenas[0].narration,
       hook: cenas[0].narration,
       cta: cenas[4].narration,

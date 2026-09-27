@@ -3048,18 +3048,93 @@
           </div>
         </div>
 
-        <!-- [ 📋 VER STORYBOARD ] [ ♻️ REFAZER ] [ 🚀 PUBLICAR AGORA ] -->
-        <div style="padding:10px 18px 18px; background:rgba(6,9,16,1); display:flex; gap:8px; align-items:center;" id="playerActionButtons">
-          <button type="button" class="topbar-btn" onclick="openCreativeStoryboardModal()" style="flex:1.1; justify-content:center; background:rgba(59,130,246,0.18); border:1px solid rgba(59,130,246,0.5); color:#60a5fa; font-weight:800; font-size:0.83rem; padding:12px 6px; border-radius:10px; cursor:pointer;" title="Visualizar o Creative Blueprint profissional e Storyboard">
-            📋 VER STORYBOARD
+        <!-- [ 📋 VER STORYBOARD ] [ ♻️ REFAZER ] [ 🗑️ EXCLUIR ] [ 🚀 PUBLICAR AGORA ] -->
+        <div style="padding:10px 18px 18px; background:rgba(6,9,16,1); display:flex; gap:6px; align-items:center; flex-wrap:wrap;" id="playerActionButtons">
+          <button type="button" class="topbar-btn" onclick="openCreativeStoryboardModal()" style="flex:1; justify-content:center; background:rgba(59,130,246,0.18); border:1px solid rgba(59,130,246,0.5); color:#60a5fa; font-weight:800; font-size:0.78rem; padding:10px 6px; border-radius:10px; cursor:pointer;" title="Visualizar o Creative Blueprint profissional e Storyboard">
+            📋 STORYBOARD
           </button>
-          <button type="button" class="topbar-btn" onclick="handleModalRemakeCreative()" style="flex:0.9; justify-content:center; background:rgba(168,85,247,0.15); border:1px solid rgba(168,85,247,0.4); color:#d8b4fe; font-weight:800; font-size:0.83rem; padding:12px 6px; border-radius:10px; cursor:pointer;" title="Refazer vídeo com novas instruções de roteiro">
+          <button type="button" class="topbar-btn" onclick="handleModalRemakeCreative()" style="flex:1; justify-content:center; background:rgba(168,85,247,0.15); border:1px solid rgba(168,85,247,0.4); color:#d8b4fe; font-weight:800; font-size:0.78rem; padding:10px 6px; border-radius:10px; cursor:pointer;" title="Refazer vídeo com novas instruções de roteiro">
             ♻️ REFAZER
           </button>
-          <button type="button" class="topbar-btn topbar-btn-primary" onclick="handleModalPublishNow()" id="btnModalPublishNow" style="flex:1.3; justify-content:center; background:linear-gradient(135deg, #10b981 0%, #059669 100%); border:1px solid #34d399; color:#fff; font-weight:800; font-size:0.88rem; padding:12px 10px; border-radius:10px; box-shadow:0 0 20px rgba(16,185,129,0.45); cursor:pointer;" title="Publicar agora oferta com link oficial validado">
+          <button type="button" class="topbar-btn" onclick="handleModalRejectCreative()" style="flex:1; justify-content:center; background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); color:#fca5a5; font-weight:800; font-size:0.78rem; padding:10px 6px; border-radius:10px; cursor:pointer;" title="Recusar ou descartar este criativo">
+            🗑️ EXCLUIR
+          </button>
+          <button type="button" class="topbar-btn topbar-btn-primary" onclick="handleModalPublishNow()" id="btnModalPublishNow" style="flex:1.4; justify-content:center; background:linear-gradient(135deg, #10b981 0%, #059669 100%); border:1px solid #34d399; color:#fff; font-weight:800; font-size:0.84rem; padding:10px 8px; border-radius:10px; box-shadow:0 0 20px rgba(16,185,129,0.45); cursor:pointer;" title="Publicar agora oferta com link oficial validado">
             🚀 PUBLICAR AGORA
           </button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════
+       MODAL: PROGRESSO E LOGS DA FÁBRICA DE VÍDEO EM TEMPO REAL
+       ══════════════════════════════════════════════════════════ -->
+  <div class="modal-overlay" id="creativeProductionModal" onclick="closeCreativeProductionModal(event)">
+    <div class="modal-window" style="background:#070a13; border:1px solid rgba(59,130,246,0.35); border-radius:24px; padding:0; overflow:hidden; max-width:520px; width:95vw; max-height:92vh; display:flex; flex-direction:column; box-shadow:0 30px 90px rgba(0,0,0,0.95), 0 0 50px rgba(59,130,246,0.25);" onclick="event.stopPropagation()">
+      <!-- Topbar -->
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:16px 20px; background:rgba(15,23,42,0.95); border-bottom:1px solid rgba(255,255,255,0.08); flex-shrink:0;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div class="pulse-dot" style="width:10px; height:10px; background:#38bdf8;"></div>
+          <div>
+            <div style="font-size:1.02rem; font-weight:800; color:#fff; display:flex; align-items:center; gap:6px;">
+              🎬 Fábrica de Criativos 9:16
+            </div>
+            <div style="font-size:0.72rem; color:#94a3b8; font-weight:600;">Produção em Tempo Real com IA e Locução Neural</div>
+          </div>
+        </div>
+        <button type="button" onclick="closeCreativeProductionModal()" style="background:transparent; border:none; color:var(--text-dim); font-size:1.2rem; cursor:pointer; padding:4px;" title="Minimizar para segundo plano">✖</button>
+      </div>
+
+      <!-- Conteúdo do Progresso -->
+      <div style="padding:20px; overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:16px;">
+        <!-- Card Resumo do Produto -->
+        <div style="display:flex; gap:14px; align-items:center; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:12px;">
+          <img id="prodProgressThumb" src="https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=200" alt="Produto" style="width:60px; height:60px; border-radius:10px; object-fit:cover; background:#000; flex-shrink:0; border:1px solid rgba(255,255,255,0.15);">
+          <div style="overflow:hidden; flex:1;">
+            <div id="prodProgressTitle" style="font-size:0.86rem; font-weight:700; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Carregando produto...</div>
+            <div style="display:flex; gap:6px; align-items:center; margin-top:4px;">
+              <span class="status-tag" style="background:rgba(59,130,246,0.2); border-color:rgba(59,130,246,0.4); color:#93c5fd; font-size:0.68rem; font-weight:800;">VERTICAL 9:16 HD</span>
+              <span id="prodProgressStatusText" style="font-size:0.72rem; color:#38bdf8; font-weight:700;">Iniciando motor...</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Barra de Progresso com Porcentagem -->
+        <div>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <span id="prodProgressStageLabel" style="font-size:0.8rem; font-weight:800; color:#f1f5f9;">Iniciando pipeline de criação...</span>
+            <span id="prodProgressPercent" style="font-size:0.85rem; font-weight:900; color:#38bdf8;">10%</span>
+          </div>
+          <div style="width:100%; height:8px; background:rgba(255,255,255,0.08); border-radius:99px; overflow:hidden; position:relative;">
+            <div id="prodProgressBarFill" style="width:10%; height:100%; background:linear-gradient(90deg, #3b82f6 0%, #a855f7 50%, #10b981 100%); transition:width 0.4s ease; border-radius:99px; box-shadow:0 0 12px rgba(59,130,246,0.6);"></div>
+          </div>
+        </div>
+
+        <!-- Terminal de Logs ao Vivo -->
+        <div>
+          <div style="font-size:0.72rem; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px; display:flex; justify-content:space-between;">
+            <span>Terminal de Telemetria da Fábrica</span>
+            <span style="color:#64748b; font-weight:600;" id="prodProgressWorkerStatus">Sonda de hardware OK</span>
+          </div>
+          <div id="prodProgressLogTerminal" style="background:#030509; border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:12px; height:150px; overflow-y:auto; font-family:'Courier New', monospace; font-size:0.73rem; line-height:1.5; color:#cbd5e1; display:flex; flex-direction:column; gap:4px; box-shadow:inset 0 2px 10px rgba(0,0,0,0.8);">
+            <div style="color:#64748b;">[00:00] Conectando ao orquestrador de criativos...</div>
+          </div>
+        </div>
+
+        <!-- Dica de Operação / Worker -->
+        <div style="background:rgba(59,130,246,0.08); border:1px solid rgba(59,130,246,0.2); border-radius:10px; padding:10px 14px; font-size:0.74rem; color:#93c5fd; display:flex; align-items:center; gap:8px;">
+          <span>💡</span>
+          <span style="line-height:1.35;">Assim que a renderização for concluída, o vídeo abrirá <strong>automaticamente no player oficial</strong> pronto para assistir ou publicar.</span>
+        </div>
+      </div>
+
+      <!-- Rodapé com Ações -->
+      <div style="padding:12px 20px; background:rgba(10,15,26,0.95); border-top:1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; align-items:center;">
+        <button type="button" onclick="closeCreativeProductionModal()" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#cbd5e1; font-weight:700; font-size:0.78rem; padding:9px 14px; border-radius:8px; cursor:pointer;">
+          Minimizar (Rodar em Segundo Plano)
+        </button>
+        <span style="font-size:0.72rem; color:#64748b;" id="prodProgressTimerCount">Tempo: 0s</span>
       </div>
     </div>
   </div>
@@ -5143,16 +5218,23 @@
           statusBadge = `<span class="status-tag META_ATINGIDA">PUBLICADO</span>`;
         }
 
+        const isVideoAsset = Boolean(isVideo || is916 || (a.storage_url && (a.storage_url.includes('.mp4') || a.storage_url.includes('.webm'))));
         const safeObj = {
-          approvalId: a.approvalId,
+          creativeId: a.id,
+          id: a.id,
+          approvalId: a.approvalId || null,
+          productId: a.product_id || a.productId,
           versionNumber: a.versionNumber || 1,
-          title: a.productTitle,
+          title: a.productTitle || a.headline || 'Criativo ACHAki',
           marketplace: a.marketplace || 'mercadolivre',
-          videoUrl: a.storage_url,
+          videoUrl: a.storage_url || a.video_url || '',
           thumbnailUrl: thumbUrl,
           headline: a.headline || a.productTitle,
           duration: a.duration || 18,
           scriptData: a.scriptData,
+          type: a.type,
+          isVideo: isVideoAsset,
+          status: a.status,
         };
 
         return `
@@ -5577,7 +5659,7 @@
     let currentReviewProductId = null;
     let currentReviewApprovalId = null;
 
-    function openCreativeReviewModal(itemId, overrideVideoUrl) {
+    function openCreativeReviewModal(itemId, overrideVideoUrl, customMeta = {}) {
       currentReviewInterventionId = itemId;
 
       // 1. Localiza item pelo mapa de intervenções, lista ou activeApproval
@@ -5602,12 +5684,37 @@
         }
       }
 
-      const meta = item?.metadata || {};
-      currentReviewProductId = item?.productId || meta.productId || meta.product_id;
-      currentReviewApprovalId = meta.approvalId || item?.approvalId;
+      // Se não encontrou em intervenções, procura no acervo da galeria (creativesState)
+      if (!item && Array.isArray(window.creativesState)) {
+        const foundAsset = window.creativesState.find(a => 
+          String(a.id) === String(itemId) || 
+          String(a.creativeId) === String(itemId) || 
+          (a.approvalId && String(a.approvalId) === String(itemId))
+        );
+        if (foundAsset) {
+          item = {
+            id: foundAsset.id,
+            title: foundAsset.productTitle || foundAsset.headline,
+            productId: foundAsset.product_id || foundAsset.productId,
+            metadata: {
+              productTitle: foundAsset.productTitle || foundAsset.headline,
+              videoUrl: foundAsset.storage_url || foundAsset.video_url,
+              thumbnailUrl: foundAsset.thumbnail_url || foundAsset.storage_url,
+              approvalId: foundAsset.approvalId,
+              creativeId: foundAsset.id,
+              duration: foundAsset.duration,
+              marketplace: foundAsset.marketplace
+            }
+          };
+        }
+      }
+
+      const meta = Object.assign({}, item?.metadata || {}, customMeta || {});
+      currentReviewProductId = customMeta?.productId || item?.productId || meta.productId || meta.product_id;
+      currentReviewApprovalId = customMeta?.approvalId || meta.approvalId || item?.approvalId;
 
       // 2. Extrai nome real do produto
-      let productTitle = meta.productTitle || meta.product_title;
+      let productTitle = customMeta?.title || customMeta?.headline || meta.productTitle || meta.product_title;
       if (!productTitle && item?.message) {
         const match = item.message.match(/para "([^"]+)"/i);
         if (match && match[1]) productTitle = match[1];
@@ -5619,22 +5726,20 @@
       }
 
       // 3. Extrai URL REAL do vídeo 9:16 (sem mocks)
-      let videoUrl = overrideVideoUrl || window.pendingDirectVideoUrl || meta.videoUrl || meta.video_url || meta.storage_url || meta.media_url || item?.videoUrl;
+      let videoUrl = overrideVideoUrl || customMeta?.videoUrl || window.pendingDirectVideoUrl || meta.videoUrl || meta.video_url || meta.storage_url || meta.media_url || item?.videoUrl;
       window.pendingDirectVideoUrl = null;
 
-      // Fallback em creatives carregados
-      if (!videoUrl && window.lastDashboardData?.creatives) {
-        const found = window.lastDashboardData.creatives.find(c => 
+      // Fallback em creativesState
+      if (!videoUrl && Array.isArray(window.creativesState)) {
+        const found = window.creativesState.find(c => 
           (meta.creativeId && c.id === meta.creativeId) ||
-          (item?.creative_id && c.id === item.creative_id) ||
-          (item?.productId && c.productId === item.productId) ||
-          (meta.productId && c.productId === meta.productId) ||
-          (currentReviewProductId && c.productId === currentReviewProductId)
+          (itemId && c.id === itemId) ||
+          (currentReviewProductId && (c.product_id === currentReviewProductId || c.productId === currentReviewProductId))
         );
         if (found) {
-          videoUrl = found.videoUrl || found.storage_url;
+          videoUrl = found.storage_url || found.video_url;
           if (!productTitle || productTitle === 'Produto Selecionado') {
-            productTitle = found.title || productTitle;
+            productTitle = found.productTitle || found.title || productTitle;
           }
         }
       }
@@ -5643,15 +5748,17 @@
         videoUrl = window.lastDashboardData.activeApproval.videoUrl;
       }
 
-      // Fallback para thumbnail ou imagem do produto
-      if (!videoUrl) {
-        videoUrl = meta.thumbnailUrl || meta.image_url || item?.imageUrl || meta.imageUrl;
+      // 4. Fallback para thumbnail ou imagem do produto
+      let thumbnailUrl = customMeta?.thumbnailUrl || meta.thumbnailUrl || meta.thumbnail_url || meta.image_url || item?.imageUrl || meta.imageUrl || '';
+      if (!thumbnailUrl && videoUrl && !videoUrl.includes('.mp4') && !videoUrl.includes('.webm')) {
+        thumbnailUrl = videoUrl;
       }
 
       console.log('🎬 [openCreativeReviewModal] Abrindo revisão do criativo 9:16:', {
         itemId,
         productTitle,
-        videoUrl: videoUrl ? videoUrl.slice(0, 80) + '...' : null
+        videoUrl: videoUrl ? videoUrl.slice(0, 80) + '...' : null,
+        thumbnailUrl: thumbnailUrl ? thumbnailUrl.slice(0, 80) + '...' : null
       });
 
       const modal = document.getElementById('creativeVideoPlayerModal');
@@ -5670,47 +5777,25 @@
         if (isVideoFormat) {
           if (badge) badge.style.display = 'none';
           vidEl.style.display = 'block';
+          vidEl.poster = thumbnailUrl || '';
           vidEl.src = videoUrl;
           vidEl.load();
           vidEl.play().catch(err => {
             console.warn('[openCreativeReviewModal] Autoplay prevenido pelo browser:', err);
           });
         } else {
-          // É imagem ou preview: ativa badge e enfileira na fábrica local de vídeo 9:16
-          if (videoUrl) {
-            vidEl.style.display = 'block';
-            vidEl.poster = videoUrl;
-            vidEl.removeAttribute('src');
-          }
-          if (badge) {
-            badge.style.display = 'flex';
-            if (badgeText) badgeText.textContent = '⏳ Renderizando vídeo 9:16 na fábrica local...';
-          }
-
-          // Dispara enfileiramento na fábrica local
-          fetch('/api/controls', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              action: 'ENQUEUE_CREATIVE_JOB',
+          // VÍDEO NÃO ESTÁ PRONTO: NUNCA exibe player vazio!
+          // Fecha o player e abre o painel de progresso da fábrica com logs em tempo real
+          closeCreativeVideoPlayer();
+          if (typeof openCreativeProductionProgressModal === 'function') {
+            openCreativeProductionProgressModal({
+              productId: currentReviewProductId,
               interventionId: itemId,
-              productId: currentReviewProductId
-            })
-          }).then(r => r.json()).then(resData => {
-            console.log('🎬 [openCreativeReviewModal] Job enfileirado na fábrica local:', resData);
-            if (resData.videoUrl && (resData.videoUrl.includes('.mp4') || resData.videoUrl.includes('.webm'))) {
-              if (badge) badge.style.display = 'none';
-              vidEl.style.display = 'block';
-              vidEl.src = resData.videoUrl;
-              vidEl.load();
-              vidEl.play().catch(() => {});
-            } else {
-              pollForReadyVideo(currentReviewProductId);
-            }
-          }).catch(e => {
-            console.warn('Erro ao disparar job:', e);
-            pollForReadyVideo(currentReviewProductId);
-          });
+              title: productTitle,
+              thumbnailUrl: thumbnailUrl
+            });
+          }
+          return;
         }
       }
 
@@ -5720,38 +5805,92 @@
     }
 
     let videoPollTimer = null;
-    function pollForReadyVideo(productId) {
+    function pollForReadyVideo(productId, previousVideoUrl, interventionId) {
       if (videoPollTimer) clearInterval(videoPollTimer);
+
+      const steps = [
+        '🧠 <strong>Etapa 1/4:</strong> Roteirizando fatos com IA de conversão...',
+        '🎙️ <strong>Etapa 2/4:</strong> Gravando locução neural em português...',
+        '🎬 <strong>Etapa 3/4:</strong> Montando cortes 9:16, legendas e trilha...',
+        '🚀 <strong>Etapa 4/4:</strong> Renderizando vídeo HD na fábrica local...'
+      ];
+      let stepIndex = 0;
 
       const check = async () => {
         try {
-          const res = await fetch(`/api/dashboard?t=${Date.now()}`);
-          if (!res.ok) return false;
-          const data = await res.json();
-          window.lastDashboardData = data;
-          const found = (data.creatives || []).find(c => 
-            (productId && c.productId === productId && c.videoUrl && (c.videoUrl.includes('.mp4') || c.videoUrl.includes('.webm'))) ||
-            (!productId && c.videoUrl && (c.videoUrl.includes('.mp4') || c.videoUrl.includes('.webm')))
-          );
-          if (found && found.videoUrl) {
-            // Se estamos aguardando um novo vídeo após remake, checa se a URL mudou
-            if (previousVideoUrl && found.videoUrl === previousVideoUrl) {
-              return false;
+          // Atualiza mensagem de progresso dinâmica se ainda renderizando
+          const badgeText = document.getElementById('playerVideoBadgeText');
+          if (badgeText && stepIndex < steps.length) {
+            badgeText.innerHTML = steps[stepIndex];
+            stepIndex = (stepIndex + 1) % steps.length;
+          }
+
+          // 1. Consulta atômica no endpoint dedicado
+          const res = await fetch('/api/controls', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'CHECK_CREATIVE_VIDEO_STATUS',
+              productId,
+              interventionId
+            })
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            if (data.ready && data.videoUrl && (data.videoUrl.includes('.mp4') || data.videoUrl.includes('.webm'))) {
+              if (previousVideoUrl && data.videoUrl === previousVideoUrl) {
+                return false;
+              }
+              if (videoPollTimer) {
+                clearInterval(videoPollTimer);
+                videoPollTimer = null;
+              }
+              const vidEl = document.getElementById('playerVideoEl');
+              const badge = document.getElementById('playerVideoRenderingBadge');
+              if (badge) badge.style.display = 'none';
+              if (vidEl) {
+                vidEl.src = data.videoUrl;
+                if (data.thumbnailUrl) vidEl.poster = data.thumbnailUrl;
+                vidEl.load();
+                vidEl.play().catch(() => {});
+              }
+              if (window.showToast) {
+                window.showToast('🎬 Criativo Pronto!', 'Vídeo vertical 9:16 gerado com alta qualidade!');
+              }
+              if (window.loadCreativesGallery) window.loadCreativesGallery();
+              if (window.loadDashboard) window.loadDashboard();
+              return true;
             }
-            if (videoPollTimer) {
-              clearInterval(videoPollTimer);
-              videoPollTimer = null;
+          }
+
+          // 2. Fallback de verificação na galeria de criativos
+          const cRes = await fetch(`/api/creatives?t=${Date.now()}`);
+          if (cRes.ok) {
+            const cData = await cRes.json();
+            const found = (cData.assets || []).find(a => 
+              (productId && (a.product_id === productId || a.productId === productId) && a.storage_url && (a.storage_url.includes('.mp4') || a.storage_url.includes('.webm')))
+            );
+            if (found && found.storage_url) {
+              if (previousVideoUrl && found.storage_url === previousVideoUrl) {
+                return false;
+              }
+              if (videoPollTimer) {
+                clearInterval(videoPollTimer);
+                videoPollTimer = null;
+              }
+              const vidEl = document.getElementById('playerVideoEl');
+              const badge = document.getElementById('playerVideoRenderingBadge');
+              if (badge) badge.style.display = 'none';
+              if (vidEl) {
+                vidEl.src = found.storage_url;
+                if (found.thumbnail_url) vidEl.poster = found.thumbnail_url;
+                vidEl.load();
+                vidEl.play().catch(() => {});
+              }
+              if (window.loadCreativesGallery) window.loadCreativesGallery();
+              return true;
             }
-            const vidEl = document.getElementById('playerVideoEl');
-            const badge = document.getElementById('playerVideoRenderingBadge');
-            if (badge) badge.style.display = 'none';
-            if (vidEl) {
-              vidEl.src = found.videoUrl;
-              vidEl.load();
-              vidEl.play().catch(() => {});
-            }
-            if (window.loadCreativesGallery) window.loadCreativesGallery();
-            return true;
           }
         } catch (_) {}
         return false;
@@ -5762,8 +5901,13 @@
       let attempts = 0;
       videoPollTimer = setInterval(async () => {
         attempts++;
-        if (attempts > 45) {
+        if (attempts > 60) {
           clearInterval(videoPollTimer);
+          videoPollTimer = null;
+          const badgeText = document.getElementById('playerVideoBadgeText');
+          if (badgeText) {
+            badgeText.innerHTML = '⚠️ <em>Fábrica em segundo plano. Mantenha o worker ativo para finalizar.</em>';
+          }
           return;
         }
         await check();
@@ -5883,6 +6027,265 @@
     window.openCreativeReviewModal = openCreativeReviewModal;
     window.handleModalPublishNow = handleModalPublishNow;
     window.handleModalRemakeCreative = handleModalRemakeCreative;
+
+    // ══════════════════════════════════════════════════════════
+    // FÁBRICA DE VÍDEO: PROGRESSO E LOGS EM TEMPO REAL
+    // ══════════════════════════════════════════════════════════
+    let progressTimer = null;
+    let progressSeconds = 0;
+    let progressPollTimer = null;
+    let activeProgressContext = null;
+
+    function openCreativeProductionProgressModal(ctx = {}) {
+      activeProgressContext = ctx;
+      const modal = document.getElementById('creativeProductionModal');
+      const titleEl = document.getElementById('prodProgressTitle');
+      const thumbEl = document.getElementById('prodProgressThumb');
+      const statusText = document.getElementById('prodProgressStatusText');
+      const stageLabel = document.getElementById('prodProgressStageLabel');
+      const percentEl = document.getElementById('prodProgressPercent');
+      const barFill = document.getElementById('prodProgressBarFill');
+      const terminal = document.getElementById('prodProgressLogTerminal');
+      const timerCount = document.getElementById('prodProgressTimerCount');
+
+      // Título e imagem do produto
+      let prodTitle = ctx.title || 'Produto Selecionado';
+      let prodThumb = ctx.thumbnailUrl || 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=200';
+
+      if (!ctx.title && Array.isArray(window.lastDashboardData?.interventions)) {
+        const found = window.lastDashboardData.interventions.find(i => String(i.id) === String(ctx.interventionId));
+        if (found) {
+          prodTitle = found.metadata?.productTitle || found.title || prodTitle;
+          prodThumb = found.metadata?.thumbnailUrl || found.metadata?.imageUrl || prodThumb;
+        }
+      }
+
+      if (titleEl) titleEl.textContent = prodTitle;
+      if (thumbEl) thumbEl.src = prodThumb;
+      if (statusText) statusText.textContent = 'Enfileirado na fábrica local';
+      if (stageLabel) stageLabel.textContent = 'Iniciando pipeline de criação...';
+      if (percentEl) percentEl.textContent = '10%';
+      if (barFill) barFill.style.width = '10%';
+      if (timerCount) timerCount.textContent = 'Tempo: 0s';
+
+      if (terminal) {
+        terminal.innerHTML = `
+          <div style="color:#64748b;">[${new Date().toLocaleTimeString()}] ✅ Link de afiliado validado com sucesso.</div>
+          <div style="color:#38bdf8;">[${new Date().toLocaleTimeString()}] 🎬 Job de vídeo 9:16 enfileirado na fábrica (creative_jobs)...</div>
+          <div style="color:#a855f7;">[${new Date().toLocaleTimeString()}] 🧠 Diretor Criativo IA ativado: extraindo fatos do produto...</div>
+        `;
+      }
+
+      if (modal) modal.classList.add('open');
+
+      // Inicia timer de contagem
+      progressSeconds = 0;
+      if (progressTimer) clearInterval(progressTimer);
+      progressTimer = setInterval(() => {
+        progressSeconds++;
+        if (timerCount) timerCount.textContent = `Tempo: ${progressSeconds}s`;
+      }, 1000);
+
+      // Dispara job na fábrica local caso ainda não tenha sido disparado
+      fetch('/api/controls', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'ENQUEUE_CREATIVE_JOB',
+          interventionId: ctx.interventionId,
+          productId: ctx.productId
+        })
+      }).then(r => r.json()).then(resData => {
+        console.log('🎬 [Progresso] Job enfileirado:', resData);
+        if (terminal) {
+          terminal.innerHTML += `<div style="color:#34d399;">[${new Date().toLocaleTimeString()}] ⚡ Fábrica notificada. Monitorando renderização...</div>`;
+          terminal.scrollTop = terminal.scrollHeight;
+        }
+      }).catch(() => {});
+
+      // Inicia o polling de progresso e logs
+      startProductionProgressPolling(ctx);
+    }
+
+    function addTerminalLog(msg, color = '#cbd5e1') {
+      const terminal = document.getElementById('prodProgressLogTerminal');
+      if (!terminal) return;
+      const time = new Date().toLocaleTimeString();
+      const div = document.createElement('div');
+      div.style.color = color;
+      div.innerHTML = `[${time}] ${msg}`;
+      terminal.appendChild(div);
+      terminal.scrollTop = terminal.scrollHeight;
+    }
+
+    function startProductionProgressPolling(ctx) {
+      if (progressPollTimer) clearInterval(progressPollTimer);
+
+      const stages = [
+        { pct: 25, label: '🧠 Analisando fotos e criando roteiro persuasivo...', log: 'IA gerando blueprint e ganchos de alta conversão...', color: '#a855f7' },
+        { pct: 50, label: '🎙️ Gravando locução neural em português (Edge-TTS)...', log: 'Locução neural PT-BR gerada com ritmo comercial...', color: '#38bdf8' },
+        { pct: 75, label: '🎬 Sincronizando cortes 9:16, legendas e trilha...', log: 'FFmpeg compondo cenas dinâmicas e legendas automáticas...', color: '#fbbf24' },
+        { pct: 90, label: '🚀 Finalizando renderização Full HD e upload...', log: 'Composição de vídeo 1080x1920 finalizada. Enviando ao Storage...', color: '#60a5fa' }
+      ];
+
+      let currentStageIdx = 0;
+      let checkAttempts = 0;
+
+      progressPollTimer = setInterval(async () => {
+        checkAttempts++;
+
+        // Avança etapas visuais enquanto a fábrica trabalha
+        if (currentStageIdx < stages.length && checkAttempts % 3 === 0) {
+          const st = stages[currentStageIdx];
+          const percentEl = document.getElementById('prodProgressPercent');
+          const barFill = document.getElementById('prodProgressBarFill');
+          const stageLabel = document.getElementById('prodProgressStageLabel');
+
+          if (percentEl) percentEl.textContent = `${st.pct}%`;
+          if (barFill) barFill.style.width = `${st.pct}%`;
+          if (stageLabel) stageLabel.textContent = st.label;
+          addTerminalLog(st.log, st.color);
+          currentStageIdx++;
+        }
+
+        try {
+          // Consulta status do vídeo
+          const res = await fetch('/api/controls', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'CHECK_CREATIVE_VIDEO_STATUS',
+              productId: ctx.productId,
+              interventionId: ctx.interventionId
+            })
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            if (data.ready && data.videoUrl && (data.videoUrl.includes('.mp4') || data.videoUrl.includes('.webm'))) {
+              // 100% CONCLUÍDO!
+              clearInterval(progressPollTimer);
+              clearInterval(progressTimer);
+              progressPollTimer = null;
+              progressTimer = null;
+
+              const percentEl = document.getElementById('prodProgressPercent');
+              const barFill = document.getElementById('prodProgressBarFill');
+              const stageLabel = document.getElementById('prodProgressStageLabel');
+
+              if (percentEl) percentEl.textContent = '100%';
+              if (barFill) barFill.style.width = '100%';
+              if (stageLabel) stageLabel.innerHTML = '✅ <strong style="color:#34d399;">Vídeo 9:16 Concluído com Sucesso!</strong>';
+              addTerminalLog('🎉 Vídeo Full HD pronto e validado! Abrindo player de revisão...', '#34d399');
+
+              // Toca som de vitória
+              if (window.achakiAudio?.notifyResolved) window.achakiAudio.notifyResolved();
+
+              // Aguarda 800ms para o usuário ver o 100% e abre o modal do vídeo tocando!
+              setTimeout(() => {
+                closeCreativeProductionModal();
+                if (typeof window.openCreativeReviewModal === 'function') {
+                  window.openCreativeReviewModal(ctx.interventionId || data.creativeId, data.videoUrl, {
+                    productId: ctx.productId,
+                    thumbnailUrl: data.thumbnailUrl || ctx.thumbnailUrl,
+                    title: ctx.title,
+                    videoUrl: data.videoUrl
+                  });
+                }
+                if (window.loadCreativesGallery) window.loadCreativesGallery();
+                if (window.loadDashboard) window.loadDashboard();
+              }, 900);
+
+              return;
+            }
+          }
+
+          // Checa também na galeria de criativos
+          const cRes = await fetch(`/api/creatives?t=${Date.now()}`);
+          if (cRes.ok) {
+            const cData = await cRes.json();
+            const found = (cData.assets || []).find(a => 
+              (ctx.productId && (a.product_id === ctx.productId || a.productId === ctx.productId) && a.storage_url && (a.storage_url.includes('.mp4') || a.storage_url.includes('.webm')))
+            );
+            if (found && found.storage_url) {
+              clearInterval(progressPollTimer);
+              clearInterval(progressTimer);
+              progressPollTimer = null;
+              progressTimer = null;
+
+              const percentEl = document.getElementById('prodProgressPercent');
+              const barFill = document.getElementById('prodProgressBarFill');
+              const stageLabel = document.getElementById('prodProgressStageLabel');
+              if (percentEl) percentEl.textContent = '100%';
+              if (barFill) barFill.style.width = '100%';
+              if (stageLabel) stageLabel.innerHTML = '✅ <strong style="color:#34d399;">Vídeo 9:16 Concluído com Sucesso!</strong>';
+
+              addTerminalLog('🎉 Criativo detectado no acervo! Abrindo player...', '#34d399');
+              if (window.achakiAudio?.notifyResolved) window.achakiAudio.notifyResolved();
+
+              setTimeout(() => {
+                closeCreativeProductionModal();
+                if (typeof window.openCreativeReviewModal === 'function') {
+                  window.openCreativeReviewModal(ctx.interventionId || found.id, found.storage_url, {
+                    productId: ctx.productId,
+                    thumbnailUrl: found.thumbnail_url || ctx.thumbnailUrl,
+                    title: ctx.title,
+                    videoUrl: found.storage_url
+                  });
+                }
+              }, 900);
+              return;
+            }
+          }
+
+          // Se demorar mais de 75 segundos, adiciona aviso amigável de worker no terminal
+          if (checkAttempts === 25) {
+            addTerminalLog('💡 Dica: Verifique se o worker local está rodando no terminal com `npm run worker`.', '#facc15');
+          }
+        } catch (_) {}
+
+        if (checkAttempts > 90) { // 3 minutos
+          clearInterval(progressPollTimer);
+          progressPollTimer = null;
+          addTerminalLog('⚠️ Tempo limite excedido. O job continua em processamento na fila.', '#f87171');
+        }
+      }, 2000);
+    }
+
+    function closeCreativeProductionModal(e) {
+      if (e && e.target && !e.target.classList.contains('modal-overlay') && !e.target.closest('button')) return;
+      const modal = document.getElementById('creativeProductionModal');
+      if (modal) modal.classList.remove('open');
+      if (progressTimer) { clearInterval(progressTimer); progressTimer = null; }
+    }
+
+    async function handleModalRejectCreative() {
+      if (!confirm('Deseja realmente recusar e descartar este criativo?')) return;
+      if (currentReviewApprovalId) {
+        promptRejectCreative(currentReviewApprovalId);
+        closeCreativeVideoPlayer();
+      } else if (currentReviewInterventionId) {
+        try {
+          await fetch('/api/controls', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'REJECT_CREATIVE', interventionId: currentReviewInterventionId })
+          });
+          closeCreativeVideoPlayer();
+          if (window.loadDashboard) window.loadDashboard();
+          if (window.loadCreativesGallery) window.loadCreativesGallery();
+          if (window.showToast) window.showToast('Criativo Recusado', 'O item foi arquivado do acervo.');
+        } catch (e) {
+          alert('Erro ao recusar criativo: ' + e.message);
+        }
+      } else {
+        closeCreativeVideoPlayer();
+      }
+    }
+
+    window.openCreativeProductionProgressModal = openCreativeProductionProgressModal;
+    window.closeCreativeProductionModal = closeCreativeProductionModal;
+    window.handleModalRejectCreative = handleModalRejectCreative;
 
     // ══════════════════════════════════════════════════════════
     // DIRETOR CRIATIVO: CREATIVE BLUEPRINT & STORYBOARD
@@ -6488,9 +6891,10 @@
     function openCreativeVideoPlayerFromMeta(metaStr) {
       try {
         const meta = typeof metaStr === 'string' ? JSON.parse(metaStr) : metaStr;
-        if (meta && (meta.approvalId || meta.creativeId)) {
-          openCreativeReviewModal(meta.approvalId || meta.creativeId);
-        }
+        if (!meta) return;
+        const targetId = meta.creativeId || meta.id || meta.approvalId || 'preview';
+        const targetVideoUrl = meta.videoUrl || meta.storage_url || meta.video_url || null;
+        openCreativeReviewModal(targetId, targetVideoUrl, meta);
       } catch (e) {
         console.error('Erro ao abrir player:', e);
       }

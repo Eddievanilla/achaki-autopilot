@@ -92,55 +92,205 @@ export class NarrationVerifier {
       }
     }
 
-    // 2. Checa se menciona características técnicas não listadas
-    // Ex: voltagem incorreta
-    if (/\b(110v|127v|220v)\b/i.test(s) && !productFacts.features_verified.some(f => /110|127|220/i.test(f))) {
-      if (!/\bbivolt\b/i.test(productFacts.features_verified.join(' '))) {
+    const factsMatched = [];
+    const verifiedFeatures = Array.isArray(productFacts?.features_verified) ? productFacts.features_verified : [];
+    const verifiedSpecs = Array.isArray(productFacts?.specifications_verified) ? productFacts.specifications_verified : [];
+    const prodName = String(productFacts?.product_name || '').trim();
+    const brand = String(productFacts?.brand || '').trim();
+
+    // 2. Validação contra alegações técnicas sem evidência (Regra: se misturar fato com dado sem evidência, rejeitar)
+    
+    // 2.1 Voltagem / Tensão não comprovada
+    if (/\b(110v|127v|220v|bivolt)\b/i.test(s)) {
+      const hasVoltageFeature = verifiedFeatures.some(f => /110|127|220|bivolt/i.test(f))
+        || verifiedSpecs.some(spec => /110|127|220|bivolt/i.test(spec));
+
+      if (!hasVoltageFeature) {
         return {
           approved: false,
-          reason: 'Menção a voltagem específica não constante no PRODUCT_FACTS',
+          reason: 'Menção a voltagem/tensão não existente no PRODUCT_FACTS',
+          sentence: s,
+        };
+      }
+      if (/\bbivolt\b/i.test(s) && verifiedFeatures.some(f => /bivolt/i.test(f))) {
+        factsMatched.push('features: bivolt');
+      }
+    }
+
+    // 2.2 Tomadas / Saídas não comprovadas
+    const tomadasMatch = s.match(/\b(\d+)\s*(?:tomadas?|sa[íi]das?)\b/i);
+    if (tomadasMatch) {
+      const qty = tomadasMatch[1];
+      const hasTomadas = verifiedFeatures.some(f => new RegExp(`\\b${qty}\\s*tomadas?`, 'i').test(f));
+      if (!hasTomadas) {
+        return {
+          approved: false,
+          reason: `Menção a ${qty} tomadas não existente no PRODUCT_FACTS`,
+          sentence: s,
+        };
+      }
+      factsMatched.push(`features: ${qty} tomadas`);
+    }
+
+    // 2.3 Portas USB não comprovadas
+    const usbMatch = s.match(/\b(\d+)?\s*(?:portas?\s*)?usb\b/i);
+    if (usbMatch) {
+      const hasUsb = verifiedFeatures.some(f => /usb/i.test(f));
+      if (!hasUsb) {
+        return {
+          approved: false,
+          reason: 'Menção a portas USB não existente no PRODUCT_FACTS',
+          sentence: s,
+        };
+      }
+      factsMatched.push('features: portas USB');
+    }
+
+    // 2.4 Cabo / Metragem não comprovada
+    const caboMatch = s.match(/\b(\d+(?:[.,]\d+)?\s*(?:m|metros?))\b/i);
+    if (caboMatch || /\bcabo\b/i.test(s)) {
+      const hasCabo = verifiedFeatures.some(f => /cabo|\d+\s*(?:m|metros?)/i.test(f))
+        || /\bcabo\b/i.test(prodName);
+      if (!hasCabo) {
+        return {
+          approved: false,
+          reason: 'Menção a cabo ou metragem não existente no PRODUCT_FACTS',
+          sentence: s,
+        };
+      }
+      if (caboMatch) factsMatched.push(`features: ${caboMatch[1]}`);
+    }
+
+    // 2.5 Tipo de produto incompatível (ex: falar "extensão" para um capacete)
+    if (/\bextens[aã]o\b/i.test(s) && !/\bextens[aã]o\b/i.test(prodName)) {
+      return {
+        approved: false,
+        reason: 'Menção a tipo de produto (extensão) incompatível com PRODUCT_FACTS',
+        sentence: s,
+      };
+    }
+
+    // 2.6 Modelo não comprovado (código alfanumérico ex: WKC-541)
+    const codeMatch = s.match(/\b([A-Za-z]{2,5}-\d{2,4})\b/);
+    if (codeMatch) {
+      const modelCode = codeMatch[1].toUpperCase();
+      const hasModel = prodName.toUpperCase().includes(modelCode)
+        || verifiedSpecs.some(spec => spec.toUpperCase().includes(modelCode));
+      if (!hasModel) {
+        return {
+          approved: false,
+          reason: `Modelo ${modelCode} não constante no PRODUCT_FACTS`,
+          sentence: s,
+        };
+      }
+      factsMatched.push(`model: ${modelCode}`);
+    }
+
+    // 3. Validação Dinâmica de Preço, Preço Original e Desconto
+    const numPrice = productFacts.price !== null && productFacts.price !== undefined ? Number(productFacts.price) : null;
+    const numOrigPrice = productFacts.original_price !== null && productFacts.original_price !== undefined ? Number(productFacts.original_price) : null;
+    const numDiscount = productFacts.discount !== null && productFacts.discount !== undefined ? Number(productFacts.discount) : null;
+
+    // 3.1 Desconto percentual
+    const percentMatches = [...s.matchAll(/\b(\d+)\s*%/g)];
+    for (const pm of percentMatches) {
+      const val = Number(pm[1]);
+      if (numDiscount !== null && val === numDiscount) {
+        factsMatched.push('discount');
+      } else {
+        return {
+          approved: false,
+          reason: `Desconto de ${val}% mencionado diverge do valor em PRODUCT_FACTS (${numDiscount}%)`,
           sentence: s,
         };
       }
     }
 
-    // 3. Mapeamento de fatos confirmados utilizados na frase
-    const factsMatched = [];
+    // 3.2 Preços e Valores Monetários
+    const priceMatches = [...s.matchAll(/(?:R\$\s*)?(\d{1,5}(?:[.,]\d{2}))\b/g)];
+    for (const pMatch of priceMatches) {
+      const rawVal = pMatch[1].replace(',', '.');
+      const val = parseFloat(rawVal);
+      if (isNaN(val)) continue;
 
-    if (/coibeu/i.test(s) && /coibeu/i.test(productFacts.brand || productFacts.product_name)) {
-      factsMatched.push('brand');
+      let matched = false;
+      if (numPrice !== null && (Math.abs(val - numPrice) < 0.05 || Math.abs(val - Math.round(numPrice)) < 0.05)) {
+        factsMatched.push('price');
+        matched = true;
+      }
+      if (numOrigPrice !== null && (Math.abs(val - numOrigPrice) < 0.05 || Math.abs(val - Math.round(numOrigPrice)) < 0.05)) {
+        factsMatched.push('original_price');
+        matched = true;
+      }
+
+      if (!matched && pMatch[0].includes('R$')) {
+        return {
+          approved: false,
+          reason: `Preço mencionado (R$ ${pMatch[1]}) diverge de PRODUCT_FACTS (atual: R$ ${numPrice}, original: R$ ${numOrigPrice})`,
+          sentence: s,
+        };
+      }
     }
-    if (/wkc-?541/i.test(s) && /wkc-?541/i.test(productFacts.product_name)) {
-      factsMatched.push('model');
+
+    // Checa menção a preço inteiro (ex: "por 144 reais")
+    if (numPrice !== null && !factsMatched.includes('price')) {
+      const intPrice = Math.floor(numPrice);
+      const intRegex = new RegExp(`\\b${intPrice}\\b`);
+      if (intRegex.test(s) && /(?:R\$|pre[çc]o|por|apenas|reais)/i.test(s)) {
+        factsMatched.push('price');
+      }
     }
-    if (/10\s*tomadas?/i.test(s) && productFacts.features_verified.some(f => /10\s*tomadas?/i.test(f))) {
-      factsMatched.push('features: 10 tomadas');
+    if (numOrigPrice !== null && !factsMatched.includes('original_price')) {
+      const intOrig = Math.floor(numOrigPrice);
+      const intRegex = new RegExp(`\\b${intOrig}\\b`);
+      if (intRegex.test(s) && /(?:de|era|original|pre[çc]o)/i.test(s)) {
+        factsMatched.push('original_price');
+      }
     }
-    if (/4\s*(?:portas?\s*)?usb/i.test(s) && productFacts.features_verified.some(f => /4\s*usb/i.test(f))) {
-      factsMatched.push('features: 4 portas USB');
+
+    // 4. Marca e Nome do Produto
+    if (brand && brand !== 'Não informada') {
+      const brandClean = brand.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const brandRegex = new RegExp(`\\b${brandClean}\\b`, 'i');
+      if (brandRegex.test(s)) {
+        factsMatched.push('brand');
+      }
     }
-    if (/2\s*(?:m|metros?)/i.test(s) && productFacts.features_verified.some(f => /2\s*(?:m|metros?)/i.test(f))) {
-      factsMatched.push('features: cabo de 2 metros');
+
+    // Termos chave do nome do produto (termos >= 4 caracteres)
+    if (prodName) {
+      const prodTokens = prodName
+        .toLowerCase()
+        .replace(/[^a-z0-9áéíóúâêôãõç\s]/gi, ' ')
+        .split(/\s+/)
+        .filter(t => t.length >= 4 && !['para', 'com', 'mais', 'pelo', 'pela', 'onde', 'como'].includes(t));
+      
+      const hasProdToken = prodTokens.some(tok => s.toLowerCase().includes(tok));
+      if (hasProdToken) {
+        factsMatched.push('product_name');
+      }
     }
-    if (/bivolt/i.test(s) && productFacts.features_verified.some(f => /bivolt/i.test(f))) {
-      factsMatched.push('features: bivolt');
+
+    // 5. Características e Especificações verificadas
+    for (const feat of verifiedFeatures) {
+      if (feat && s.toLowerCase().includes(feat.toLowerCase())) {
+        factsMatched.push(`feature: ${feat}`);
+      }
     }
-    if (/\b(?:38|39)\b/i.test(s) && productFacts.price) {
-      factsMatched.push('price');
+    for (const spec of verifiedSpecs) {
+      const specVal = spec.split(':')[1]?.trim();
+      if (specVal && specVal.length > 2 && s.toLowerCase().includes(specVal.toLowerCase())) {
+        factsMatched.push(`spec: ${spec}`);
+      }
     }
-    if (/\b69\b/i.test(s) && productFacts.original_price) {
-      factsMatched.push('original_price');
-    }
-    if (/\b44\s*%/i.test(s) && productFacts.discount) {
-      factsMatched.push('discount');
-    }
-    if (/coment[aá]rios?|link/i.test(s)) {
+
+    // 6. Chamada para Ação / Local do Link
+    if (/coment[aá]rios?|link(?:\s+com\s+desconto|\s+fixado|\s+no|\s+liberado)/i.test(s)) {
       factsMatched.push('cta_location');
     }
 
-    // 4. Frases puramente conectoras de CTA ou apresentação factual permitidas
-    const isPlausibleFactual = factsMatched.length > 0
-      || /^(d[aá]\s+uma\s+olhada|extens[aã]o|confira|o\s+link\s+com\s+desconto)/i.test(s);
+    // 7. Frases conectivas neutras e factualmente seguras
+    const isPlausibleFactual = factsMatched.length > 0;
 
     if (!isPlausibleFactual) {
       return {

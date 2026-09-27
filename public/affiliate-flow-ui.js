@@ -51,12 +51,32 @@
         if (window.loadDashboard) window.loadDashboard();
         if (window.loadCreativesGallery) window.loadCreativesGallery();
 
-        // Abre automaticamente o modal de revisão do criativo 9:16
-        setTimeout(() => {
-          if (typeof window.openCreativeReviewModal === 'function') {
-            window.openCreativeReviewModal(interventionId, result.videoUrl || null);
-          }
-        }, 300);
+        // Se o vídeo já está pronto no acervo, abre direto a revisão
+        if (result.videoUrl && (result.videoUrl.includes('.mp4') || result.videoUrl.includes('.webm'))) {
+          window.pendingDirectVideoUrl = result.videoUrl;
+          setTimeout(() => {
+            if (typeof window.openCreativeReviewModal === 'function') {
+              window.openCreativeReviewModal(interventionId, result.videoUrl, {
+                productId: result.productId,
+                thumbnailUrl: result.thumbnailUrl,
+                videoUrl: result.videoUrl,
+                affiliateUrl: result.affiliateUrl
+              });
+            }
+          }, 300);
+        } else {
+          // VÍDEO EM PRODUÇÃO: Abre painel de progresso e logs em tempo real (NUNCA tela preta)
+          setTimeout(() => {
+            if (typeof window.openCreativeProductionProgressModal === 'function') {
+              window.openCreativeProductionProgressModal({
+                productId: result.productId,
+                interventionId: interventionId,
+                thumbnailUrl: result.thumbnailUrl,
+                affiliateUrl: result.affiliateUrl
+              });
+            }
+          }, 300);
+        }
 
         return true;
       } else if (feedback && result.reason) {

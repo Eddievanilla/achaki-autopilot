@@ -236,13 +236,31 @@ export default class ManualAffiliateFlow {
       .limit(1)
       .maybeSingle();
 
+    let resolvedVideoUrl = existingCv?.video_url || null;
+    let resolvedThumbnailUrl = existingCv?.thumbnail_url || product.image_url || null;
+
+    if (!resolvedVideoUrl) {
+      const { data: existingAsset } = await this.db.from('creative_assets')
+        .select('id, storage_url, thumbnail_url')
+        .eq('product_id', product.id)
+        .eq('type', 'VIDEO')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (existingAsset?.storage_url && (existingAsset.storage_url.includes('.mp4') || existingAsset.storage_url.includes('.webm'))) {
+        resolvedVideoUrl = existingAsset.storage_url;
+        resolvedThumbnailUrl = existingAsset.thumbnail_url || resolvedThumbnailUrl;
+      }
+    }
+
     return {
       success: true,
       status: LINK_READY,
       affiliateUrl: verifiedUrl,
       productId: product.id,
-      videoUrl: existingCv?.video_url || null,
-      thumbnailUrl: existingCv?.thumbnail_url || null,
+      videoUrl: resolvedVideoUrl,
+      thumbnailUrl: resolvedThumbnailUrl,
     };
   }
 
